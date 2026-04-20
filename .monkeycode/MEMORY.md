@@ -32,3 +32,10 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - Instructions:
   - 仓库采用单仓结构，包含 `frontend`、`backend`、`worker`、`shared`、`infra` 和 `.monkeycode` 目录。
   - 前端使用 `Next.js`，后端使用 `FastAPI`，异步任务单独放在 `worker` 目录。
+
+[前端视觉要求]
+- Date: 2026-04-20
+- Context: 用户要求前端除页面实现外还需承担 UI 设计，整体需要有高级感
+- Instructions:
+  - 前端开发除实现后台页面外，还需要负责 UI 设计工作。
+  - 后台整体视觉应体现高级感，避免普通后台模板化观感。
