@@ -1,0 +1,16 @@
+node_modules/
+.next/
+dist/
+build/
+coverage/
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/

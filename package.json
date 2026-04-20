@@ -1,0 +1,10 @@
+{
+  "name": "ai-xiaohongshu-posting-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.8.1",
+  "scripts": {
+    "dev:frontend": "pnpm --dir frontend dev",
+    "lint:frontend": "pnpm --dir frontend lint"
+  }
+}

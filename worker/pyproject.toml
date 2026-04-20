@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-xiaohongshu-worker"
+version = "0.1.0"
+description = "Async worker for AI Xiaohongshu posting platform"
+dependencies = [
+  "redis>=5.0.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
