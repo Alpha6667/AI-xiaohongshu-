@@ -1,0 +1,109 @@
+# 需求实施计划
+
+- [ ] 1. 完善项目基础骨架与核心边界
+  - [ ] 1.1 补齐后端 API 分层目录与基础配置
+    - 在 `backend/app` 下建立 `api/routes`、`models`、`schemas`、`services`、`repositories`、`db` 目录，对应设计文档中的 `FastAPI Application`、`Draft and Post Domain Service` 与 `Metrics Collector` 组件。
+    - 补充配置读取、数据库连接和路由注册入口，覆盖 Requirement 1 的草稿管理入口和 Requirement 4 的数据采集入口。
+
+  - [ ] 1.2 补齐前端后台基础路由与布局骨架
+    - 在 `frontend/src/app` 下创建 `dashboard`、`posts`、`review`、`assets` 路由骨架，对应 Requirement 1、Requirement 3、Requirement 4。
+    - 定义后台导航、页面布局和统一 API 请求封装，建立前后端边界。
+
+  - [ ] 1.3 补齐 worker 任务分类与任务入口
+    - 在 `worker/app` 下创建 `tasks` 目录并拆分文案生成、图片生成、发布、指标采集任务占位，实现设计文档中的 `AI Orchestrator` 与 `Metrics Collector` 对应入口。
+    - 约定任务状态字段与任务输入输出结构，支撑 Requirement 2、Requirement 4。
+
+  - [ ]* 1.4 为骨架与基础配置编写验证测试
+    - 为后端健康检查、路由注册和配置加载添加基础测试。
+    - 为前端页面基础渲染添加最小验证用例。
+
+- [ ] 2. 实现帖子草稿、素材与审核核心数据模型
+  - [ ] 2.1 创建 `Post`、`Asset`、`ReviewRecord`、`GenerationTask`、`PublishLog`、`MetricsSnapshot` 数据模型
+    - 在后端落库模型中定义字段、状态枚举和关联关系，覆盖设计文档中的全部核心模型。
+    - 明确 `Post.status` 合法流转，支撑 Requirement 1、Requirement 3、Requirement 4。
+
+  - [ ] 2.2 创建对应的请求与响应 Schema
+    - 为草稿创建、草稿更新、审核提交、审核批准、审核退回、素材上传和看板查询建立 Pydantic Schema。
+    - 保证 Schema 与前端所需字段一致，覆盖 Requirement 1、Requirement 3、Requirement 4。
+
+  - [ ] 2.3 实现草稿与审核领域服务
+    - 编写草稿创建、更新、提交审核、批准、退回逻辑，确保状态流转符合设计文档 Correctness Properties 1。
+    - 记录审核历史与修改记录，覆盖 Requirement 1、Requirement 3。
+
+  - [ ]* 2.4 为状态流转和数据约束编写测试
+    - 为 `draft -> in_review -> approved` 流转编写单元测试。
+    - 为属性“任一帖子任意时刻只能处于一个合法状态”编写性质测试，对应 Correctness Property 1。
+
+- [ ] 3. 检查点 - 确保所有测试通过
+  - 确保所有测试通过,如有疑问请询问用户
+
+- [ ] 4. 实现草稿管理与素材管理 API
+  - [ ] 4.1 实现帖子草稿 CRUD 接口
+    - 提供 `POST /api/posts`、`GET /api/posts`、`GET /api/posts/{post_id}`、`PATCH /api/posts/{post_id}`。
+    - 返回草稿基础信息、状态、最新关联素材和最新任务标识，覆盖 Requirement 1。
+
+  - [ ] 4.2 实现素材上传与关联接口
+    - 提供 `POST /api/assets/upload` 和素材关联能力，保证上传图片可挂载到草稿。
+    - 覆盖 Requirement 3 中的图片上传、图片选择和失败保护。
+
+  - [ ] 4.3 实现审核流转接口
+    - 提供 `POST /api/posts/{post_id}/submit-review`、`approve`、`reject` 接口。
+    - 在审核动作中写入 `ReviewRecord`，覆盖 Requirement 3。
+
+  - [ ]* 4.4 为草稿与审核接口编写集成测试
+    - 覆盖草稿创建、更新、提交审核、退回和批准流程。
+    - 验证非法状态下的接口返回。
+
+- [ ] 5. 实现 AI 生成任务主链路
+  - [ ] 5.1 实现文案生成任务创建与结果回填
+    - 提供 `POST /api/posts/{post_id}/generate-copy`，创建文案生成任务并持久化请求参数。
+    - 设计任务结果回填机制，把生成标题、正文、标签写回草稿修订内容，覆盖 Requirement 2。
+
+  - [ ] 5.2 实现图片生成任务创建与素材入库
+    - 提供 `POST /api/posts/{post_id}/generate-images`，创建图片任务并把成功结果登记为 `Asset`。
+    - 在任务失败时保留原草稿内容，覆盖 Requirement 2、Requirement 3。
+
+  - [ ] 5.3 实现 worker 侧任务占位执行逻辑
+    - 为文案生成与图片生成任务提供基础执行函数和失败记录逻辑。
+    - 统一 `GenerationTask` 的 `pending/running/succeeded/failed` 状态流转，覆盖 Requirement 2。
+
+  - [ ]* 5.4 为生成任务状态和结果一致性编写测试
+    - 验证生成任务成功后必须落库并关联到对应 `Post`，对应 Correctness Property 3。
+    - 验证失败时原草稿不被破坏。
+
+- [ ] 6. 实现发布与指标采集主链路
+  - [ ] 6.1 实现发布任务入口与去重保护
+    - 提供 `POST /api/posts/{post_id}/publish`，仅允许 `approved` 状态草稿进入 `publishing`。
+    - 记录 `PublishLog` 并阻止重复发布，覆盖 Requirement 4 与 Correctness Property 6。
+
+  - [ ] 6.2 实现发布结果回写与失败处理
+    - 在发布成功时回写 `platform_post_id` 和 `published` 状态。
+    - 在失败时回写 `publish_failed` 和错误信息，覆盖 Requirement 4、Correctness Property 2。
+
+  - [ ] 6.3 实现指标采集任务与快照存储
+    - 为 `published` 帖子建立采集入口，存储浏览、点赞、收藏、评论和关注转化快照。
+    - 采用追加存储方式保存 `MetricsSnapshot`，覆盖 Requirement 4 与 Correctness Property 4。
+
+  - [ ]* 6.4 为发布与指标采集编写测试
+    - 验证发布中状态不可重复触发，对应 Correctness Property 6。
+    - 验证指标快照追加存储不覆盖历史值，对应 Correctness Property 4。
+
+- [ ] 7. 实现前端后台最小可用页面
+  - [ ] 7.1 实现数据看板页面
+    - 对接 `GET /api/dashboard/summary`，展示帖子数、浏览、点赞、收藏、评论、关注转化。
+    - 覆盖 Requirement 4 中的后台数据展示需求。
+
+  - [ ] 7.2 实现帖子列表与详情页
+    - 展示帖子状态、发布时间、最新指标和进入详情的入口。
+    - 在详情页展示草稿内容、审核记录、发布记录和指标历史，覆盖 Requirement 1、Requirement 4。
+
+  - [ ] 7.3 实现内容工作台与审核页
+    - 支持输入主题、编辑标题正文、上传图片、触发文案生成与图片生成、提交审核。
+    - 支持审核批准、退回和修改后再次保存，覆盖 Requirement 1、Requirement 2、Requirement 3。
+
+  - [ ]* 7.4 为前端主流程编写页面测试
+    - 验证工作台表单、帖子列表筛选和审核交互。
+    - 为属性“审核前禁止发布未通过草稿”编写流程校验测试，对应 Correctness Property 1 与 6。
+
+- [ ] 8. 检查点 - 确保所有测试通过
+  - 确保所有测试通过,如有疑问请询问用户
