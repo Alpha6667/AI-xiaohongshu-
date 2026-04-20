@@ -134,13 +134,22 @@
 ## 本轮同步区
 
 ## 已完成
-- 待填写
+- 已补齐 `frontend/src/app` 下的 `dashboard`、`posts`、`posts/[id]`、`review`、`assets` 路由，并保留 `/` 作为内容工作台入口。
+- 已完成统一后台框架，包括顶部标题区、左侧轻量导航、页面容器和基础卡片/状态标签组件。
+- 已建立 `frontend/src/lib/api/client.ts`、`frontend/src/lib/api/mock.ts`、`frontend/src/lib/api/types.ts`，统一管理 mock 数据与 API 边界。
+- 已完成看板页、帖子列表页、帖子详情页、审核页、素材库和内容工作台入口的静态结构与占位交互。
+- 已按 `.monkeycode/docs/API_CONTRACT.md` 预留 `dashboard`、`posts`、`assets`、审核与发布相关接口路径。
+- 已重写全局样式，视觉方向偏内容运营工作台，避免通用后台模板感。
 
 ## 当前问题
-- 待填写
+- 前端依赖尚未安装，当前无法在本地直接执行 `pnpm --dir frontend lint` 或 `next` 相关命令验证页面。
+- 后端真实接口尚未返回详情页里的审核记录、发布记录和指标历史结构，目前仍使用本地 mock 占位。
 
 ## 需要协作
-- 待填写
+- 需要后端确认 `GET /api/posts/{post_id}` 是否按当前页面预留返回 `reviewRecords`、`publishRecords`、`metricsHistory` 字段。
+- 需要后端确认 `GET /api/dashboard/summary` 是否只返回聚合数值，还是还会补充趋势维度，便于后续升级看板层级。
 
 ## 下一步
-- 先完成 `dashboard` 与统一布局
+- 在后端接口可用后替换 mock 数据层，完成列表和详情页真实数据接入。
+- 继续补充工作台中的筛选、保存、状态切换和审核动作的真实交互。
+- 增加最小页面测试和基础渲染验证。
