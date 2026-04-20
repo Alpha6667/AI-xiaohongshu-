@@ -46,6 +46,11 @@
 - 说明哪些任务优先做
 - 说明哪些任务是可选测试任务
 
+本轮先看：
+
+- 前端：重点看 `tasklist.md` 顶部“当前迭代分工”与 `frontend.md`
+- 后端：重点看 `tasklist.md` 顶部“当前迭代分工”与 `backend.md`
+
 ### 3. 协作同步文件
 
 - `.monkeycode/team-context/architecture.md`
@@ -170,3 +175,10 @@
 - 每日汇总看 `daily-sync.md`
 
 只要所有人遵守这套规则，负责人就不需要反复在不同开发之间手动转发任务。
+
+## 现在直接怎么通知开发
+
+你可以直接这样告诉他们：
+
+- 前端开发：请拉取最新分支，阅读 `.monkeycode/specs/2026-04-20-xiaohongshu-ai-posting-platform/tasklist.md` 顶部的当前迭代分工，以及 `.monkeycode/team-context/frontend.md`，按文档直接开发并在完成后更新同步区。
+- 后端开发：请拉取最新分支，阅读 `.monkeycode/specs/2026-04-20-xiaohongshu-ai-posting-platform/tasklist.md` 顶部的当前迭代分工，以及 `.monkeycode/team-context/backend.md`，按文档直接开发并在完成后更新同步区。

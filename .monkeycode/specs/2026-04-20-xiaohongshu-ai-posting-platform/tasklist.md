@@ -1,5 +1,36 @@
 # 需求实施计划
 
+## 当前迭代分工
+
+### 前端本轮先做
+
+- `1.2` 补齐后台路由与统一布局骨架
+- `7.1` 实现看板页静态结构与 mock 数据展示
+- `7.2` 实现帖子列表页与帖子详情页静态结构
+- `7.3` 实现内容工作台与审核页静态交互骨架
+
+本轮交付标准：
+
+- `frontend/src/app` 下存在 `dashboard`、`posts`、`posts/[id]`、`review`、`assets` 路由
+- 存在统一后台布局、导航、页面容器和基础卡片组件
+- 页面先使用 mock 数据，但字段命名与 `API_CONTRACT.md` 保持一致
+- 前端在 `.monkeycode/team-context/frontend.md` 写清已完成内容、问题和下一步
+
+### 后端本轮先做
+
+- `1.1` 补齐后端分层目录、配置加载、数据库入口和路由注册
+- `2.1` 创建第一批核心数据模型与状态枚举
+- `2.2` 创建草稿、审核、素材、看板相关 Schema
+- `4.1` `4.2` `4.3` 实现草稿 CRUD、素材上传占位、审核流转接口
+- `5.1` `5.2` `6.1` 先实现生成任务和发布任务的任务记录入口，不要求接入真实平台
+
+本轮交付标准：
+
+- `backend/app` 下存在 `api/routes`、`models`、`schemas`、`services`、`repositories`、`db`
+- `backend/app/main.py` 已注册 `/health`、`/api/posts`、`/api/assets`、`/api/dashboard`
+- API 能返回基础 JSON 结构，状态流转符合设计文档约束
+- 后端在 `.monkeycode/team-context/backend.md` 写清已完成内容、问题和下一步
+
 - [ ] 1. 完善项目基础骨架与核心边界
   - [ ] 1.1 补齐后端 API 分层目录与基础配置
     - 在 `backend/app` 下建立 `api/routes`、`models`、`schemas`、`services`、`repositories`、`db` 目录，对应设计文档中的 `FastAPI Application`、`Draft and Post Domain Service` 与 `Metrics Collector` 组件。
