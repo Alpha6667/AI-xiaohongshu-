@@ -339,6 +339,23 @@ textarea {
   cursor: pointer;
 }
 
+.action-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.feedback-text {
+  margin: 0;
+  color: var(--accent);
+  line-height: 1.7;
+}
+
+.asset-upload-panel,
+.asset-meta-row {
+  display: grid;
+  gap: 12px;
+}
+
 .endpoint-stack code,
 .single-endpoint code {
   display: block;

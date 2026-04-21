@@ -2,6 +2,16 @@ import Link from "next/link";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 
+function getCoverStyle(postId: string) {
+  const covers = [
+    "linear-gradient(135deg, rgba(127, 97, 71, 0.28), rgba(255, 255, 255, 0.82))",
+    "linear-gradient(135deg, rgba(96, 115, 92, 0.24), rgba(255, 255, 255, 0.78))",
+    "linear-gradient(135deg, rgba(89, 86, 118, 0.24), rgba(255, 255, 255, 0.78))",
+  ];
+  const index = postId.charCodeAt(postId.length - 1) % covers.length;
+  return covers[index];
+}
+
 function getStatusTone(status: string) {
   if (status === "published") {
     return "positive" as const;
@@ -14,8 +24,8 @@ function getStatusTone(status: string) {
   return "neutral" as const;
 }
 
-export default function PostsPage() {
-  const posts = apiClient.posts.list();
+export default async function PostsPage() {
+  const posts = await apiClient.posts.list();
 
   return (
     <div className="page-stack">
@@ -25,7 +35,7 @@ export default function PostsPage() {
         <div className="post-list">
           {posts.map((post) => (
             <Link key={post.id} href={`/posts/${post.id}`} className="post-row">
-              <div className="post-cover" style={{ backgroundImage: `url(${post.coverUrl})` }} />
+              <div className="post-cover" style={{ background: getCoverStyle(post.id) }} />
               <div className="post-main">
                 <div className="post-headline">
                   <StatusPill label={post.status} tone={getStatusTone(post.status)} />

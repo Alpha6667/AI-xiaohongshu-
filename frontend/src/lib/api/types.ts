@@ -1,4 +1,4 @@
-export type PostStatus = "draft" | "in_review" | "approved" | "published" | "failed";
+export type PostStatus = "draft" | "in_review" | "approved" | "publishing" | "published" | "publish_failed";
 
 export interface DashboardSummary {
   totalPosts: number;
@@ -19,6 +19,22 @@ export interface AssetItem {
   width: number;
   height: number;
   sizeKb: number;
+  createdAt: string;
+}
+
+export interface AssetUploadPayload {
+  name: string;
+  fileName: string;
+  contentType: string;
+  postId?: string;
+}
+
+export interface AssetUploadResponse {
+  id: string;
+  name: string;
+  fileName: string;
+  contentType: string;
+  url: string;
   createdAt: string;
 }
 
@@ -58,10 +74,15 @@ export interface PostListItem {
   id: string;
   topic: string;
   title: string;
+  body: string;
+  tags: string[];
   status: PostStatus;
   publishedAt?: string;
-  coverUrl: string;
+  assetIds: string[];
+  latestTaskIds: string[];
+  platformPostId?: string | null;
   latestMetrics: PostMetrics;
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -75,12 +96,12 @@ export interface PostDetail extends PostListItem {
 }
 
 export interface ReviewQueueItem {
-  postId: string;
+  id: string;
   topic: string;
   title: string;
-  submittedAt: string;
-  operator: string;
-  reviewComment: string;
+  body: string;
+  updatedAt: string;
+  reviewRecords: ReviewRecord[];
 }
 
 export interface WorkspaceDraft {

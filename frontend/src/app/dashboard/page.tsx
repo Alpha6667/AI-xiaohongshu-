@@ -10,9 +10,9 @@ const metricMap = [
   { key: "followConversions", label: "关注转化" },
 ] as const;
 
-export default function DashboardPage() {
-  const summary = apiClient.dashboard.getSummary();
-  const posts = apiClient.posts.list();
+export default async function DashboardPage() {
+  const summary = await apiClient.dashboard.getSummary();
+  const posts = await apiClient.posts.list();
   const publishedPosts = posts.filter((post) => post.status === "published");
 
   return (
@@ -72,7 +72,7 @@ export default function DashboardPage() {
               <span className="todo-index">02</span>
               <div>
                 <strong>指标回填</strong>
-                <p>等后端完成 `/api/dashboard/summary` 后可替换 mock 统计并增加趋势图。</p>
+                <p>当前已切到真实看板接口，本轮继续保证聚合字段稳定，不扩展趋势维度。</p>
               </div>
             </article>
           </div>

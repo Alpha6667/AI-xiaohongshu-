@@ -1,9 +1,10 @@
-import { apiClient } from "../lib/api/client";
+import { AssetUploadPanel } from "../components/asset-upload-panel";
+import { WorkspaceForm } from "../components/workspace-form";
 import { SectionCard, SectionHeading, StatusPill } from "../components/ui";
+import { apiClient } from "../lib/api/client";
 
-export default function HomePage() {
-  const draft = apiClient.workspace.getDraft();
-  const summary = apiClient.dashboard.getSummary();
+export default async function HomePage() {
+  const [draft, summary] = await Promise.all([apiClient.workspace.getDraft(), apiClient.dashboard.getSummary()]);
 
   return (
     <div className="page-stack">
@@ -11,9 +12,7 @@ export default function HomePage() {
         <SectionCard className="hero-card">
           <span className="eyebrow">Workspace Entry</span>
           <h2>生成、编辑、提交审核的主链路，要一眼看懂。</h2>
-          <p>
-            这一页先承载内容工作台入口，用 mock 数据把主题输入、文案编辑、图片选择和 AI 生成动作都摆出来，便于后续直接接真实接口。
-          </p>
+          <p>这一页现在直接基于真实草稿接口驱动，优先接通保存与提交审核，让前后端联调主链路先闭环。</p>
 
           <div className="quick-metrics">
             <div>
@@ -44,51 +43,34 @@ export default function HomePage() {
 
       <section className="workspace-grid">
         <SectionCard>
-          <SectionHeading eyebrow="Topic" title="内容工作台" description="预留 `POST /api/posts`、`PATCH /api/posts/{post_id}`、生成与审核相关接口边界。" />
+          <SectionHeading eyebrow="Topic" title="内容工作台" description="本轮接通真实草稿数据、保存动作和提交审核动作。" />
 
-          <div className="field-grid">
-            <label className="field-block">
-              <span>主题输入</span>
-              <input defaultValue={draft.topic} readOnly />
-            </label>
-            <label className="field-block">
-              <span>标题</span>
-              <input defaultValue={draft.title} readOnly />
-            </label>
-          </div>
+          {"id" in draft ? (
+            <>
+              <div className="tag-row">
+                <StatusPill label={draft.status} tone={draft.status === "in_review" ? "warm" : draft.status === "approved" || draft.status === "published" ? "positive" : "neutral"} />
+                {draft.tags.map((tag) => (
+                  <StatusPill key={tag} label={`#${tag}`} />
+                ))}
+              </div>
 
-          <label className="field-block">
-            <span>正文编辑</span>
-            <textarea defaultValue={draft.body} rows={8} readOnly />
-          </label>
+              <WorkspaceForm post={draft} />
+            </>
+          ) : (
+            <p className="muted-copy">当前还没有可编辑草稿，等待后端生成第一篇内容草稿。</p>
+          )}
 
-          <div className="field-block">
-            <span>标签区域</span>
-            <div className="tag-row">
-              {draft.tags.map((tag) => (
-                <StatusPill key={tag} label={`#${tag}`} />
-              ))}
-            </div>
-          </div>
-
-          <div className="field-block">
-            <span>AI 操作入口</span>
-            <div className="action-row">
-              <button type="button">生成文案</button>
-              <button type="button">生成图片</button>
-              <button type="button">提交审核</button>
-            </div>
-            <div className="endpoint-stack">
-              <code>{apiClient.posts.createEndpoint}</code>
-              <code>{apiClient.posts.generateCopyEndpoint("post-001")}</code>
-              <code>{apiClient.posts.generateImagesEndpoint("post-001")}</code>
-              <code>{apiClient.posts.submitReviewEndpoint("post-001")}</code>
-            </div>
+          <div className="endpoint-stack">
+            <code>{apiClient.posts.createEndpoint}</code>
+            <code>{"id" in draft ? apiClient.posts.updateEndpoint(draft.id) : apiClient.posts.updateEndpoint("{post_id}")}</code>
+            <code>{"id" in draft ? apiClient.posts.submitReviewEndpoint(draft.id) : apiClient.posts.submitReviewEndpoint("{post_id}")}</code>
           </div>
         </SectionCard>
 
         <SectionCard>
-          <SectionHeading eyebrow="Assets" title="图片上传区" description="当前先展示素材入口与挂载关系，等待 `POST /api/assets/upload` 接入。" />
+          <SectionHeading eyebrow="Assets" title="图片上传区" description="第三轮补真实上传反馈；素材展示本身仍保留轻量占位，等待查询接口补齐。" />
+
+          {"id" in draft ? <AssetUploadPanel postId={draft.id} assetIds={draft.assetIds} /> : <p className="muted-copy">当前没有可关联的真实草稿，暂不触发素材上传联调。</p>}
 
           <div className="asset-strip">
             {apiClient.assets.list().slice(0, 2).map((asset) => (

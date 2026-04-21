@@ -196,22 +196,25 @@
 ## 本轮同步区
 
 ## 已完成
-- 已补齐 `frontend/src/app` 下的 `dashboard`、`posts`、`posts/[id]`、`review`、`assets` 路由，并保留 `/` 作为内容工作台入口。
-- 已完成统一后台框架，包括顶部标题区、左侧轻量导航、页面容器和基础卡片/状态标签组件。
-- 已建立 `frontend/src/lib/api/client.ts`、`frontend/src/lib/api/mock.ts`、`frontend/src/lib/api/types.ts`，统一管理 mock 数据与 API 边界。
-- 已完成看板页、帖子列表页、帖子详情页、审核页、素材库和内容工作台入口的静态结构与占位交互。
-- 已按 `.monkeycode/docs/API_CONTRACT.md` 预留 `dashboard`、`posts`、`assets`、审核与发布相关接口路径。
-- 已重写全局样式，视觉方向偏内容运营工作台，避免通用后台模板感。
+- 已将 `dashboard`、`posts`、`posts/[id]`、`review` 的主数据从本地 mock 切换到真实接口。
+- 已按后端当前字段名消费 `reviewRecords`、`publishRecords`、`metricsHistory`，详情页直接渲染真实返回结构。
+- 已接入 `GET /api/dashboard/summary`、`GET /api/posts`、`GET /api/posts/{post_id}` 并保留现有 UI 结构不做大改。
+- 已完成工作台中的真实保存与 `submit-review` 动作接线，并在审核页接入 `approve`、`reject` 按钮行为。
+- 已在工作台补上 `POST /api/assets/upload` 的真实上传入口，上传时携带 `postId`，成功后会提示素材已关联并刷新页面状态。
+- 已收敛 mock 使用范围，当前仅保留素材展示卡片本身的本地占位，因为后端尚未提供素材查询列表接口。
 
 ## 当前问题
 - 前端依赖尚未安装，当前无法在本地直接执行 `pnpm --dir frontend lint` 或 `next` 相关命令验证页面。
-- 后端真实接口尚未返回详情页里的审核记录、发布记录和指标历史结构，目前仍使用本地 mock 占位。
+- 素材区仍缺少真实查询接口，当前上传后的页面反馈只能体现“关联成功”和 `assetIds` 数量变化，无法渲染真实素材卡片。
+- 工作台当前默认选择第一篇可编辑草稿；如果后端后续支持显式“当前工作草稿”概念，前端还需要再收口选择逻辑。
+- 仍未接线的动作是：`generate-copy`、`generate-images`、`publish`，当前只保留按钮或接口边界占位，尚未接入真实请求与结果回填。
 
 ## 需要协作
-- 需要后端确认 `GET /api/posts/{post_id}` 是否按当前页面预留返回 `reviewRecords`、`publishRecords`、`metricsHistory` 字段。
-- 需要后端确认 `GET /api/dashboard/summary` 是否只返回聚合数值，还是还会补充趋势维度，便于后续升级看板层级。
+- 需要后端继续保持 `GET /api/posts/{post_id}` 中 `reviewRecords`、`publishRecords`、`metricsHistory` 三个字段稳定，不要在联调阶段改名。
+- 需要后端补一个素材查询接口，至少让前端可以根据 `assetIds` 拉到素材名称和预览地址，彻底移除素材展示 mock。
+- 如果后端后续增加发布成功/失败回写，前端详情页可继续补 `publishing` 与 `publish_failed` 状态展示。
 
 ## 下一步
-- 在后端接口可用后替换 mock 数据层，完成列表和详情页真实数据接入。
-- 继续补充工作台中的筛选、保存、状态切换和审核动作的真实交互。
-- 增加最小页面测试和基础渲染验证。
+- 继续把工作台里的生成文案、生成图片、发布动作接到真实接口。
+- 在后端补齐素材查询后，移除素材区剩余的本地占位数据，并把已关联素材改成真实卡片展示。
+- 增加最小页面测试和基础渲染验证，覆盖工作台保存与审核动作。

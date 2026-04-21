@@ -2,10 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
+import type { PostDetail } from "../../../lib/api/types";
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const post = apiClient.posts.getById(id);
+  let post: PostDetail;
+
+  try {
+    post = await apiClient.posts.getById(id);
+  } catch (error) {
+    if (typeof error === "object" && error && "status" in error && error.status === 404) {
+      notFound();
+    }
+    throw error;
+  }
 
   if (!post) {
     notFound();

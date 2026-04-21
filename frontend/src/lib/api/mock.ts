@@ -47,7 +47,9 @@ const posts: PostDetail[] = [
     title: "换季敏感肌，先把护肤节奏慢下来",
     status: "in_review",
     publishedAt: undefined,
-    coverUrl: assets[0].url,
+    latestTaskIds: ["task-review-001"],
+    platformPostId: null,
+    createdAt: "2026-04-20T04:30:00Z",
     updatedAt: "2026-04-20T06:20:00Z",
     latestMetrics: {
       views: 0,
@@ -77,7 +79,9 @@ const posts: PostDetail[] = [
     title: "让办公区更像灵感区，而不是任务堆积区",
     status: "draft",
     publishedAt: undefined,
-    coverUrl: assets[1].url,
+    latestTaskIds: ["task-draft-001"],
+    platformPostId: null,
+    createdAt: "2026-04-19T08:20:00Z",
     updatedAt: "2026-04-19T12:48:00Z",
     latestMetrics: {
       views: 0,
@@ -99,7 +103,9 @@ const posts: PostDetail[] = [
     title: "一个让人愿意停留的品牌空间，细节都在光线里",
     status: "published",
     publishedAt: "2026-04-17T09:30:00Z",
-    coverUrl: assets[2].url,
+    latestTaskIds: ["task-publish-001"],
+    platformPostId: "xh-post-003",
+    createdAt: "2026-04-16T09:00:00Z",
     updatedAt: "2026-04-18T03:10:00Z",
     latestMetrics: {
       views: 18234,
@@ -170,12 +176,20 @@ const dashboardSummary: DashboardSummary = {
 
 const reviewQueue: ReviewQueueItem[] = [
   {
-    postId: "post-001",
+    id: "post-001",
     topic: "春季护肤选题",
     title: "换季敏感肌，先把护肤节奏慢下来",
-    submittedAt: "2026-04-20T05:10:00Z",
-    operator: "Nora",
-    reviewComment: "重点确认第二屏是否需要增加成分解释，结尾 CTA 是否自然。",
+    body: "第一屏强调换季时屏障波动，第二屏写使用感，第三屏给出简单可执行的护理节奏。整体语气保持克制和可信赖，不做激进承诺。",
+    updatedAt: "2026-04-20T05:10:00Z",
+    reviewRecords: [
+      {
+        id: "review-1",
+        action: "submit",
+        comment: "重点确认第二屏是否需要增加成分解释，结尾 CTA 是否自然。",
+        operator: "Nora",
+        createdAt: "2026-04-20T05:10:00Z",
+      },
+    ],
   },
 ];
 
@@ -184,7 +198,7 @@ export const mockApi = {
     return dashboardSummary;
   },
   listPosts(): PostListItem[] {
-    return posts.map(({ body: _body, tags: _tags, assetIds: _assetIds, reviewRecords: _reviewRecords, publishRecords: _publishRecords, metricsHistory: _metricsHistory, ...rest }) => rest);
+    return posts.map(({ reviewRecords: _reviewRecords, publishRecords: _publishRecords, metricsHistory: _metricsHistory, ...rest }) => rest);
   },
   getPostById(postId: string) {
     return posts.find((post) => post.id === postId);
