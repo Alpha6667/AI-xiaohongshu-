@@ -61,6 +61,24 @@ const posts: PostDetail[] = [
     body: "第一屏强调换季时屏障波动，第二屏写使用感，第三屏给出简单可执行的护理节奏。整体语气保持克制和可信赖，不做激进承诺。",
     tags: ["敏感肌", "换季护理", "内容选题"],
     assetIds: ["asset-1", "asset-2"],
+    assets: [
+      {
+        id: "asset-1",
+        name: "夜色封面",
+        fileName: "cover-night.jpg",
+        contentType: "image/jpeg",
+        url: assets[0].url,
+        createdAt: assets[0].createdAt,
+      },
+      {
+        id: "asset-2",
+        name: "桌面氛围图",
+        fileName: "desk-mood.jpg",
+        contentType: "image/jpeg",
+        url: assets[1].url,
+        createdAt: assets[1].createdAt,
+      },
+    ],
     reviewRecords: [
       {
         id: "review-1",
@@ -93,6 +111,16 @@ const posts: PostDetail[] = [
     body: "内容从灯光、桌面秩序、收纳细节切入，强调轻改造和拍摄角度建议，让读者能快速照着做。",
     tags: ["桌搭", "办公区", "氛围感"],
     assetIds: ["asset-2"],
+    assets: [
+      {
+        id: "asset-2",
+        name: "桌面氛围图",
+        fileName: "desk-mood.jpg",
+        contentType: "image/jpeg",
+        url: assets[1].url,
+        createdAt: assets[1].createdAt,
+      },
+    ],
     reviewRecords: [],
     publishRecords: [],
     metricsHistory: [],
@@ -117,6 +145,16 @@ const posts: PostDetail[] = [
     body: "从动线、材质与光影节奏切入，像编辑手记一样记录空间感受，同时给出读者可复制的拍摄提示。",
     tags: ["品牌空间", "门店拍摄", "内容策划"],
     assetIds: ["asset-3"],
+    assets: [
+      {
+        id: "asset-3",
+        name: "空间细节图",
+        fileName: "brand-space-detail.jpg",
+        contentType: "image/jpeg",
+        url: assets[2].url,
+        createdAt: assets[2].createdAt,
+      },
+    ],
     reviewRecords: [
       {
         id: "review-2",

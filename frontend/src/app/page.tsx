@@ -45,7 +45,7 @@ export default async function HomePage() {
         <SectionCard>
           <SectionHeading eyebrow="Topic" title="内容工作台" description="本轮接通真实草稿数据、保存动作和提交审核动作。" />
 
-          {"id" in draft ? (
+          {draft ? (
             <>
               <div className="tag-row">
                 <StatusPill label={draft.status} tone={draft.status === "in_review" ? "warm" : draft.status === "approved" || draft.status === "published" ? "positive" : "neutral"} />
@@ -62,27 +62,18 @@ export default async function HomePage() {
 
           <div className="endpoint-stack">
             <code>{apiClient.posts.createEndpoint}</code>
-            <code>{"id" in draft ? apiClient.posts.updateEndpoint(draft.id) : apiClient.posts.updateEndpoint("{post_id}")}</code>
-            <code>{"id" in draft ? apiClient.posts.generateCopyEndpoint(draft.id) : apiClient.posts.generateCopyEndpoint("{post_id}")}</code>
-            <code>{"id" in draft ? apiClient.posts.generateImagesEndpoint(draft.id) : apiClient.posts.generateImagesEndpoint("{post_id}")}</code>
-            <code>{"id" in draft ? apiClient.posts.submitReviewEndpoint(draft.id) : apiClient.posts.submitReviewEndpoint("{post_id}")}</code>
-            <code>{"id" in draft ? apiClient.posts.publishEndpoint(draft.id) : apiClient.posts.publishEndpoint("{post_id}")}</code>
+            <code>{draft ? apiClient.posts.updateEndpoint(draft.id) : apiClient.posts.updateEndpoint("{post_id}")}</code>
+            <code>{draft ? apiClient.posts.generateCopyEndpoint(draft.id) : apiClient.posts.generateCopyEndpoint("{post_id}")}</code>
+            <code>{draft ? apiClient.posts.generateImagesEndpoint(draft.id) : apiClient.posts.generateImagesEndpoint("{post_id}")}</code>
+            <code>{draft ? apiClient.posts.submitReviewEndpoint(draft.id) : apiClient.posts.submitReviewEndpoint("{post_id}")}</code>
+            <code>{draft ? apiClient.posts.publishEndpoint(draft.id) : apiClient.posts.publishEndpoint("{post_id}")}</code>
           </div>
         </SectionCard>
 
         <SectionCard>
-          <SectionHeading eyebrow="Assets" title="图片上传区" description="第三轮补真实上传反馈；素材展示本身仍保留轻量占位，等待查询接口补齐。" />
+          <SectionHeading eyebrow="Assets" title="图片上传区" description="当前直接展示真实关联素材，并验证上传后 `assetIds` 与 `assets` 的回填刷新。" />
 
-          {"id" in draft ? <AssetUploadPanel postId={draft.id} assetIds={draft.assetIds} /> : <p className="muted-copy">当前没有可关联的真实草稿，暂不触发素材上传联调。</p>}
-
-          <div className="asset-strip">
-            {apiClient.assets.list().slice(0, 2).map((asset) => (
-              <article key={asset.id} className="asset-tile">
-                <div className="asset-thumb" style={{ backgroundImage: `url(${asset.url})` }} />
-                <strong>{asset.name}</strong>
-              </article>
-            ))}
-          </div>
+          {draft ? <AssetUploadPanel postId={draft.id} assetIds={draft.assetIds} assets={draft.assets} /> : <p className="muted-copy">当前没有可关联的真实草稿，暂不触发素材上传联调。</p>}
 
           <code>{apiClient.assets.uploadEndpoint}</code>
         </SectionCard>

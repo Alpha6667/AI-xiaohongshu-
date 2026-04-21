@@ -28,7 +28,7 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
           title,
         },
       });
-      setNotice(`已触发文案生成任务 ${task.taskId}，当前状态 ${task.status}。`);
+      setNotice(task.message || `已触发文案生成任务 ${task.taskId}，当前状态 ${task.status}。`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "触发文案生成失败");
@@ -48,7 +48,7 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
           tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean).join(","),
         },
       });
-      setNotice(`已触发图片生成任务 ${task.taskId}，当前状态 ${task.status}。`);
+      setNotice(task.message || `已触发图片生成任务 ${task.taskId}，当前状态 ${task.status}。`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "触发图片生成失败");
@@ -101,7 +101,7 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
         comment,
         operator: "frontend-operator",
       });
-      setNotice(`已触发发布请求 ${publishLog.publishLogId}，当前帖子状态 ${publishLog.status}。`);
+      setNotice(`${publishLog.message} 发布状态 ${publishLog.publishStatus}。`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "触发发布失败");

@@ -22,6 +22,15 @@ export interface AssetItem {
   createdAt: string;
 }
 
+export interface AssetSummary {
+  id: string;
+  name: string;
+  fileName: string;
+  contentType: string;
+  url: string;
+  createdAt: string;
+}
+
 export interface AssetUploadPayload {
   name: string;
   fileName: string;
@@ -49,14 +58,17 @@ export interface TaskRecordResponse {
   status: string;
   taskType: string;
   createdAt: string;
+  message: string;
 }
 
 export interface PublishResponse {
   publishLogId: string;
   postId: string;
   status: PostStatus;
+  publishStatus: "queued" | "succeeded" | "failed";
   detail: string;
   createdAt: string;
+  message: string;
 }
 
 export interface PostMetrics {
@@ -111,6 +123,7 @@ export interface PostDetail extends PostListItem {
   body: string;
   tags: string[];
   assetIds: string[];
+  assets: AssetSummary[];
   reviewRecords: ReviewRecord[];
   publishRecords: PublishRecord[];
   metricsHistory: MetricsHistoryItem[];

@@ -1,5 +1,5 @@
-import { mockApi } from "./mock";
 import type {
+  AssetSummary,
   AssetUploadPayload,
   AssetUploadResponse,
   DashboardSummary,
@@ -133,14 +133,25 @@ export const apiClient = {
     },
   },
   assets: {
+    listEndpoint: endpoint("/assets"),
     uploadEndpoint: endpoint("/assets/upload"),
+    list(params?: { postId?: string; ids?: string[] }) {
+      const searchParams = new URLSearchParams();
+      if (params?.postId) {
+        searchParams.set("postId", params.postId);
+      }
+      if (params?.ids && params.ids.length > 0) {
+        searchParams.set("ids", params.ids.join(","));
+      }
+      const suffix = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
+      return apiFetch<AssetSummary[]>(`${endpoint("/assets")}${suffix}`);
+    },
     upload(payload: AssetUploadPayload) {
       return apiFetch<AssetUploadResponse>(endpoint("/assets/upload"), {
         method: "POST",
         body: JSON.stringify(payload),
       });
     },
-    list: mockApi.listAssets,
   },
   review: {
     async list() {
@@ -155,7 +166,7 @@ export const apiClient = {
       const posts = await apiFetch<PostListItem[]>(endpoint("/posts"));
       const candidate = posts.find((post) => post.status === "draft") ?? posts.find((post) => post.status !== "published") ?? posts[0];
       if (!candidate) {
-        return mockApi.getWorkspaceDraft();
+        return null;
       }
       return apiFetch<PostDetail>(endpoint(`/posts/${candidate.id}`));
     },

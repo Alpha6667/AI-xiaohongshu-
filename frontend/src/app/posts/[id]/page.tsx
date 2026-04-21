@@ -49,6 +49,26 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
+              <SectionHeading eyebrow="Assets" title="关联素材" description="当前直接使用详情接口返回的 `assets` 字段渲染真实素材。" />
+              {post.assets.length > 0 ? (
+                <div className="asset-grid">
+                  {post.assets.map((asset) => (
+                    <article key={asset.id} className="asset-card">
+                      <div className="asset-cover" style={{ backgroundImage: `url(${asset.url})` }} />
+                      <div className="asset-copy">
+                        <StatusPill label={asset.contentType} />
+                        <h3>{asset.name}</h3>
+                        <p>{asset.fileName}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted-copy">当前还没有已关联素材。</p>
+              )}
+            </SectionCard>
+
+            <SectionCard className="nested-card">
               <SectionHeading eyebrow="Metrics" title="指标历史占位" description="后续直接对应 `GET /api/posts/{post_id}` 返回的 `metricsHistory`。" />
               <div className="history-stack">
                 {post.metricsHistory.length > 0 ? (

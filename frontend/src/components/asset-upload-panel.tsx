@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
+import type { AssetSummary } from "../lib/api/types";
 import { StatusPill } from "./ui";
 
-export function AssetUploadPanel({ postId, assetIds }: { postId: string; assetIds: string[] }) {
+export function AssetUploadPanel({ postId, assetIds, assets }: { postId: string; assetIds: string[]; assets: AssetSummary[] }) {
   const router = useRouter();
   const [name, setName] = useState("工作台新素材");
   const [fileName, setFileName] = useState("workspace-asset.jpg");
@@ -59,6 +60,20 @@ export function AssetUploadPanel({ postId, assetIds }: { postId: string; assetId
           {assetIds.length > 0 ? assetIds.map((assetId) => <StatusPill key={assetId} label={assetId} />) : <StatusPill label="暂无已关联素材" />}
         </div>
       </div>
+
+      {assets.length > 0 ? (
+        <div className="asset-strip">
+          {assets.map((asset) => (
+            <article key={asset.id} className="asset-tile">
+              <div className="asset-thumb" style={{ backgroundImage: `url(${asset.url})` }} />
+              <strong>{asset.name}</strong>
+              <span className="muted-copy">{asset.fileName}</span>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="muted-copy">当前帖子还没有可展示的真实素材。</p>
+      )}
 
       <div className="action-row">
         <button type="button" onClick={handleUpload} disabled={pending}>
