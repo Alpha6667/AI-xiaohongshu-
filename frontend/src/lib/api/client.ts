@@ -12,14 +12,24 @@ import type {
 } from "./types";
 
 const API_PREFIX = "/api";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+function getApiBaseUrl() {
+  const publicBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+  const internalBaseUrl = process.env.INTERNAL_API_BASE_URL?.replace(/\/$/, "");
+
+  if (typeof window !== "undefined") {
+    return publicBaseUrl ?? "";
+  }
+
+  return internalBaseUrl ?? publicBaseUrl ?? "http://127.0.0.1:8000";
+}
 
 function endpoint(pathname: string) {
   return `${API_PREFIX}${pathname}`;
 }
 
 async function apiFetch<T>(pathname: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${pathname}`, {
+  const response = await fetch(`${getApiBaseUrl()}${pathname}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -162,9 +172,12 @@ export const apiClient = {
     },
   },
   workspace: {
+    listCandidatePosts(posts: PostListItem[]) {
+      return posts.filter((post) => post.status !== "published");
+    },
     async getDraft() {
       const posts = await apiFetch<PostListItem[]>(endpoint("/posts"));
-      const candidate = posts.find((post) => post.status === "draft") ?? posts.find((post) => post.status !== "published") ?? posts[0];
+      const candidate = apiClient.workspace.listCandidatePosts(posts)[0];
       if (!candidate) {
         return null;
       }

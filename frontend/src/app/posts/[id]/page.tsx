@@ -44,6 +44,61 @@ function getPublishSummary(post: PostDetail) {
   return post.platformPostId ? `当前已记录平台 ID：${post.platformPostId}` : "当前还未进入平台发布结果回写阶段。";
 }
 
+function getMetricsState(post: PostDetail) {
+  if (post.metricsHistory.length === 0) {
+    if (post.status === "published") {
+      return {
+        title: "已发布但暂无历史快照",
+        description: "帖子已经发布，但指标采集结果还没有回写到历史中，可能是 worker 任务尚未追加快照。",
+        tone: "warm" as const,
+      };
+    }
+
+    return {
+      title: "当前暂无指标历史",
+      description: "帖子还未进入稳定采集阶段，所以详情页暂时不展示历史曲线。",
+      tone: "neutral" as const,
+    };
+  }
+
+  const latestSnapshot = post.metricsHistory.at(-1);
+  if (!latestSnapshot) {
+    return {
+      title: "历史快照读取异常",
+      description: "接口返回了历史数量，但最新快照无法读取，建议后端排查持久化序列。",
+      tone: "critical" as const,
+    };
+  }
+
+  const hasSummaryMismatch = latestSnapshot.views !== post.latestMetrics.views
+    || latestSnapshot.likes !== post.latestMetrics.likes
+    || latestSnapshot.favorites !== post.latestMetrics.favorites
+    || latestSnapshot.comments !== post.latestMetrics.comments
+    || latestSnapshot.followConversions !== post.latestMetrics.followConversions;
+
+  if (hasSummaryMismatch) {
+    return {
+      title: "历史尾项与最新汇总不一致",
+      description: "详情页指标历史的最后一项与帖子最新汇总不一致，建议后端核对汇总口径或写入顺序。",
+      tone: "critical" as const,
+    };
+  }
+
+  if (post.status === "published" && latestSnapshot.views === 0 && latestSnapshot.likes === 0 && latestSnapshot.favorites === 0 && latestSnapshot.comments === 0 && latestSnapshot.followConversions === 0) {
+    return {
+      title: "已发布但当前快照仍为 0",
+      description: "当前已有历史快照，但所有指标仍为 0，可能只是刚发布后的初始采集结果。",
+      tone: "warm" as const,
+    };
+  }
+
+  return {
+    title: "指标历史已回写",
+    description: `当前已记录 ${post.metricsHistory.length} 条历史快照，详情页展示的是最新持久化结果。`,
+    tone: "positive" as const,
+  };
+}
+
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let post: PostDetail;
@@ -60,6 +115,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   if (!post) {
     notFound();
   }
+
+  const metricsState = getMetricsState(post);
+  const latestPublishRecord = post.publishRecords.at(-1);
 
   return (
     <div className="page-stack">
@@ -101,6 +159,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <strong>{post.publishRecords.at(-1)?.platformPostId || post.platformPostId || "待回写"}</strong>
                   <p>{post.publishedAt ? `发布时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : "当前还没有平台发布时间回写。"}</p>
                 </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">Latest Result</span>
+                  <strong>{latestPublishRecord?.status || "暂无结果"}</strong>
+                  <p>{latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "当前还没有发布结果记录。"}</p>
+                </article>
               </div>
             </SectionCard>
 
@@ -126,6 +189,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
             <SectionCard className="nested-card">
               <SectionHeading eyebrow="Metrics" title="指标历史" description="当前直接渲染详情接口返回的 `metricsHistory` 真实快照。" />
+              <article className={`state-card state-card-${metricsState.tone}`}>
+                <strong>{metricsState.title}</strong>
+                <p>{metricsState.description}</p>
+              </article>
               <div className="history-stack">
                 {post.metricsHistory.length > 0 ? (
                   post.metricsHistory.map((item) => (
@@ -141,7 +208,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                     </article>
                   ))
                 ) : (
-                  <p className="muted-copy">尚无已发布后的指标快照。</p>
+                  <p className="muted-copy">当前没有可展示的历史快照，详情页已退回到无数据状态提示。</p>
                 )}
               </div>
             </SectionCard>

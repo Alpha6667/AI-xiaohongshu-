@@ -27,6 +27,30 @@ function getStatusTone(status: PostDetail["status"]) {
   return "neutral" as const;
 }
 
+function getPublishFeedback(post: PostDetail) {
+  const latestPublishRecord = post.publishRecords.at(-1);
+
+  if (post.status === "publish_failed") {
+    return latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "发布失败，等待更明确的失败原因回写。";
+  }
+
+  if (post.status === "published") {
+    return post.platformPostId
+      ? `已发布到平台，回写 ID：${post.platformPostId}`
+      : "已发布完成，但平台 ID 还未回写。";
+  }
+
+  if (post.status === "publishing") {
+    return latestPublishRecord?.detail || "发布任务已入队，等待 worker 或回写接口更新最终结果。";
+  }
+
+  if (post.status === "approved") {
+    return "审核已通过，可以进入发布。";
+  }
+
+  return "当前还处于编辑或审核前阶段。";
+}
+
 export function WorkspaceForm({ post }: { post: PostDetail }) {
   const router = useRouter();
   const [topic, setTopic] = useState(post.topic);
@@ -163,11 +187,14 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
         <div className="tag-row">
           <StatusPill label={post.status} tone={getStatusTone(post.status)} />
           {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
-          {post.status === "publish_failed" ? <StatusPill label="等待失败原因回写" tone="critical" /> : null}
+          {post.status === "publish_failed" && post.publishRecords.at(-1)?.errorMessage ? <StatusPill label="失败原因已回写" tone="critical" /> : null}
           {tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag) => (
             <StatusPill key={tag} label={`#${tag}`} />
           ))}
         </div>
+        <p className="muted-copy">{getPublishFeedback(post)}</p>
+        {post.publishedAt ? <p className="muted-copy">发布时间：{new Date(post.publishedAt).toLocaleString("zh-CN")}</p> : null}
+        {post.publishRecords.at(-1)?.errorMessage ? <p className="feedback-text">失败原因：{post.publishRecords.at(-1)?.errorMessage}</p> : null}
       </div>
 
       <label className="field-block">

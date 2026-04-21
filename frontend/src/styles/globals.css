@@ -127,7 +127,7 @@ textarea {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: end;
+  align-items: flex-end;
   gap: 24px;
   margin-bottom: 28px;
 }
@@ -168,7 +168,11 @@ textarea {
 .endpoint-stack,
 .history-stack,
 .list-column,
-.todo-stack {
+.todo-stack,
+.workspace-selector-list,
+.workspace-empty-state,
+.asset-copy,
+.workspace-selector-header {
   display: grid;
   gap: 20px;
 }
@@ -180,7 +184,7 @@ textarea {
 .section-heading {
   display: flex;
   justify-content: space-between;
-  align-items: end;
+  align-items: flex-end;
   gap: 24px;
   margin-bottom: 22px;
 }
@@ -383,6 +387,70 @@ textarea {
   gap: 12px;
 }
 
+.workspace-selector-header {
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.workspace-selector-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workspace-option,
+.workspace-empty-state,
+.state-card {
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+.workspace-option {
+  display: grid;
+  gap: 12px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.workspace-option:hover,
+.workspace-option-active {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.workspace-option-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.workspace-option strong,
+.workspace-empty-state strong,
+.state-card strong {
+  margin: 0;
+}
+
+.workspace-option p,
+.workspace-empty-state p,
+.state-card p {
+  margin: 0;
+}
+
+.state-card-positive {
+  background: rgba(72, 109, 84, 0.08);
+}
+
+.state-card-warm {
+  background: rgba(139, 105, 59, 0.08);
+}
+
+.state-card-critical {
+  background: rgba(154, 74, 67, 0.08);
+}
+
 .endpoint-stack code,
 .single-endpoint code {
   display: block;
@@ -526,6 +594,7 @@ textarea {
   .field-grid,
   .quick-metrics,
   .detail-meta-grid,
+  .workspace-selector-list,
   .topbar {
     grid-template-columns: 1fr;
   }

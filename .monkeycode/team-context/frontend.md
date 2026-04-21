@@ -347,18 +347,22 @@
 - 已将 `next.config.ts` 中与当前 Next 15 不兼容的 `allowedHosts` 修正为 `allowedDevOrigins`，解除 `build` 的配置类型报错。
 - 已修复 `typedRoutes` 下导航 `Link` 的路由类型问题，以及 mock 数据层的无用变量 lint 错误。
 - 当前环境验证结果：`npm run lint` 已通过，`npm run build` 已通过。
+- 已按第六轮要求收口工作台选择逻辑：首页不再默认抓取第一篇草稿，改为显式选择当前工作对象，并补齐未选择、非法 `postId`、无候选帖子三类状态。
+- 已按第六轮要求收口发布结果展示：工作台与详情页均稳定展示 `publishing`、`published`、`publish_failed`，并优先透出 `platformPostId`、发布时间、失败原因和最新发布记录说明。
+- 已按第六轮要求补齐指标历史状态卡：详情页除正常态外，新增空状态、无数据状态、历史读取异常、汇总不一致、发布后全 0 快照等提示。
+- 已在前端补 `/api` 同源代理方案：`next.config.ts` 新增 `/api/:path*` rewrite，客户端默认回落到同源请求，减少远程预览环境下的后端地址差异。
+- 已再次执行工程验证：`npm run lint` 通过，`npm run build` 通过，顺手清理了 `globals.css` 中的 `autoprefixer` 兼容告警。
 
 ## 当前问题
-- 工作台当前默认选择第一篇可编辑草稿；如果后端后续支持显式“当前工作草稿”概念，前端还需要再收口选择逻辑。
-- 当前页面已切到第五轮真实状态和指标展示，但尚未完成浏览器端回归验证。
+- 当前没有新的前端工程阻塞；本轮未额外执行严格意义上的远程浏览器点击回归。
 - 安装依赖后仍有安全与维护提示：`npm install` 输出了 1 个 critical vulnerability，且部分上游包存在 deprecated 提示；本轮未额外处理升级，避免扩大范围。
 
 ## 需要协作
 - 需要后端继续保持 `GET /api/posts/{post_id}` 中 `reviewRecords`、`publishRecords`、`metricsHistory` 三个字段稳定，不要在联调阶段改名。
 - 后端已提供 `POST /api/posts/{post_id}/publish-result` 和 `POST /api/posts/{post_id}/metrics-snapshots`，前端需按现有详情返回结构验证 `publishStatus`、`platformPostId`、`errorMessage` 和指标历史追加结果。
 - 需要后端保持 `platformPostId`、`publishedAt` 和发布失败明细的回写结构稳定，避免前端状态展示反复调整。
+- 第六轮仍需要后端继续推进 worker 自动回写外壳和发布失败分类语义；前端当前只消费既有结果字段，不自行假设新的平台行为。
 
 ## 下一步
-- 继续做浏览器端回归，重点检查生成、发布、上传和指标历史展示四条链路。
-- 待后端第五轮持久化代码完全合入后，继续回归服务重启后的帖子、发布记录和指标历史是否仍能在页面保持一致。
+- 等后端补齐第六轮自动回写外壳与失败语义后，再做一次以远程预览为主的真实点击回归。
 - 如后端后续开放 `GET /api/assets?postId=...` 的更多筛选或分页能力，前端再补素材库页的真实查询与筛选交互。
