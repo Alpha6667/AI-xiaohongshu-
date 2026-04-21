@@ -29,3 +29,5 @@
 - 前端已完成第五轮收口并提交 `bb2a55c`，已补工作台、列表页、详情页的真实发布状态展示与发布记录信息展示
 - 前端已将详情页指标历史切到真实 `metricsHistory` 渲染；当前唯一未完成项为环境验证，`npm run lint` 仍报 `next: not found`
 - 当前决策是不直接开启第六轮，先由前端补依赖环境并恢复 `npm run lint` / `npm run build` 基础验证能力
+- 前端已完成依赖环境收口并提交 `62cc5bd`：`next: not found` 已解除，`npm run lint` 与 `npm run build` 均已通过
+- 当前第五轮剩余工作转为浏览器端回归与服务重启后一致性验证，后端继续待命支持
