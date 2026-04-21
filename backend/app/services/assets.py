@@ -6,6 +6,43 @@ from app.repositories.memory import new_id, now_iso, repository
 from app.schemas.assets import AssetResponse, AssetUploadRequest
 
 
+def _serialize_asset(asset: Asset) -> AssetResponse:
+    return AssetResponse(
+        id=asset.id,
+        name=asset.name,
+        fileName=asset.file_name,
+        contentType=asset.content_type,
+        url=asset.url,
+        createdAt=asset.created_at,
+    )
+
+
+def list_assets(post_id: str | None = None, ids: str | None = None) -> list[AssetResponse]:
+    filtered_ids: list[str] | None = None
+
+    if post_id is not None:
+        post = repository.posts.get(post_id)
+        if post is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+        filtered_ids = list(post.asset_ids)
+
+    if ids:
+        requested_ids = [item.strip() for item in ids.split(",") if item.strip()]
+        if filtered_ids is None:
+            filtered_ids = requested_ids
+        else:
+            requested_set = set(requested_ids)
+            filtered_ids = [item for item in filtered_ids if item in requested_set]
+
+    if filtered_ids is None:
+        assets = list(repository.assets.values())
+    else:
+        assets = [repository.assets[item] for item in filtered_ids if item in repository.assets]
+
+    assets.sort(key=lambda item: item.created_at, reverse=True)
+    return [_serialize_asset(asset) for asset in assets]
+
+
 def upload_asset(payload: AssetUploadRequest) -> AssetResponse:
     if payload.postId is not None:
         post = repository.posts.get(payload.postId)
@@ -33,11 +70,4 @@ def upload_asset(payload: AssetUploadRequest) -> AssetResponse:
             post.asset_ids.append(asset.id)
             post.updated_at = asset.created_at
 
-    return AssetResponse(
-        id=asset.id,
-        name=asset.name,
-        fileName=asset.file_name,
-        contentType=asset.content_type,
-        url=asset.url,
-        createdAt=asset.created_at,
-    )
+    return _serialize_asset(asset)

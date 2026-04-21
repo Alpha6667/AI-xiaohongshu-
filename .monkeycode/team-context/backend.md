@@ -242,12 +242,19 @@
 - 已补联调相关测试增强：
   - 素材上传关联测试：`test_asset_upload_with_post_id_association`
   - 看板字段稳定性测试：`test_dashboard_summary_fields_stable`
+- 已完成第四轮素材查询能力：新增 `GET /api/assets`，支持 `postId` 与 `ids` 过滤，前端可按帖子或素材 ID 拉取真实素材卡片数据。
+- 已在 `GET /api/posts/{post_id}` 增加 `assets` 明细字段，前端可直接把 `assetIds` 解析为可渲染素材对象列表。
+- 已稳定生成与发布入口契约：
+  - `generate-copy` / `generate-images` 响应固定补充 `message`
+  - `publish` 响应固定补充 `publishStatus` 与 `message`
+- 已补第四轮生成/发布链路测试：`test_generate_and_publish_contract_stable`。
 
 ## 当前问题
 - 当前后端使用内存仓储占位，尚未接入真实数据库和持久化层，服务重启后数据不会保留。
 - `publish` 入口目前只创建 `PublishLog` 并把帖子置为 `publishing`，尚未实现成功/失败回写和真实平台交互。
 - 指标采集目前只有汇总与快照结构占位，尚未开放独立采集接口或 worker 任务执行逻辑。
 - 最小测试依赖 `fastapi.testclient` 运行环境，CI 需确保先安装 backend 依赖后再执行测试。
+- 当前生成与发布链路仍为占位逻辑，尚未接入真实 worker 执行结果回写。
 
 ## 需要协作
 - 需要前端确认详情页是否直接消费 `reviewRecords`、`publishRecords`、`metricsHistory` 这三个字段名称，避免后续联调时再次改契约。
@@ -255,8 +262,10 @@
 - 仍待前端验证：
   - 前端在真实联调中验证素材上传传入 `postId` 后，详情页 `assetIds` 是否即时刷新。
   - 前端验证看板接口字段集合与页面映射是否一致（`totalPosts`、`totalViews`、`totalLikes`、`totalFavorites`、`totalComments`、`followConversions`、`pendingReviewCount`、`publishedCount`）。
+  - 前端验证 `GET /api/assets` 与详情 `assets` 字段能否完全替换素材卡片 mock。
+  - 前端验证生成与发布入口新字段（`message`、`publishStatus`）的页面反馈呈现。
 
 ## 下一步
 - 补充数据库持久化实现或仓储抽象，替换当前内存存储。
 - 完善发布成功/失败回写、`platform_post_id` 更新以及指标快照追加写入入口。
-- 根据前端第三轮联调反馈继续修正字段、错误码和边界校验，不扩展数据库与真实平台链路。
+- 根据前端第四轮联调反馈继续修正字段、错误码和边界校验，不扩展数据库与真实平台链路。

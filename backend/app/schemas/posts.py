@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.models.enums import PostStatus, ReviewAction, TaskStatus
+from app.models.enums import GenerationTaskType, PostStatus, PublishStatus, ReviewAction, TaskStatus
 
 
 class PostCreateRequest(BaseModel):
@@ -33,15 +33,27 @@ class TaskRecordResponse(BaseModel):
     taskId: str
     postId: str
     status: TaskStatus
-    taskType: str
+    taskType: GenerationTaskType
     createdAt: str
+    message: str
 
 
 class PublishResponse(BaseModel):
     publishLogId: str
     postId: str
     status: PostStatus
+    publishStatus: PublishStatus
     detail: str
+    createdAt: str
+    message: str
+
+
+class AssetSummaryResponse(BaseModel):
+    id: str
+    name: str
+    fileName: str
+    contentType: str
+    url: str
     createdAt: str
 
 
@@ -95,6 +107,7 @@ class PostSummaryResponse(BaseModel):
 
 
 class PostDetailResponse(PostSummaryResponse):
+    assets: list[AssetSummaryResponse]
     reviewRecords: list[ReviewRecordResponse]
     publishRecords: list[PublishLogResponse]
     metricsHistory: list[MetricsSnapshotResponse]

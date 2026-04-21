@@ -7,6 +7,7 @@ from app.models.publish_log import PublishLog
 from app.models.review_record import ReviewRecord
 from app.repositories.memory import new_id, now_iso, repository
 from app.schemas.posts import (
+    AssetSummaryResponse,
     GenerateTaskRequest,
     MetricsSnapshotResponse,
     PostCreateRequest,
@@ -85,6 +86,25 @@ def _serialize_metrics_history(post: Post) -> list[MetricsSnapshotResponse]:
     ]
 
 
+def _serialize_assets(post: Post) -> list[AssetSummaryResponse]:
+    assets: list[AssetSummaryResponse] = []
+    for asset_id in post.asset_ids:
+        asset = repository.assets.get(asset_id)
+        if asset is None:
+            continue
+        assets.append(
+            AssetSummaryResponse(
+                id=asset.id,
+                name=asset.name,
+                fileName=asset.file_name,
+                contentType=asset.content_type,
+                url=asset.url,
+                createdAt=asset.created_at,
+            )
+        )
+    return assets
+
+
 def _serialize_post(post: Post) -> PostSummaryResponse:
     return PostSummaryResponse(
         id=post.id,
@@ -113,6 +133,7 @@ def get_post_detail(post_id: str) -> PostDetailResponse:
     summary = _serialize_post(post)
     return PostDetailResponse(
         **summary.model_dump(),
+        assets=_serialize_assets(post),
         reviewRecords=_serialize_review_records(post),
         publishRecords=_serialize_publish_records(post),
         metricsHistory=_serialize_metrics_history(post),
@@ -220,6 +241,7 @@ def create_generation_task(post_id: str, task_type: GenerationTaskType, request:
         status=task.status,
         taskType=task.task_type,
         createdAt=task.created_at,
+        message="Task accepted and queued for worker execution",
     )
 
 
@@ -250,6 +272,8 @@ def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
         publishLogId=log.id,
         postId=post.id,
         status=post.status,
+        publishStatus=log.status,
         detail=log.detail,
         createdAt=log.created_at,
+        message="Publish request accepted and queued",
     )

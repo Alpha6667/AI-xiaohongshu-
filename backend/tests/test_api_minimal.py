@@ -49,6 +49,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         detail_resp = self.client.get(f"/api/posts/{post_id}")
         self.assertEqual(detail_resp.status_code, 200)
         detail = detail_resp.json()
+        self.assertIn("assets", detail)
         self.assertIn("reviewRecords", detail)
         self.assertIn("publishRecords", detail)
         self.assertIn("metricsHistory", detail)
@@ -156,6 +157,70 @@ class BackendApiMinimalTests(unittest.TestCase):
         detail_resp = self.client.get(f"/api/posts/{post_id}")
         self.assertEqual(detail_resp.status_code, 200)
         self.assertIn(asset_id, detail_resp.json()["assetIds"])
+        self.assertTrue(any(item["id"] == asset_id for item in detail_resp.json()["assets"]))
+
+        post_asset_list_resp = self.client.get(f"/api/assets?postId={post_id}")
+        self.assertEqual(post_asset_list_resp.status_code, 200)
+        self.assertTrue(any(item["id"] == asset_id for item in post_asset_list_resp.json()))
+
+    def test_generate_and_publish_contract_stable(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "任务入口契约",
+                "title": "任务入口契约标题",
+                "body": "任务入口契约正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        copy_resp = self.client.post(
+            f"/api/posts/{post_id}/generate-copy",
+            json={"operator": "qa", "payload": {"tone": "warm"}},
+        )
+        self.assertEqual(copy_resp.status_code, 200)
+        copy_payload = copy_resp.json()
+        self.assertEqual(copy_payload["status"], "pending")
+        self.assertEqual(copy_payload["taskType"], "generate_copy")
+        self.assertIn("message", copy_payload)
+
+        image_resp = self.client.post(
+            f"/api/posts/{post_id}/generate-images",
+            json={"operator": "qa", "payload": {"style": "minimal"}},
+        )
+        self.assertEqual(image_resp.status_code, 200)
+        image_payload = image_resp.json()
+        self.assertEqual(image_payload["status"], "pending")
+        self.assertEqual(image_payload["taskType"], "generate_images")
+        self.assertIn("message", image_payload)
+
+        self.client.post(
+            f"/api/posts/{post_id}/submit-review",
+            json={"comment": "提交", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{post_id}/approve",
+            json={"comment": "通过", "operator": "qa"},
+        )
+
+        publish_resp = self.client.post(
+            f"/api/posts/{post_id}/publish",
+            json={"comment": "进入发布", "operator": "qa"},
+        )
+        self.assertEqual(publish_resp.status_code, 200)
+        publish_payload = publish_resp.json()
+        self.assertEqual(publish_payload["status"], "publishing")
+        self.assertEqual(publish_payload["publishStatus"], "queued")
+        self.assertIn("message", publish_payload)
+
+        publish_repeat_resp = self.client.post(
+            f"/api/posts/{post_id}/publish",
+            json={"comment": "重复发布", "operator": "qa"},
+        )
+        self.assertEqual(publish_repeat_resp.status_code, 409)
 
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")
