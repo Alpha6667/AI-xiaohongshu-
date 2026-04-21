@@ -2,6 +2,43 @@
 
 ## 当前迭代分工
 
+### 第二轮协作决策
+
+- 本轮优先目标不是接真实数据库，而是先完成前后端联调闭环。
+- 后端先稳定接口契约、补齐详情字段、补最小测试、补 worker 入口占位。
+- 前端先把 `dashboard`、`posts`、`posts/[id]`、`review` 从 mock 切到真实接口。
+- 下一轮再处理数据库持久化与真实发布/采集。
+
+### 前端今天先做
+
+- 把 `dashboard`、`posts`、`posts/[id]`、`review` 接到真实接口
+- 统一按后端当前字段消费：`reviewRecords`、`publishRecords`、`metricsHistory`
+- 保留现有 UI，不再大改视觉方向，重点完成联调与交互闭环
+- 完成工作台中的保存、提交审核、批准、退回动作接线
+
+本轮交付标准：
+
+- 列表页和详情页不再依赖本地 mock 主数据
+- 看板页使用 `GET /api/dashboard/summary`
+- 详情页使用 `GET /api/posts/{post_id}` 并正确渲染 `reviewRecords`、`publishRecords`、`metricsHistory`
+- 审核页可触发 `submit-review`、`approve`、`reject`
+- 前端更新 `.monkeycode/team-context/frontend.md` 同步区
+
+### 后端今天先做
+
+- 固定并文档化当前联调字段：`reviewRecords`、`publishRecords`、`metricsHistory`
+- 确保 `GET /api/posts/{post_id}`、`GET /api/dashboard/summary` 返回结构稳定
+- 补草稿 CRUD、审核流转、发布前状态校验的最小接口测试
+- 在 `worker/app` 下补任务入口占位与统一状态流转字段定义
+
+本轮交付标准：
+
+- 详情接口稳定返回前端需要的三个明细字段
+- 看板汇总接口保持聚合字段稳定，本轮不扩展趋势维度
+- 存在最小测试覆盖草稿、审核、发布校验
+- `worker/app/tasks` 存在文案生成、图片生成、发布、指标采集任务占位
+- 后端更新 `.monkeycode/team-context/backend.md` 同步区
+
 ### 前端本轮先做
 
 - `1.2` 补齐后台路由与统一布局骨架
