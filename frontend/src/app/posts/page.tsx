@@ -17,7 +17,15 @@ function getStatusTone(status: string) {
     return "positive" as const;
   }
 
+  if (status === "publish_failed") {
+    return "critical" as const;
+  }
+
   if (status === "in_review") {
+    return "warm" as const;
+  }
+
+  if (status === "publishing") {
     return "warm" as const;
   }
 

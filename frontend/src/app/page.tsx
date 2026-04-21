@@ -3,6 +3,26 @@ import { WorkspaceForm } from "../components/workspace-form";
 import { SectionCard, SectionHeading, StatusPill } from "../components/ui";
 import { apiClient } from "../lib/api/client";
 
+function getStatusTone(status: string) {
+  if (status === "published") {
+    return "positive" as const;
+  }
+
+  if (status === "publish_failed") {
+    return "critical" as const;
+  }
+
+  if (status === "in_review" || status === "publishing") {
+    return "warm" as const;
+  }
+
+  if (status === "approved") {
+    return "positive" as const;
+  }
+
+  return "neutral" as const;
+}
+
 export default async function HomePage() {
   const [draft, summary] = await Promise.all([apiClient.workspace.getDraft(), apiClient.dashboard.getSummary()]);
 
@@ -48,7 +68,7 @@ export default async function HomePage() {
           {draft ? (
             <>
               <div className="tag-row">
-                <StatusPill label={draft.status} tone={draft.status === "in_review" ? "warm" : draft.status === "approved" || draft.status === "published" ? "positive" : "neutral"} />
+                <StatusPill label={draft.status} tone={getStatusTone(draft.status)} />
                 {draft.tags.map((tag) => (
                   <StatusPill key={tag} label={`#${tag}`} />
                 ))}

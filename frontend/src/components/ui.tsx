@@ -16,6 +16,6 @@ export function SectionHeading({ eyebrow, title, description }: { eyebrow: strin
   );
 }
 
-export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "warm" | "positive" }) {
+export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: "neutral" | "warm" | "positive" | "critical" }) {
   return <span className={`status-pill status-${tone}`}>{label}</span>;
 }

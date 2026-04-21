@@ -330,6 +330,33 @@ textarea {
   color: #486d54;
 }
 
+.status-critical {
+  color: #9a4a43;
+}
+
+.detail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-meta-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.detail-meta-card strong,
+.detail-meta-card p {
+  margin: 0;
+}
+
+.detail-meta-card strong {
+  display: block;
+  margin-top: 8px;
+}
+
 .action-row button {
   padding: 12px 16px;
   border: 0;
@@ -498,6 +525,7 @@ textarea {
   .asset-grid,
   .field-grid,
   .quick-metrics,
+  .detail-meta-grid,
   .topbar {
     grid-template-columns: 1fr;
   }

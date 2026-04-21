@@ -69,6 +69,8 @@ export interface PublishResponse {
   detail: string;
   createdAt: string;
   message: string;
+  platformPostId?: string | null;
+  errorMessage?: string | null;
 }
 
 export interface PostMetrics {
@@ -92,6 +94,8 @@ export interface PublishRecord {
   status: "queued" | "succeeded" | "failed";
   createdAt: string;
   detail: string;
+  platformPostId?: string | null;
+  errorMessage?: string | null;
 }
 
 export interface MetricsHistoryItem {

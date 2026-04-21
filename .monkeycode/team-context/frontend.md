@@ -288,17 +288,23 @@
 - 已验证并接通素材上传关联回填展示：上传时传 `postId` 后，页面刷新后会同时显示更新后的 `assetIds` 和 `assets`。
 - 已按第四轮后端契约展示生成与发布反馈：`generate-copy` 展示 `message`，`generate-images` 展示 `message`，`publish` 展示 `publishStatus` 和 `message`。
 - 已核对看板字段映射仍对应后端聚合字段：`totalPosts`、`totalViews`、`totalLikes`、`totalFavorites`、`totalComments`、`followConversions`、`pendingReviewCount`、`publishedCount`。
+- 已按第五轮待命任务补充真实发布状态展示：`publishing`、`published`、`publish_failed` 在工作台、列表页、详情页均有明确状态反馈。
+- 已在详情页增加发布状态回写区，展示 `platformPostId`、发布时间和最近一次发布结果说明，便于核对后端回写是否生效。
+- 已将详情页“指标历史占位”改为真实指标历史展示，直接渲染 `metricsHistory` 的浏览、点赞、收藏、评论、关注转化快照。
+- 已继续收口第五轮后端新增字段：详情页发布记录现已展示 `platformPostId`、`errorMessage`，工作台发布反馈也会优先透出平台 ID 或失败原因。
+- 已在本轮再次尝试执行 `npm run lint`，确认当前环境仍因缺少 `next` 依赖而无法完成 `lint` / `build` 验证。
 
 ## 当前问题
-- 前端依赖尚未安装，当前无法在本地直接执行 `pnpm --dir frontend lint` 或 `next` 相关命令验证页面。
+- 前端依赖尚未安装，当前执行 `npm run lint` 仍报 `next: not found`，因此无法在本地完成 `next lint` 或 `next build`。
 - 工作台当前默认选择第一篇可编辑草稿；如果后端后续支持显式“当前工作草稿”概念，前端还需要再收口选择逻辑。
-- 当前页面已接线生成与发布入口，但由于依赖未安装，尚未执行 `next lint` / `next build` 以及真实浏览器端回归验证。
+- 当前页面已切到第五轮真实状态和指标展示，但尚未完成浏览器端回归验证。
 
 ## 需要协作
 - 需要后端继续保持 `GET /api/posts/{post_id}` 中 `reviewRecords`、`publishRecords`、`metricsHistory` 三个字段稳定，不要在联调阶段改名。
 - 后端已提供 `POST /api/posts/{post_id}/publish-result` 和 `POST /api/posts/{post_id}/metrics-snapshots`，前端需按现有详情返回结构验证 `publishStatus`、`platformPostId`、`errorMessage` 和指标历史追加结果。
+- 需要后端保持 `platformPostId`、`publishedAt` 和发布失败明细的回写结构稳定，避免前端状态展示反复调整。
 
 ## 下一步
-- 补详情页或列表页对 `publishing`、`published`、`publish_failed` 的明确状态展示，并验证从发布到回写后的页面反馈。
-- 补 `publishRecords` 中 `platformPostId`、`errorMessage` 的展示层次，避免成功和失败记录信息丢失。
 - 依赖可用后补 `next lint` 或 `next build` 基础验证，并回归检查生成、发布、上传和指标历史展示四条链路。
+- 待后端第五轮持久化代码完全合入后，继续回归服务重启后的帖子、发布记录和指标历史是否仍能在页面保持一致。
+- 如后端后续开放 `GET /api/assets?postId=...` 的更多筛选或分页能力，前端再补素材库页的真实查询与筛选交互。

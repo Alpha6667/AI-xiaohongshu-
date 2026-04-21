@@ -4,6 +4,46 @@ import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui"
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
 
+function getStatusTone(status: PostDetail["status"]) {
+  if (status === "published") {
+    return "positive" as const;
+  }
+
+  if (status === "publish_failed") {
+    return "critical" as const;
+  }
+
+  if (status === "in_review" || status === "publishing") {
+    return "warm" as const;
+  }
+
+  if (status === "approved") {
+    return "positive" as const;
+  }
+
+  return "neutral" as const;
+}
+
+function getPublishSummary(post: PostDetail) {
+  const latestRecord = post.publishRecords.at(-1);
+
+  if (post.status === "published") {
+    return latestRecord?.platformPostId ?? post.platformPostId
+      ? `已完成发布，平台回写 ID：${latestRecord?.platformPostId ?? post.platformPostId}`
+      : "已完成发布，等待平台 ID 展示。";
+  }
+
+  if (post.status === "publish_failed") {
+    return latestRecord?.errorMessage || latestRecord?.detail || "发布失败，等待后端补充更明确的错误信息。";
+  }
+
+  if (post.status === "publishing") {
+    return latestRecord?.detail || "发布请求已入队，等待结果回写。";
+  }
+
+  return post.platformPostId ? `当前已记录平台 ID：${post.platformPostId}` : "当前还未进入平台发布结果回写阶段。";
+}
+
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let post: PostDetail;
@@ -24,11 +64,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="Post Detail" title={post.title} description="详情页展示草稿内容、审核记录、发布记录和指标历史占位。" />
+        <SectionHeading eyebrow="Post Detail" title={post.title} description="详情页直接展示真实草稿、发布结果回写和指标历史快照。" />
 
         <div className="detail-overview">
           <div>
-            <StatusPill label={post.status} tone={post.status === "published" ? "positive" : post.status === "in_review" ? "warm" : "neutral"} />
+            <StatusPill label={post.status} tone={getStatusTone(post.status)} />
             <p className="detail-topic">主题：{post.topic}</p>
           </div>
           <Link href="/posts" className="text-link">
@@ -45,6 +85,22 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 {post.tags.map((tag) => (
                   <StatusPill key={tag} label={`#${tag}`} />
                 ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard className="nested-card">
+              <SectionHeading eyebrow="Publish State" title="发布状态回写" description="第五轮开始直接展示发布中、成功、失败三类真实状态。" />
+              <div className="detail-meta-grid">
+                <article className="detail-meta-card">
+                  <span className="eyebrow">Status</span>
+                  <strong>{post.status}</strong>
+                  <p>{getPublishSummary(post)}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">Platform</span>
+                  <strong>{post.publishRecords.at(-1)?.platformPostId || post.platformPostId || "待回写"}</strong>
+                  <p>{post.publishedAt ? `发布时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : "当前还没有平台发布时间回写。"}</p>
+                </article>
               </div>
             </SectionCard>
 
@@ -69,7 +125,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Metrics" title="指标历史占位" description="后续直接对应 `GET /api/posts/{post_id}` 返回的 `metricsHistory`。" />
+              <SectionHeading eyebrow="Metrics" title="指标历史" description="当前直接渲染详情接口返回的 `metricsHistory` 真实快照。" />
               <div className="history-stack">
                 {post.metricsHistory.length > 0 ? (
                   post.metricsHistory.map((item) => (
@@ -80,6 +136,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                         <span>点赞 {item.likes.toLocaleString()}</span>
                         <span>收藏 {item.favorites.toLocaleString()}</span>
                         <span>评论 {item.comments.toLocaleString()}</span>
+                        <span>关注转化 {item.followConversions.toLocaleString()}</span>
                       </div>
                     </article>
                   ))
@@ -110,8 +167,13 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 {post.publishRecords.length > 0 ? (
                   post.publishRecords.map((record) => (
                     <article key={record.id} className="plain-row-card">
-                      <strong>{record.status}</strong>
+                      <div className="tag-row">
+                        <StatusPill label={record.status} tone={record.status === "failed" ? "critical" : record.status === "succeeded" ? "positive" : "warm"} />
+                        <span className="muted-inline">{new Date(record.createdAt).toLocaleString("zh-CN")}</span>
+                      </div>
                       <p>{record.detail}</p>
+                      {record.platformPostId ? <p className="muted-copy">平台帖子 ID：{record.platformPostId}</p> : null}
+                      {record.errorMessage ? <p className="muted-copy">失败原因：{record.errorMessage}</p> : null}
                     </article>
                   ))
                 ) : (
