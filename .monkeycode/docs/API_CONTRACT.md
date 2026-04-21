@@ -14,3 +14,24 @@
 - `POST /api/posts/{post_id}/approve`
 - `POST /api/posts/{post_id}/reject`
 - `POST /api/posts/{post_id}/publish`
+
+## 第二轮联调固定字段
+
+### `GET /api/posts/{post_id}`
+
+- 详情响应固定包含以下明细字段：
+  - `reviewRecords`
+  - `publishRecords`
+  - `metricsHistory`
+
+### `GET /api/dashboard/summary`
+
+- 本轮保持聚合字段稳定，不扩展趋势字段：
+  - `totalPosts`
+  - `totalViews`
+  - `totalLikes`
+  - `totalFavorites`
+  - `totalComments`
+  - `followConversions`
+  - `pendingReviewCount`
+  - `publishedCount`

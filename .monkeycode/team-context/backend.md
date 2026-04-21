@@ -184,17 +184,22 @@
 - 已用内存仓储先实现草稿 CRUD、素材上传占位、审核流转、生成任务入口、发布入口和看板汇总接口。
 - 已为发布入口加入状态校验与去重保护，支持 `approved -> publishing` 的最小状态流转。
 - 已预留指标快照追加存储结构，并在仓储中提供种子数据，便于前端和联调阶段直接获取稳定 JSON 结构。
+- 已在 `.monkeycode/docs/API_CONTRACT.md` 文档化第二轮联调固定字段：详情接口固定返回 `reviewRecords`、`publishRecords`、`metricsHistory`，看板接口保持聚合字段稳定。
+- 已补最小后端接口测试 `backend/tests/test_api_minimal.py`，覆盖草稿 CRUD、审核流转、发布前状态校验。
+- 已在 `worker/app/tasks` 增加任务入口占位：`copy_generation.py`、`image_generation.py`、`publish.py`、`metrics_collection.py`，并统一状态字段 `pending/running/succeeded/failed`。
 
 ## 当前问题
 - 当前后端使用内存仓储占位，尚未接入真实数据库和持久化层，服务重启后数据不会保留。
 - `publish` 入口目前只创建 `PublishLog` 并把帖子置为 `publishing`，尚未实现成功/失败回写和真实平台交互。
 - 指标采集目前只有汇总与快照结构占位，尚未开放独立采集接口或 worker 任务执行逻辑。
+- 最小测试依赖 `fastapi.testclient` 运行环境，CI 需确保先安装 backend 依赖后再执行测试。
 
 ## 需要协作
 - 需要前端确认详情页是否直接消费 `reviewRecords`、`publishRecords`、`metricsHistory` 这三个字段名称，避免后续联调时再次改契约。
 - 需要协调方确认下一轮是优先接数据库持久化，还是先补测试与 worker 任务占位，以便安排实现顺序。
+- 需要前端确认 `POST /api/assets/upload` 是否立即需要 `postId` 关联字段，若需要我下一轮补充到契约和服务层。
 
 ## 下一步
 - 补充数据库持久化实现或仓储抽象，替换当前内存存储。
 - 完善发布成功/失败回写、`platform_post_id` 更新以及指标快照追加写入入口。
-- 增加基础接口测试，覆盖草稿 CRUD、审核流转和发布前状态校验。
+- 扩展测试覆盖生成任务入口、看板稳定字段与素材关联接口。

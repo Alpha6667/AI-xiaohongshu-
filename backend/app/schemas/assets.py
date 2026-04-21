@@ -5,6 +5,7 @@ class AssetUploadRequest(BaseModel):
     name: str
     fileName: str
     contentType: str
+    postId: str | None = None
 
 
 class AssetResponse(BaseModel):
