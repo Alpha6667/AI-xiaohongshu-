@@ -1,9 +1,10 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navItems = [
+const navItems: Array<{ href: Route; label: string }> = [
   { href: "/", label: "内容工作台" },
   { href: "/dashboard", label: "数据看板" },
   { href: "/posts", label: "帖子库" },
@@ -11,7 +12,7 @@ const navItems = [
   { href: "/assets", label: "素材库" },
 ];
 
-function matchPath(pathname: string, href: string) {
+function matchPath(pathname: string, href: Route) {
   if (href === "/") {
     return pathname === href;
   }

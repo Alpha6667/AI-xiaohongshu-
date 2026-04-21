@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    allowedHosts: [".monkeycode-ai.online"],
+    allowedDevOrigins: [".monkeycode-ai.online"],
     typedRoutes: true,
   },
 };

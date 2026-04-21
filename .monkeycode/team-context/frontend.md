@@ -313,11 +313,16 @@
 - 已将详情页“指标历史占位”改为真实指标历史展示，直接渲染 `metricsHistory` 的浏览、点赞、收藏、评论、关注转化快照。
 - 已继续收口第五轮后端新增字段：详情页发布记录现已展示 `platformPostId`、`errorMessage`，工作台发布反馈也会优先透出平台 ID 或失败原因。
 - 已在本轮再次尝试执行 `npm run lint`，确认当前环境仍因缺少 `next` 依赖而无法完成 `lint` / `build` 验证。
+- 已在 `frontend/` 安装项目依赖，解决 `next: not found` 阻塞；当前 `next`、`react`、`react-dom` 及类型依赖已可用于本地校验。
+- 已补充 `eslint`、`eslint-config-next` 和 `.eslintrc.json`，使 `npm run lint` 能以非交互方式执行。
+- 已将 `next.config.ts` 中与当前 Next 15 不兼容的 `allowedHosts` 修正为 `allowedDevOrigins`，解除 `build` 的配置类型报错。
+- 已修复 `typedRoutes` 下导航 `Link` 的路由类型问题，以及 mock 数据层的无用变量 lint 错误。
+- 当前环境验证结果：`npm run lint` 已通过，`npm run build` 已通过。
 
 ## 当前问题
-- 前端依赖尚未安装，当前执行 `npm run lint` 仍报 `next: not found`，因此无法在本地完成 `next lint` 或 `next build`。
 - 工作台当前默认选择第一篇可编辑草稿；如果后端后续支持显式“当前工作草稿”概念，前端还需要再收口选择逻辑。
 - 当前页面已切到第五轮真实状态和指标展示，但尚未完成浏览器端回归验证。
+- 安装依赖后仍有安全与维护提示：`npm install` 输出了 1 个 critical vulnerability，且部分上游包存在 deprecated 提示；本轮未额外处理升级，避免扩大范围。
 
 ## 需要协作
 - 需要后端继续保持 `GET /api/posts/{post_id}` 中 `reviewRecords`、`publishRecords`、`metricsHistory` 三个字段稳定，不要在联调阶段改名。
@@ -325,6 +330,6 @@
 - 需要后端保持 `platformPostId`、`publishedAt` 和发布失败明细的回写结构稳定，避免前端状态展示反复调整。
 
 ## 下一步
-- 依赖可用后补 `next lint` 或 `next build` 基础验证，并回归检查生成、发布、上传和指标历史展示四条链路。
+- 继续做浏览器端回归，重点检查生成、发布、上传和指标历史展示四条链路。
 - 待后端第五轮持久化代码完全合入后，继续回归服务重启后的帖子、发布记录和指标历史是否仍能在页面保持一致。
 - 如后端后续开放 `GET /api/assets?postId=...` 的更多筛选或分页能力，前端再补素材库页的真实查询与筛选交互。

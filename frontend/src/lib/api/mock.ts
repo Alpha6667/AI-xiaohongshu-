@@ -236,7 +236,7 @@ export const mockApi = {
     return dashboardSummary;
   },
   listPosts(): PostListItem[] {
-    return posts.map(({ reviewRecords: _reviewRecords, publishRecords: _publishRecords, metricsHistory: _metricsHistory, ...rest }) => rest);
+    return posts;
   },
   getPostById(postId: string) {
     return posts.find((post) => post.id === postId);
