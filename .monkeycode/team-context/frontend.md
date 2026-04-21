@@ -9,6 +9,29 @@
 
 ## 当前分配任务
 
+### 第五轮当前执行任务
+
+- 后端第五轮持久化、发布结果回写、指标快照追加写入已经落库，前端不再等待后端主链路完成。
+- 当前优先级切到展示收口与真实回归，重点验证发布状态流转、发布结果信息和指标历史展示。
+
+### 本轮必须优先完成
+
+1. 发布状态收口
+- 在列表页、详情页或工作台中至少一处明确展示 `publishing`、`published`、`publish_failed`
+- 若页面当前只显示帖子状态，需要核对并正确消费 `publishStatus` 的阶段信息
+
+2. 发布结果信息收口
+- 在详情页优先展示 `publishRecords` 中的 `platformPostId`
+- 发布失败时明确展示 `errorMessage`，避免只有通用失败提示
+
+3. 指标历史真实渲染
+- 用后端当前返回的 `metricsHistory` 验证快照追加后是否能形成真实历史序列
+- 若仍有字段不足以支撑图表，必须在同步区写清具体缺口，不自行假设字段
+
+4. 环境验证
+- 依赖可用后优先执行 `next lint` 或 `next build`
+- 若仍卡在依赖或命令不可用，需把阻塞信息写入同步区
+
 ### 第五轮待命任务
 
 - 第五轮以前端验证和展示收口为主，等待后端完成持久化与发布/指标链路补全
@@ -273,9 +296,9 @@
 
 ## 需要协作
 - 需要后端继续保持 `GET /api/posts/{post_id}` 中 `reviewRecords`、`publishRecords`、`metricsHistory` 三个字段稳定，不要在联调阶段改名。
-- 如果后端后续增加发布成功/失败回写，前端详情页可继续补 `publishing` 与 `publish_failed` 状态展示。
+- 后端已提供 `POST /api/posts/{post_id}/publish-result` 和 `POST /api/posts/{post_id}/metrics-snapshots`，前端需按现有详情返回结构验证 `publishStatus`、`platformPostId`、`errorMessage` 和指标历史追加结果。
 
 ## 下一步
-- 依赖可用后补 `next lint` 或 `next build` 基础验证，并回归检查生成、发布、上传三条链路。
-- 若后端继续稳定发布回写结构，再补详情页对 `publishing`、`publish_failed` 的展示层次。
-- 如后端后续开放 `GET /api/assets?postId=...` 的更多筛选或分页能力，前端再补素材库页的真实查询与筛选交互。
+- 补详情页或列表页对 `publishing`、`published`、`publish_failed` 的明确状态展示，并验证从发布到回写后的页面反馈。
+- 补 `publishRecords` 中 `platformPostId`、`errorMessage` 的展示层次，避免成功和失败记录信息丢失。
+- 依赖可用后补 `next lint` 或 `next build` 基础验证，并回归检查生成、发布、上传和指标历史展示四条链路。
