@@ -260,22 +260,24 @@
 ## 本轮同步区
 
 ## 已完成
-- 第五轮第一步已完成：将仓储升级为文件持久化实现，`backend/app/repositories/memory.py` 现在会优先从 `backend/data/repository.json` 加载数据，不存在则自动 seed 并落盘。
-- 持久化覆盖对象已纳入同一仓储：`Post`、`Asset`、`ReviewRecord`、`PublishLog`、`MetricsSnapshot`（并保留 `GenerationTask` 的持久化记录）。
-- 已在写路径补持久化落盘：草稿创建/更新、审核记录写入、生成任务创建、发布任务入队、素材上传关联后都会触发 `repository.save()`。
-- 已新增仓储级最小测试 `backend/tests/test_repository_persistence.py`，验证帖子写入后可从落盘文件重载。
-- 已更新 API 最小测试重置逻辑：`backend/tests/test_api_minimal.py` 改为通过 `repository.reset_to_seed()` 重置并同步持久化状态。
+- 第五轮第二步已完成发布结果回写入口：新增 `POST /api/posts/{post_id}/publish-result`，支持把帖子从 `publishing` 回写到 `published` 或 `publish_failed`。
+- 回写能力已支持并落盘：`platform_post_id` 写回、失败错误信息 `errorMessage` 写回、`publishRecords` 历史记录同步保留。
+- 指标追加写入入口已完成：新增 `POST /api/posts/{post_id}/metrics-snapshots`，采用 append 模式写入，保证历史快照不覆盖。
+- 已更新 `.monkeycode/docs/API_CONTRACT.md`，文档化新增接口和 `publish` 相关新增字段（`platformPostId`、`errorMessage`）。
+- 已补第五轮第二步测试：
+  - `test_publish_result_writeback_success_and_failed`
+  - `test_append_metrics_snapshot_keeps_history`
 
 ## 当前问题
-- 当前仅完成第五轮第一步；发布结果回写仍停留在 `publish` 入队后 `publishing` 状态。
-- 尚未实现 `published` / `publish_failed` 的回写入口，也未写入 `platform_post_id` 与失败错误信息。
-- 指标快照目前仍是种子与读取能力，尚未补“追加写入入口”和发布后自动追加策略。
+- 当前发布回写仍为后端手动/任务回调触发，尚未接入真实小红书平台异步回执。
+- 指标快照目前提供手动追加入口，尚未接入真实采集任务自动回填。
 - 测试环境依赖 `fastapi.testclient`，若环境未安装依赖将无法执行 API 级测试。
 
 ## 需要协作
-- 前端可开始验证“重启后数据保留”场景，尤其是帖子与素材关联是否在重启后仍可读取。
-- 第五轮第二步会补发布回写与指标追加，前端暂不需要改字段名，先保留现有展示契约。
+- 前端需要验证发布状态展示从 `publishing` 到 `published/publish_failed` 的实时反馈。
+- 前端需要验证详情页 `publishRecords` 中 `platformPostId` 和 `errorMessage` 的展示策略。
+- 前端可基于 `metricsHistory` 验证指标快照追加后的历史曲线渲染。
 
 ## 下一步
-- 进入第五轮第二步：新增发布结果回写入口，支持 `published`、`publish_failed`、`platform_post_id`、错误信息回写。
-- 增加指标快照追加写入入口，保证历史快照追加而非覆盖，并补对应最小测试。
+- 评估是否需要在 worker 发布任务里直接接入 `publish-result` 回写调用，减少手动触发。
+- 规划下一轮真实平台接入前的错误码与重试策略（仅接口层，不扩展外部平台实现）。

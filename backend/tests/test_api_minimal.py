@@ -216,6 +216,118 @@ class BackendApiMinimalTests(unittest.TestCase):
         )
         self.assertEqual(publish_repeat_resp.status_code, 409)
 
+    def test_publish_result_writeback_success_and_failed(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "发布结果回写",
+                "title": "发布结果回写标题",
+                "body": "发布结果回写正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        self.client.post(
+            f"/api/posts/{post_id}/submit-review",
+            json={"comment": "提交", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{post_id}/approve",
+            json={"comment": "通过", "operator": "qa"},
+        )
+
+        publish_resp = self.client.post(
+            f"/api/posts/{post_id}/publish",
+            json={"comment": "进入发布", "operator": "qa"},
+        )
+        self.assertEqual(publish_resp.status_code, 200)
+
+        writeback_success_resp = self.client.post(
+            f"/api/posts/{post_id}/publish-result",
+            json={
+                "publishStatus": "succeeded",
+                "operator": "worker",
+                "detail": "发布成功",
+                "platformPostId": "xh_new_1001",
+            },
+        )
+        self.assertEqual(writeback_success_resp.status_code, 200)
+        success_payload = writeback_success_resp.json()
+        self.assertEqual(success_payload["status"], "published")
+        self.assertEqual(success_payload["publishStatus"], "succeeded")
+        self.assertEqual(success_payload["platformPostId"], "xh_new_1001")
+
+        detail_after_success = self.client.get(f"/api/posts/{post_id}").json()
+        self.assertEqual(detail_after_success["status"], "published")
+        self.assertEqual(detail_after_success["platformPostId"], "xh_new_1001")
+
+        failed_post_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "发布失败回写",
+                "title": "发布失败标题",
+                "body": "发布失败正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        failed_post_id = failed_post_resp.json()["id"]
+        self.client.post(
+            f"/api/posts/{failed_post_id}/submit-review",
+            json={"comment": "提交", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{failed_post_id}/approve",
+            json={"comment": "通过", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{failed_post_id}/publish",
+            json={"comment": "进入发布", "operator": "qa"},
+        )
+
+        writeback_failed_resp = self.client.post(
+            f"/api/posts/{failed_post_id}/publish-result",
+            json={
+                "publishStatus": "failed",
+                "operator": "worker",
+                "detail": "发布失败",
+                "errorMessage": "platform timeout",
+            },
+        )
+        self.assertEqual(writeback_failed_resp.status_code, 200)
+        failed_payload = writeback_failed_resp.json()
+        self.assertEqual(failed_payload["status"], "publish_failed")
+        self.assertEqual(failed_payload["publishStatus"], "failed")
+        self.assertEqual(failed_payload["errorMessage"], "platform timeout")
+
+    def test_append_metrics_snapshot_keeps_history(self) -> None:
+        before_detail_resp = self.client.get("/api/posts/post_seed_published")
+        self.assertEqual(before_detail_resp.status_code, 200)
+        before_history = before_detail_resp.json()["metricsHistory"]
+        before_count = len(before_history)
+
+        append_resp = self.client.post(
+            "/api/posts/post_seed_published/metrics-snapshots",
+            json={
+                "views": 19000,
+                "likes": 1400,
+                "favorites": 900,
+                "comments": 130,
+                "followConversions": 101,
+            },
+        )
+        self.assertEqual(append_resp.status_code, 201)
+        self.assertEqual(append_resp.json()["views"], 19000)
+
+        after_detail_resp = self.client.get("/api/posts/post_seed_published")
+        self.assertEqual(after_detail_resp.status_code, 200)
+        after_history = after_detail_resp.json()["metricsHistory"]
+        self.assertEqual(len(after_history), before_count + 1)
+        self.assertEqual(after_history[-1]["views"], 19000)
+
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")
         self.assertEqual(summary_resp.status_code, 200)

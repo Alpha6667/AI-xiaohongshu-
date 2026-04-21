@@ -10,3 +10,5 @@ class PublishLog:
     status: PublishStatus
     detail: str
     created_at: str
+    platform_post_id: str | None = None
+    error_message: str | None = None

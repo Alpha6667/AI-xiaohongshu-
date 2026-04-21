@@ -46,6 +46,25 @@ class PublishResponse(BaseModel):
     detail: str
     createdAt: str
     message: str
+    platformPostId: str | None = None
+    errorMessage: str | None = None
+
+
+class PublishResultWritebackRequest(BaseModel):
+    publishStatus: PublishStatus
+    operator: str = "worker"
+    detail: str = ""
+    platformPostId: str | None = None
+    errorMessage: str | None = None
+
+
+class MetricsSnapshotAppendRequest(BaseModel):
+    views: int
+    likes: int
+    favorites: int
+    comments: int
+    followConversions: int
+    snapshotAt: str | None = None
 
 
 class AssetSummaryResponse(BaseModel):
@@ -75,9 +94,11 @@ class ReviewRecordResponse(BaseModel):
 
 class PublishLogResponse(BaseModel):
     id: str
-    status: str
+    status: PublishStatus
     detail: str
     createdAt: str
+    platformPostId: str | None = None
+    errorMessage: str | None = None
 
 
 class MetricsSnapshotResponse(BaseModel):

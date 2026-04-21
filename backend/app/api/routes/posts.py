@@ -3,15 +3,19 @@ from fastapi import APIRouter, status
 from app.models.enums import GenerationTaskType
 from app.schemas.posts import (
     GenerateTaskRequest,
+    MetricsSnapshotAppendRequest,
+    MetricsSnapshotResponse,
     PostCreateRequest,
     PostDetailResponse,
     PostSummaryResponse,
     PostUpdateRequest,
+    PublishResultWritebackRequest,
     PublishResponse,
     ReviewRequest,
     TaskRecordResponse,
 )
 from app.services.posts import (
+    append_metrics_snapshot,
     approve_post,
     create_generation_task,
     create_post,
@@ -21,6 +25,7 @@ from app.services.posts import (
     reject_post,
     submit_review,
     update_post,
+    writeback_publish_result,
 )
 
 
@@ -75,3 +80,13 @@ def generate_images_route(post_id: str, payload: GenerateTaskRequest) -> TaskRec
 @router.post("/{post_id}/publish", response_model=PublishResponse)
 def publish_post_route(post_id: str, payload: ReviewRequest) -> PublishResponse:
     return publish_post(post_id, payload)
+
+
+@router.post("/{post_id}/publish-result", response_model=PublishResponse)
+def writeback_publish_result_route(post_id: str, payload: PublishResultWritebackRequest) -> PublishResponse:
+    return writeback_publish_result(post_id, payload)
+
+
+@router.post("/{post_id}/metrics-snapshots", response_model=MetricsSnapshotResponse, status_code=status.HTTP_201_CREATED)
+def append_metrics_snapshot_route(post_id: str, payload: MetricsSnapshotAppendRequest) -> MetricsSnapshotResponse:
+    return append_metrics_snapshot(post_id, payload)

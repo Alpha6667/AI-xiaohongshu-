@@ -15,6 +15,8 @@
 - `POST /api/posts/{post_id}/approve`
 - `POST /api/posts/{post_id}/reject`
 - `POST /api/posts/{post_id}/publish`
+- `POST /api/posts/{post_id}/publish-result`
+- `POST /api/posts/{post_id}/metrics-snapshots`
 
 ## 第二轮联调固定字段
 
@@ -58,6 +60,31 @@
   - `detail`
   - `createdAt`
   - `message`
+  - `platformPostId`（nullable）
+  - `errorMessage`（nullable）
+
+### `POST /api/posts/{post_id}/publish-result`
+
+- 用于 worker 或后端任务回写发布结果。
+- 请求体：
+  - `publishStatus`（`succeeded|failed`）
+  - `operator`（string，可选）
+  - `detail`（string，可选）
+  - `platformPostId`（string，可选，发布成功时写回）
+  - `errorMessage`（string，可选，发布失败时写回）
+- 响应体：沿用 `publish` 响应结构，返回回写后的状态与信息。
+
+### `POST /api/posts/{post_id}/metrics-snapshots`
+
+- 用于追加写入帖子指标快照，不覆盖历史。
+- 请求体：
+  - `views`
+  - `likes`
+  - `favorites`
+  - `comments`
+  - `followConversions`
+  - `snapshotAt`（可选，不传则后端自动生成）
+- 响应体：返回新写入的快照记录。
 
 ### `GET /api/dashboard/summary`
 

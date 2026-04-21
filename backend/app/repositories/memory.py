@@ -108,6 +108,8 @@ class InMemoryRepository:
                 status=PublishStatus(value["status"]),
                 detail=value["detail"],
                 created_at=value["created_at"],
+                platform_post_id=value.get("platform_post_id"),
+                error_message=value.get("error_message"),
             )
             for key, value in (payload.get("publish_logs", {}) or {}).items()
         }

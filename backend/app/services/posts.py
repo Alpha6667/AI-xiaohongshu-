@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 
 from app.models.enums import GenerationTaskType, PostStatus, PublishStatus, ReviewAction, TaskStatus
 from app.models.generation_task import GenerationTask
+from app.models.metrics_snapshot import MetricsSnapshot
 from app.models.post import Post
 from app.models.publish_log import PublishLog
 from app.models.review_record import ReviewRecord
@@ -9,10 +10,12 @@ from app.repositories.memory import new_id, now_iso, repository
 from app.schemas.posts import (
     AssetSummaryResponse,
     GenerateTaskRequest,
+    MetricsSnapshotAppendRequest,
     MetricsSnapshotResponse,
     PostCreateRequest,
     PostDetailResponse,
     PostMetricsResponse,
+    PublishResultWritebackRequest,
     PostSummaryResponse,
     PostUpdateRequest,
     PublishLogResponse,
@@ -65,6 +68,8 @@ def _serialize_publish_records(post: Post) -> list[PublishLogResponse]:
             status=record.status,
             detail=record.detail,
             createdAt=record.created_at,
+            platformPostId=record.platform_post_id,
+            errorMessage=record.error_message,
         )
         for record_id in post.publish_log_ids
         if (record := repository.publish_logs.get(record_id)) is not None
@@ -281,4 +286,84 @@ def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
         detail=log.detail,
         createdAt=log.created_at,
         message="Publish request accepted and queued",
+        platformPostId=log.platform_post_id,
+        errorMessage=log.error_message,
+    )
+
+
+def _get_latest_publish_log(post: Post) -> PublishLog:
+    for log_id in reversed(post.publish_log_ids):
+        log = repository.publish_logs.get(log_id)
+        if log is not None:
+            return log
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Publish log not found for post")
+
+
+def writeback_publish_result(post_id: str, payload: PublishResultWritebackRequest) -> PublishResponse:
+    post = _get_post_or_404(post_id)
+    if post.status != PostStatus.PUBLISHING:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only publishing posts can write back result")
+    if payload.publishStatus == PublishStatus.QUEUED:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Writeback status cannot be queued")
+
+    log = _get_latest_publish_log(post)
+    if log.status != PublishStatus.QUEUED:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Latest publish log is not queued")
+
+    detail = payload.detail.strip() if payload.detail.strip() else f"Publish result from {payload.operator}"
+    log.detail = detail
+    log.status = payload.publishStatus
+
+    if payload.publishStatus == PublishStatus.SUCCEEDED:
+        post.status = PostStatus.PUBLISHED
+        post.published_at = now_iso()
+        if payload.platformPostId is not None:
+            post.platform_post_id = payload.platformPostId
+            log.platform_post_id = payload.platformPostId
+        log.error_message = None
+    else:
+        post.status = PostStatus.PUBLISH_FAILED
+        log.error_message = payload.errorMessage or payload.detail or "Publish failed"
+        log.platform_post_id = None
+
+    post.updated_at = now_iso()
+    repository.save()
+    return PublishResponse(
+        publishLogId=log.id,
+        postId=post.id,
+        status=post.status,
+        publishStatus=log.status,
+        detail=log.detail,
+        createdAt=log.created_at,
+        message="Publish result writeback completed",
+        platformPostId=log.platform_post_id,
+        errorMessage=log.error_message,
+    )
+
+
+def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest) -> MetricsSnapshotResponse:
+    post = _get_post_or_404(post_id)
+    timestamp = payload.snapshotAt or now_iso()
+    snapshot = MetricsSnapshot(
+        id=new_id("metric"),
+        post_id=post.id,
+        views=payload.views,
+        likes=payload.likes,
+        favorites=payload.favorites,
+        comments=payload.comments,
+        follow_conversions=payload.followConversions,
+        snapshot_at=timestamp,
+    )
+    history = repository.metrics_snapshots.setdefault(post.id, [])
+    history.append(snapshot)
+    post.updated_at = now_iso()
+    repository.save()
+    return MetricsSnapshotResponse(
+        id=snapshot.id,
+        snapshotAt=snapshot.snapshot_at,
+        views=snapshot.views,
+        likes=snapshot.likes,
+        favorites=snapshot.favorites,
+        comments=snapshot.comments,
+        followConversions=snapshot.follow_conversions,
     )
