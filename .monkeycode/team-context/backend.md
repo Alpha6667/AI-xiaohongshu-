@@ -213,6 +213,10 @@
 - 已在 `.monkeycode/docs/API_CONTRACT.md` 文档化第二轮联调固定字段：详情接口固定返回 `reviewRecords`、`publishRecords`、`metricsHistory`，看板接口保持聚合字段稳定。
 - 已补最小后端接口测试 `backend/tests/test_api_minimal.py`，覆盖草稿 CRUD、审核流转、发布前状态校验。
 - 已在 `worker/app/tasks` 增加任务入口占位：`copy_generation.py`、`image_generation.py`、`publish.py`、`metrics_collection.py`，并统一状态字段 `pending/running/succeeded/failed`。
+- 已处理联调问题：`POST /api/assets/upload` 已支持可选 `postId` 并自动回填到帖子 `assetIds`，同时增加对 `publishing/published` 状态的保护。
+- 已补联调相关测试增强：
+  - 素材上传关联测试：`test_asset_upload_with_post_id_association`
+  - 看板字段稳定性测试：`test_dashboard_summary_fields_stable`
 
 ## 当前问题
 - 当前后端使用内存仓储占位，尚未接入真实数据库和持久化层，服务重启后数据不会保留。
@@ -223,9 +227,11 @@
 ## 需要协作
 - 需要前端确认详情页是否直接消费 `reviewRecords`、`publishRecords`、`metricsHistory` 这三个字段名称，避免后续联调时再次改契约。
 - 需要协调方确认下一轮是优先接数据库持久化，还是先补测试与 worker 任务占位，以便安排实现顺序。
-- 需要前端确认 `POST /api/assets/upload` 是否立即需要 `postId` 关联字段，若需要我下一轮补充到契约和服务层。
+- 仍待前端验证：
+  - 前端在真实联调中验证素材上传传入 `postId` 后，详情页 `assetIds` 是否即时刷新。
+  - 前端验证看板接口字段集合与页面映射是否一致（`totalPosts`、`totalViews`、`totalLikes`、`totalFavorites`、`totalComments`、`followConversions`、`pendingReviewCount`、`publishedCount`）。
 
 ## 下一步
 - 补充数据库持久化实现或仓储抽象，替换当前内存存储。
 - 完善发布成功/失败回写、`platform_post_id` 更新以及指标快照追加写入入口。
-- 扩展测试覆盖生成任务入口、看板稳定字段与素材关联接口。
+- 根据前端第三轮联调反馈继续修正字段、错误码和边界校验，不扩展数据库与真实平台链路。

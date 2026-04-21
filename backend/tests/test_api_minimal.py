@@ -127,6 +127,53 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(publish_resp.status_code, 200)
         self.assertEqual(publish_resp.json()["status"], "publishing")
 
+    def test_asset_upload_with_post_id_association(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "素材关联",
+                "title": "素材关联标题",
+                "body": "素材关联正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        upload_resp = self.client.post(
+            "/api/assets/upload",
+            json={
+                "name": "主图",
+                "fileName": "cover.jpg",
+                "contentType": "image/jpeg",
+                "postId": post_id,
+            },
+        )
+        self.assertEqual(upload_resp.status_code, 201)
+        asset_id = upload_resp.json()["id"]
+
+        detail_resp = self.client.get(f"/api/posts/{post_id}")
+        self.assertEqual(detail_resp.status_code, 200)
+        self.assertIn(asset_id, detail_resp.json()["assetIds"])
+
+    def test_dashboard_summary_fields_stable(self) -> None:
+        summary_resp = self.client.get("/api/dashboard/summary")
+        self.assertEqual(summary_resp.status_code, 200)
+
+        payload = summary_resp.json()
+        expected_keys = {
+            "totalPosts",
+            "totalViews",
+            "totalLikes",
+            "totalFavorites",
+            "totalComments",
+            "followConversions",
+            "pendingReviewCount",
+            "publishedCount",
+        }
+        self.assertEqual(set(payload.keys()), expected_keys)
+
 
 if __name__ == "__main__":
     unittest.main()
