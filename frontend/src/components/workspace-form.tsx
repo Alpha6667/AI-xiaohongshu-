@@ -17,6 +17,46 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  async function handleGenerateCopy() {
+    setPending(true);
+    setNotice(null);
+    try {
+      const task = await apiClient.posts.generateCopy(post.id, {
+        operator: "frontend-operator",
+        payload: {
+          topic,
+          title,
+        },
+      });
+      setNotice(`已触发文案生成任务 ${task.taskId}，当前状态 ${task.status}。`);
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "触发文案生成失败");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleGenerateImages() {
+    setPending(true);
+    setNotice(null);
+    try {
+      const task = await apiClient.posts.generateImages(post.id, {
+        operator: "frontend-operator",
+        payload: {
+          title,
+          tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean).join(","),
+        },
+      });
+      setNotice(`已触发图片生成任务 ${task.taskId}，当前状态 ${task.status}。`);
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "触发图片生成失败");
+    } finally {
+      setPending(false);
+    }
+  }
+
   async function handleSave() {
     setPending(true);
     setNotice(null);
@@ -48,6 +88,23 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "提交审核失败");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handlePublish() {
+    setPending(true);
+    setNotice(null);
+    try {
+      const publishLog = await apiClient.posts.publish(post.id, {
+        comment,
+        operator: "frontend-operator",
+      });
+      setNotice(`已触发发布请求 ${publishLog.publishLogId}，当前帖子状态 ${publishLog.status}。`);
+      startTransition(() => router.refresh());
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "触发发布失败");
     } finally {
       setPending(false);
     }
@@ -95,14 +152,17 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
         <button type="button" onClick={handleSave} disabled={pending}>
           {pending ? "处理中..." : "保存草稿"}
         </button>
-        <button type="button" disabled>
+        <button type="button" onClick={handleGenerateCopy} disabled={pending}>
           生成文案
         </button>
-        <button type="button" disabled>
+        <button type="button" onClick={handleGenerateImages} disabled={pending}>
           生成图片
         </button>
         <button type="button" onClick={handleSubmitReview} disabled={pending || post.status !== "draft"}>
           提交审核
+        </button>
+        <button type="button" onClick={handlePublish} disabled={pending || post.status !== "approved"}>
+          发布内容
         </button>
       </div>
 

@@ -1,5 +1,15 @@
 import { mockApi } from "./mock";
-import type { AssetUploadPayload, AssetUploadResponse, DashboardSummary, PostDetail, PostListItem, ReviewQueueItem } from "./types";
+import type {
+  AssetUploadPayload,
+  AssetUploadResponse,
+  DashboardSummary,
+  GenerationTaskPayload,
+  PostDetail,
+  PostListItem,
+  PublishResponse,
+  ReviewQueueItem,
+  TaskRecordResponse,
+} from "./types";
 
 const API_PREFIX = "/api";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -85,6 +95,18 @@ export const apiClient = {
         body: JSON.stringify(payload),
       });
     },
+    generateCopy(postId: string, payload: GenerationTaskPayload) {
+      return apiFetch<TaskRecordResponse>(endpoint(`/posts/${postId}/generate-copy`), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    generateImages(postId: string, payload: GenerationTaskPayload) {
+      return apiFetch<TaskRecordResponse>(endpoint(`/posts/${postId}/generate-images`), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
     submitReview(postId: string, payload: { comment: string; operator: string }) {
       return apiFetch<PostDetail>(endpoint(`/posts/${postId}/submit-review`), {
         method: "POST",
@@ -99,6 +121,12 @@ export const apiClient = {
     },
     reject(postId: string, payload: { comment: string; operator: string }) {
       return apiFetch<PostDetail>(endpoint(`/posts/${postId}/reject`), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    publish(postId: string, payload: { comment: string; operator: string }) {
+      return apiFetch<PublishResponse>(endpoint(`/posts/${postId}/publish`), {
         method: "POST",
         body: JSON.stringify(payload),
       });

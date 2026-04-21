@@ -228,13 +228,14 @@
 - 已接入 `GET /api/dashboard/summary`、`GET /api/posts`、`GET /api/posts/{post_id}` 并保留现有 UI 结构不做大改。
 - 已完成工作台中的真实保存与 `submit-review` 动作接线，并在审核页接入 `approve`、`reject` 按钮行为。
 - 已在工作台补上 `POST /api/assets/upload` 的真实上传入口，上传时携带 `postId`，成功后会提示素材已关联并刷新页面状态。
+- 已按第四轮待命任务接通 `POST /api/posts/{post_id}/generate-copy`、`POST /api/posts/{post_id}/generate-images`、`POST /api/posts/{post_id}/publish`，补齐按钮加载态、错误反馈和刷新逻辑。
 - 已收敛 mock 使用范围，当前仅保留素材展示卡片本身的本地占位，因为后端尚未提供素材查询列表接口。
 
 ## 当前问题
 - 前端依赖尚未安装，当前无法在本地直接执行 `pnpm --dir frontend lint` 或 `next` 相关命令验证页面。
-- 素材区仍缺少真实查询接口，当前上传后的页面反馈只能体现“关联成功”和 `assetIds` 数量变化，无法渲染真实素材卡片。
+- 第四轮文档要求的素材真实卡片仍无法完成，因为后端目前还没有提供素材查询列表接口，也没有在帖子详情接口中补足素材名称和预览地址。
 - 工作台当前默认选择第一篇可编辑草稿；如果后端后续支持显式“当前工作草稿”概念，前端还需要再收口选择逻辑。
-- 仍未接线的动作是：`generate-copy`、`generate-images`、`publish`，当前只保留按钮或接口边界占位，尚未接入真实请求与结果回填。
+- 当前页面已接线生成与发布入口，但由于依赖未安装，尚未执行 `next lint` / `next build` 以及真实浏览器端回归验证。
 
 ## 需要协作
 - 需要后端继续保持 `GET /api/posts/{post_id}` 中 `reviewRecords`、`publishRecords`、`metricsHistory` 三个字段稳定，不要在联调阶段改名。
@@ -242,6 +243,6 @@
 - 如果后端后续增加发布成功/失败回写，前端详情页可继续补 `publishing` 与 `publish_failed` 状态展示。
 
 ## 下一步
-- 继续把工作台里的生成文案、生成图片、发布动作接到真实接口。
 - 在后端补齐素材查询后，移除素材区剩余的本地占位数据，并把已关联素材改成真实卡片展示。
-- 增加最小页面测试和基础渲染验证，覆盖工作台保存与审核动作。
+- 依赖可用后补 `next lint` 或 `next build` 基础验证，并回归检查生成、发布、上传三条链路。
+- 若后端继续稳定发布回写结构，再补详情页对 `publishing`、`publish_failed` 的展示层次。

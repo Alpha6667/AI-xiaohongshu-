@@ -38,6 +38,27 @@ export interface AssetUploadResponse {
   createdAt: string;
 }
 
+export interface GenerationTaskPayload {
+  operator?: string;
+  payload?: Record<string, object | string | number | boolean | null>;
+}
+
+export interface TaskRecordResponse {
+  taskId: string;
+  postId: string;
+  status: string;
+  taskType: string;
+  createdAt: string;
+}
+
+export interface PublishResponse {
+  publishLogId: string;
+  postId: string;
+  status: PostStatus;
+  detail: string;
+  createdAt: string;
+}
+
 export interface PostMetrics {
   views: number;
   likes: number;

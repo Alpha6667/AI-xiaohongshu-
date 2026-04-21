@@ -63,7 +63,10 @@ export default async function HomePage() {
           <div className="endpoint-stack">
             <code>{apiClient.posts.createEndpoint}</code>
             <code>{"id" in draft ? apiClient.posts.updateEndpoint(draft.id) : apiClient.posts.updateEndpoint("{post_id}")}</code>
+            <code>{"id" in draft ? apiClient.posts.generateCopyEndpoint(draft.id) : apiClient.posts.generateCopyEndpoint("{post_id}")}</code>
+            <code>{"id" in draft ? apiClient.posts.generateImagesEndpoint(draft.id) : apiClient.posts.generateImagesEndpoint("{post_id}")}</code>
             <code>{"id" in draft ? apiClient.posts.submitReviewEndpoint(draft.id) : apiClient.posts.submitReviewEndpoint("{post_id}")}</code>
+            <code>{"id" in draft ? apiClient.posts.publishEndpoint(draft.id) : apiClient.posts.publishEndpoint("{post_id}")}</code>
           </div>
         </SectionCard>
 
