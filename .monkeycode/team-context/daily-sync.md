@@ -28,3 +28,4 @@
 - 当前第五轮主推进已切换为前端，重点收口 `publishing/published/publish_failed` 展示、`platformPostId/errorMessage` 展示和指标历史真实渲染
 - 前端已完成第五轮收口并提交 `bb2a55c`，已补工作台、列表页、详情页的真实发布状态展示与发布记录信息展示
 - 前端已将详情页指标历史切到真实 `metricsHistory` 渲染；当前唯一未完成项为环境验证，`npm run lint` 仍报 `next: not found`
+- 当前决策是不直接开启第六轮，先由前端补依赖环境并恢复 `npm run lint` / `npm run build` 基础验证能力
