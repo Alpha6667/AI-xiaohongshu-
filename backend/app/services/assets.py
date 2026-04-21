@@ -70,4 +70,6 @@ def upload_asset(payload: AssetUploadRequest) -> AssetResponse:
             post.asset_ids.append(asset.id)
             post.updated_at = asset.created_at
 
+    repository.save()
+
     return _serialize_asset(asset)

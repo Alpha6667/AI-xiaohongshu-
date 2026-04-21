@@ -154,6 +154,7 @@ def create_post(payload: PostCreateRequest) -> PostSummaryResponse:
         updated_at=timestamp,
     )
     repository.posts[post.id] = post
+    repository.save()
     return _serialize_post(post)
 
 
@@ -171,6 +172,7 @@ def update_post(post_id: str, payload: PostUpdateRequest) -> PostSummaryResponse
     if "assetIds" in changes:
         post.asset_ids = changes["assetIds"]
     post.updated_at = now_iso()
+    repository.save()
     return _serialize_post(post)
 
 
@@ -186,6 +188,7 @@ def _add_review_record(post: Post, action: ReviewAction, request: ReviewRequest)
     repository.review_records[review.id] = review
     post.review_record_ids.append(review.id)
     post.updated_at = review.created_at
+    repository.save()
     return ReviewRecordResponse(
         id=review.id,
         action=review.action,
@@ -235,6 +238,7 @@ def create_generation_task(post_id: str, task_type: GenerationTaskType, request:
     repository.generation_tasks[task.id] = task
     post.generation_task_ids.append(task.id)
     post.updated_at = task.created_at
+    repository.save()
     return TaskRecordResponse(
         taskId=task.id,
         postId=post.id,
@@ -268,6 +272,7 @@ def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
     post.publish_log_ids.append(log.id)
     post.status = PostStatus.PUBLISHING
     post.updated_at = created_at
+    repository.save()
     return PublishResponse(
         publishLogId=log.id,
         postId=post.id,

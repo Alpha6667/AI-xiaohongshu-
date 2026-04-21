@@ -7,13 +7,7 @@ from app.repositories.memory import repository
 
 
 def reset_repository() -> None:
-    repository.posts.clear()
-    repository.assets.clear()
-    repository.review_records.clear()
-    repository.generation_tasks.clear()
-    repository.publish_logs.clear()
-    repository.metrics_snapshots.clear()
-    repository._seed()
+    repository.reset_to_seed()
 
 
 class BackendApiMinimalTests(unittest.TestCase):
