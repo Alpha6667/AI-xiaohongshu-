@@ -697,6 +697,10 @@ textarea {
   gap: 16px;
 }
 
+.compact-section-head {
+  margin-bottom: 0;
+}
+
 .product-row-card,
 .product-post-row {
   background: rgba(255, 255, 255, 0.62);
@@ -866,6 +870,55 @@ textarea {
   gap: 12px;
 }
 
+.message-task-card,
+.account-card,
+.message-source-card,
+.multi-account-post-row {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.message-task-grid,
+.account-choice-list,
+.account-stat-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.message-task-grid,
+.account-stat-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.account-choice-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.66);
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.account-choice-card:hover {
+  transform: translateY(-1px);
+}
+
+.account-choice-card-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(127, 97, 71, 0.18);
+  background: rgba(127, 97, 71, 0.08);
+}
+
+.account-choice-card p,
+.message-task-card p,
+.account-card p,
+.message-source-card p {
+  margin: 0;
+}
+
 .publish-center-hero,
 .posts-hero {
   margin-top: 6px;
@@ -947,6 +1000,11 @@ textarea {
 
   .action-panel-card {
     position: static;
+  }
+
+  .message-task-grid,
+  .account-stat-grid {
+    grid-template-columns: 1fr;
   }
 }
 

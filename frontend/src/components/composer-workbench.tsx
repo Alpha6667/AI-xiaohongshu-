@@ -6,17 +6,22 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type { AssetSummary, PostDetail, PostListItem } from "../lib/api/types";
-import { buildCopyVariants, getCandidateAssets, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../lib/product";
+import type { AccountOverview, MessageTask } from "../lib/product";
+import { buildCopyVariants, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../lib/product";
 import { StatusPill } from "./ui";
 
 export function ComposerWorkbench({
   post,
   allAssets,
   candidates,
+  accounts,
+  task,
 }: {
   post: PostDetail | null;
   allAssets: AssetSummary[];
   candidates: PostListItem[];
+  accounts: AccountOverview[];
+  task: MessageTask | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -25,19 +30,23 @@ export function ComposerWorkbench({
   const copyVariants = useMemo(() => (post ? buildCopyVariants(post) : []), [post]);
   const imageCandidates = useMemo(() => (post ? getCandidateAssets(post, allAssets) : []), [allAssets, post]);
 
+  const initialAccountId = task?.accountId ?? accounts[0]?.id ?? "";
   const [selectedCopyId, setSelectedCopyId] = useState(copyVariants[0]?.id ?? "");
   const [selectedAssetId, setSelectedAssetId] = useState(imageCandidates[0]?.id ?? "");
+  const [selectedAccountId, setSelectedAccountId] = useState(initialAccountId);
   const [reviewComment, setReviewComment] = useState("这版已经确认完成，可以继续往下走。");
 
   useEffect(() => {
     setSelectedCopyId(copyVariants[0]?.id ?? "");
     setSelectedAssetId(imageCandidates[0]?.id ?? "");
+    setSelectedAccountId(task?.accountId ?? accounts[0]?.id ?? "");
     setReviewComment("这版已经确认完成，可以继续往下走。");
     setNotice(null);
-  }, [copyVariants, imageCandidates, post?.id]);
+  }, [accounts, copyVariants, imageCandidates, post?.id, task?.accountId]);
 
   const selectedCopy = copyVariants.find((item) => item.id === selectedCopyId) ?? copyVariants[0] ?? null;
   const selectedAsset = imageCandidates.find((item) => item.id === selectedAssetId) ?? imageCandidates[0] ?? null;
+  const selectedAccount = accounts.find((item) => item.id === selectedAccountId) ?? accounts[0] ?? null;
   const publishNarrative = post ? getPublishNarrative(post) : null;
   const latestPublishRecord = post?.publishRecords.at(-1);
 
@@ -54,10 +63,10 @@ export function ComposerWorkbench({
         apiClient.posts.generateCopy(post.id, { operator: "frontend-operator", payload: { topic: post.topic, title: post.title } }),
         apiClient.posts.generateImages(post.id, { operator: "frontend-operator", payload: { title: post.title, topic: post.topic } }),
       ]);
-      setNotice(`已刷新 AI 候选：文案任务 ${copyTask.status}，图片任务 ${imageTask.status}。`);
+      setNotice(`已刷新候选内容：文案任务 ${copyTask.status}，图片任务 ${imageTask.status}。`);
       startTransition(() => router.refresh());
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "刷新 AI 候选失败");
+      setNotice(error instanceof Error ? error.message : "刷新候选内容失败");
     } finally {
       setPending(false);
     }
@@ -79,7 +88,7 @@ export function ComposerWorkbench({
         tags: post.tags,
         assetIds: selectedAsset ? [selectedAsset.id] : post.assetIds,
       });
-      setNotice("已把当前选中的文案和图片保存为今天准备发的最终版。");
+      setNotice(`已保存当前确认版。${selectedAccount ? `默认发布账号已选择为 ${selectedAccount.name}。` : ""}`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "保存最终版失败");
@@ -99,23 +108,23 @@ export function ComposerWorkbench({
     try {
       if (action === "submit") {
         await apiClient.posts.submitReview(post.id, { comment: reviewComment, operator: "frontend-operator" });
-        setNotice("已提交确认，接下来可以在工作台里通过或退回。");
+        setNotice("已提交人工确认，接下来可以在这里通过或退回。");
       }
 
       if (action === "approve") {
         await apiClient.posts.approve(post.id, { comment: reviewComment, operator: "frontend-operator" });
-        setNotice("这版已经确认通过，可以交给 OpenClaw 去发。");
+        setNotice(`这版已经确认通过${selectedAccount ? `，准备交给 ${selectedAccount.name}` : ""}。`);
       }
 
       if (action === "reject") {
         await apiClient.posts.reject(post.id, { comment: reviewComment, operator: "frontend-operator" });
-        setNotice("这版已退回修改，可以继续调整文案和图片。");
+        setNotice("这版已退回修改，可以继续调整文案、图片或账号选择。");
       }
 
       if (action === "publish") {
         const publishResult = await apiClient.posts.publish(post.id, { comment: reviewComment, operator: "frontend-operator" });
         const failureType = getFailureTypeLabel(publishResult.failureType);
-        setNotice(`已交给 OpenClaw 去发。当前状态：${publishResult.publishStatus}${failureType ? `，失败分类：${failureType}` : ""}。`);
+        setNotice(`已交给 OpenClaw 去发${selectedAccount ? `，目标账号 ${selectedAccount.name}` : ""}。当前状态：${publishResult.publishStatus}${failureType ? `，失败分类：${failureType}` : ""}。`);
       }
 
       startTransition(() => router.refresh());
@@ -129,8 +138,8 @@ export function ComposerWorkbench({
   if (!post) {
     return (
       <section className="product-empty-card">
-        <strong>今天还没有可操作的主题</strong>
-        <p>等新主题创建完成后，这里会直接进入“生成候选文案和图片、人工挑选最终版、交给 OpenClaw 去发”的工作流。</p>
+        <strong>当前还没有可确认的任务</strong>
+        <p>等消息任务中心里有任务生成完成后，这里会进入“确认候选文案、确认候选图片、选择发布账号、交给 OpenClaw 去发”的工作流。</p>
       </section>
     );
   }
@@ -140,26 +149,50 @@ export function ComposerWorkbench({
       <section className="composer-main-panel">
         <div className="composer-toolbar">
           <div>
-            <span className="eyebrow">今天要发</span>
+            <span className="eyebrow">内容确认台</span>
             <h2>{post.topic}</h2>
-            <p>先选定文案和图片，再决定是否提交确认、通过或交给 OpenClaw 去发。</p>
+            <p>{task ? `这条任务来自 ${task.accountName} 的聊天需求，先确认系统生成好的候选内容，再决定由哪个账号发。` : "先确认系统生成好的候选内容，再决定由哪个账号发。"}</p>
           </div>
 
           <div className="tag-row">
             <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+            {task ? <StatusPill label={task.stageLabel} tone={task.stageTone} /> : null}
             {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
             {getFailureTypeLabel(latestPublishRecord?.failureType) ? <StatusPill label={getFailureTypeLabel(latestPublishRecord?.failureType) ?? ""} tone="critical" /> : null}
           </div>
         </div>
 
+        {task ? (
+          <section className="product-card message-source-card">
+            <div className="product-section-head compact-section-head">
+              <div>
+                <span className="eyebrow">消息来源</span>
+                <h3>这条内容最初是怎么进来的</h3>
+              </div>
+            </div>
+            <div className="detail-meta-grid">
+              <article className="detail-meta-card">
+                <span className="eyebrow">用户消息</span>
+                <strong>聊天入口</strong>
+                <p>{task.sourceMessage}</p>
+              </article>
+              <article className="detail-meta-card">
+                <span className="eyebrow">当前任务进度</span>
+                <strong>{task.stageLabel}</strong>
+                <p>{task.nextAction}</p>
+              </article>
+            </div>
+          </section>
+        ) : null}
+
         <section className="product-card">
           <div className="product-section-head">
             <div>
               <span className="eyebrow">第一步</span>
-              <h3>先看 AI 给出的 3 版文案</h3>
+              <h3>确认系统生成的候选文案</h3>
             </div>
             <button type="button" className="ghost-button" onClick={handleRefreshAICandidates} disabled={pending}>
-              刷新 AI 候选
+              刷新候选内容
             </button>
           </div>
 
@@ -185,7 +218,7 @@ export function ComposerWorkbench({
           <div className="product-section-head">
             <div>
               <span className="eyebrow">第二步</span>
-              <h3>挑今天要配的图片</h3>
+              <h3>确认系统生成的候选图片</h3>
             </div>
             <span className="muted-inline">候选图 {imageCandidates.length} 张</span>
           </div>
@@ -211,9 +244,9 @@ export function ComposerWorkbench({
           <div className="product-section-head">
             <div>
               <span className="eyebrow">第三步</span>
-              <h3>确认手机里的最终预览</h3>
+              <h3>选定发布账号并确认最终预览</h3>
             </div>
-            <strong>准备交给 OpenClaw 的最终版</strong>
+            <strong>准备交给 OpenClaw 的确认版</strong>
           </div>
 
           <div className="preview-layout">
@@ -229,6 +262,11 @@ export function ComposerWorkbench({
 
             <div className="preview-summary">
               <article className="preview-summary-card">
+                <span className="eyebrow">发布账号</span>
+                <strong>{selectedAccount?.name ?? "暂未选择账号"}</strong>
+                <p>{selectedAccount ? `${selectedAccount.handle}，当前状态 ${getAccountStatusLabel(selectedAccount.status)}。` : "先从右侧选择一个要发布的账号。"}</p>
+              </article>
+              <article className="preview-summary-card">
                 <span className="eyebrow">最终文案</span>
                 <strong>{selectedCopy?.title ?? post.title}</strong>
                 <p>{selectedCopy?.summary ?? "当前先用帖子里已有文案。"}</p>
@@ -236,7 +274,7 @@ export function ComposerWorkbench({
               <article className="preview-summary-card">
                 <span className="eyebrow">最终图片</span>
                 <strong>{selectedAsset?.name ?? "暂未选择图片"}</strong>
-                <p>{selectedAsset ? "这张图会被保存为今天准备发送的最终封面。" : "需要先从候选图里挑一张。"}</p>
+                <p>{selectedAsset ? "这张图会被保存为这次任务的最终封面。" : "需要先从候选图里挑一张。"}</p>
               </article>
               {publishNarrative ? (
                 <article className={`state-card state-card-${publishNarrative.tone}`}>
@@ -254,21 +292,37 @@ export function ComposerWorkbench({
           <div className="product-section-head compact-section-head">
             <div>
               <span className="eyebrow">第四步</span>
-              <h3>往下推进</h3>
+              <h3>确认账号并往下推进</h3>
             </div>
           </div>
 
+          <div className="account-choice-list">
+            {accounts.map((account) => {
+              const active = account.id === selectedAccountId;
+
+              return (
+                <button key={account.id} type="button" className={`account-choice-card${active ? " account-choice-card-active" : ""}`} onClick={() => setSelectedAccountId(account.id)}>
+                  <div className="queue-item-head">
+                    <strong>{account.name}</strong>
+                    <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
+                  </div>
+                  <p>{account.summary}</p>
+                </button>
+              );
+            })}
+          </div>
+
           <label className="field-block">
-            <span>给自己留一句操作说明</span>
+            <span>给这次确认留一句说明</span>
             <textarea rows={4} value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} disabled={pending} />
           </label>
 
           <div className="action-column">
-            <button type="button" onClick={handleSaveSelection} disabled={pending || !selectedCopy}>
-              保存今天这版
+            <button type="button" onClick={handleSaveSelection} disabled={pending || !selectedCopy || !selectedAccount}>
+              保存这次确认版
             </button>
             <button type="button" className="secondary-button" onClick={() => handleSubmitReview("submit")} disabled={pending || post.status !== "draft"}>
-              提交确认
+              提交人工确认
             </button>
             <button type="button" className="secondary-button" onClick={() => handleSubmitReview("approve")} disabled={pending || post.status !== "in_review"}>
               确认通过
@@ -276,8 +330,8 @@ export function ComposerWorkbench({
             <button type="button" className="secondary-button" onClick={() => handleSubmitReview("reject")} disabled={pending || post.status !== "in_review"}>
               退回修改
             </button>
-            <button type="button" className="accent-button" onClick={() => handleSubmitReview("publish")} disabled={pending || post.status !== "approved"}>
-              确认这版并交给 OpenClaw 去发
+            <button type="button" className="accent-button" onClick={() => handleSubmitReview("publish")} disabled={pending || post.status !== "approved" || !selectedAccount}>
+              交给 OpenClaw 按此账号去发
             </button>
           </div>
 
@@ -288,8 +342,8 @@ export function ComposerWorkbench({
         <section className="product-card">
           <div className="product-section-head compact-section-head">
             <div>
-              <span className="eyebrow">待处理主题</span>
-              <h3>今天的工作队列</h3>
+              <span className="eyebrow">待确认任务</span>
+              <h3>今天的确认队列</h3>
             </div>
           </div>
 

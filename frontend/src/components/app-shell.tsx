@@ -5,8 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems: Array<{ href: Route; label: string }> = [
-  { href: "/", label: "总览首页" },
-  { href: "/review", label: "发帖工作台" },
+  { href: "/", label: "任务总览" },
+  { href: "/tasks", label: "消息任务中心" },
+  { href: "/accounts", label: "多账号运营" },
+  { href: "/review", label: "内容确认台" },
   { href: "/dashboard", label: "发布中心" },
   { href: "/posts", label: "帖子与数据" },
 ];
@@ -26,9 +28,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <aside className="shell-sidebar">
         <div className="brand-panel">
-          <span className="eyebrow">小红书日常模式</span>
-          <strong>发帖工作台</strong>
-          <p>今天发什么、选哪版、什么时候交给 OpenClaw、发完表现怎么样，都按真实操作顺序组织。</p>
+          <span className="eyebrow">OpenClaw 消息驱动模式</span>
+          <strong>多账号发帖后台</strong>
+          <p>先接住聊天里来的发帖需求，再把任务分发到账号、确认内容、执行发布，最后回到后台看结果和数据。</p>
         </div>
         <nav className="main-nav" aria-label="后台导航">
           {navItems.map((item) => {
@@ -46,17 +48,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="shell-main">
         <header className="topbar">
           <div>
-            <span className="eyebrow">单账号日常发帖闭环</span>
-            <h1>把今天要发的内容一路推进到发布和复盘</h1>
+            <span className="eyebrow">消息 / 任务 / 确认 / 发布 / 数据</span>
+            <h1>把 OpenClaw 收到的发帖需求一路推进到多账号发布和复盘</h1>
           </div>
           <div className="topbar-meta">
             <div>
-              <span className="topbar-label">账号接入</span>
-              <strong>单账号已接入</strong>
+              <span className="topbar-label">消息入口</span>
+              <strong>聊天任务直达后台</strong>
             </div>
             <div>
-              <span className="topbar-label">执行链路</span>
-              <strong>主题到复盘一条线</strong>
+              <span className="topbar-label">运营模式</span>
+              <strong>多账号并行处理</strong>
             </div>
           </div>
         </header>

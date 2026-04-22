@@ -1,5 +1,68 @@
 import type { AssetSummary, PostDetail, PostListItem, PostStatus, PublishRecord } from "./api/types";
 
+type AccountStatus = "online" | "offline" | "busy";
+type MessageTaskStage = "waiting_generation" | "ready_to_confirm" | "waiting_publish" | "publishing" | "published" | "failed";
+
+export interface AccountOverview {
+  id: string;
+  name: string;
+  handle: string;
+  status: AccountStatus;
+  summary: string;
+  lastActiveAt: string;
+  todayTaskCount: number;
+  waitingCount: number;
+  publishedCount: number;
+  totalEngagement: number;
+  bestTopic: string;
+}
+
+export interface MessageTask {
+  id: string;
+  postId: string;
+  accountId: string;
+  accountName: string;
+  sourceMessage: string;
+  requestedAt: string;
+  plannedAt: string;
+  topic: string;
+  title: string;
+  stage: MessageTaskStage;
+  stageLabel: string;
+  stageTone: "neutral" | "warm" | "positive" | "critical";
+  hasCopy: boolean;
+  hasImages: boolean;
+  requiresReview: boolean;
+  nextAction: string;
+}
+
+const accountSeeds = [
+  {
+    id: "account-lulu",
+    name: "小鹿的穿搭日记",
+    handle: "@lulu_outfit",
+    status: "online" as const,
+    summary: "偏穿搭和通勤内容，适合承接今晚的高意图任务。",
+    lastActiveAt: "2026-04-22T11:58:00Z",
+  },
+  {
+    id: "account-yiyi",
+    name: "一一的居家灵感",
+    handle: "@yiyi_home",
+    status: "busy" as const,
+    summary: "今天已有生成中的任务，更适合接家居与空间内容。",
+    lastActiveAt: "2026-04-22T11:32:00Z",
+  },
+  {
+    id: "account-momo",
+    name: "Momo 轻食研究所",
+    handle: "@momo_foodlab",
+    status: "offline" as const,
+    summary: "最近数据不错，但当前账号离线，需要稍后接回。",
+    lastActiveAt: "2026-04-22T08:20:00Z",
+  },
+];
+
 export function sortByUpdatedDesc<T extends { updatedAt: string }>(items: T[]) {
   return [...items].sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
 }
@@ -68,6 +131,11 @@ export function getFailureTypeLabel(failureType?: PublishRecord["failureType"] |
   return null;
 }
 
+function getAssignedAccountSeed(post: Pick<PostListItem, "id" | "topic">) {
+  const raw = `${post.id}${post.topic}`.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return accountSeeds[raw % accountSeeds.length];
+}
+
 export function getWorkspaceCandidates(posts: PostListItem[]) {
   return sortByUpdatedDesc(posts.filter((post) => post.status !== "published"));
 }
@@ -118,7 +186,7 @@ export function getPublishNarrative(post: PostDetail) {
   if (post.status === "approved") {
     return {
       headline: "这条内容已经选定完成，下一步可以交给 OpenClaw 代发。",
-      nextAction: "去发帖工作台确认最终版，然后点击交给 OpenClaw。",
+      nextAction: "去内容确认台确认最终版和发布账号，然后点击交给 OpenClaw。",
       tone: "positive" as const,
     };
   }
@@ -155,14 +223,14 @@ export function getPublishNarrative(post: PostDetail) {
   if (post.status === "in_review") {
     return {
       headline: "这条内容还在人工确认阶段。",
-      nextAction: "先在发帖工作台确认最终文案和图片，再决定是否通过。",
+      nextAction: "先在内容确认台确认系统生成的候选文案、图片和发布账号，再决定是否通过。",
       tone: "warm" as const,
     };
   }
 
   return {
-    headline: "这条内容还在准备中，先把主题、文案和图片挑好。",
-    nextAction: "先去发帖工作台生成候选并选定最终版。",
+    headline: "这条内容还在准备中，先把候选文案和图片补齐。",
+    nextAction: "先去消息任务中心确认系统是否已完成生成，再进入内容确认台。",
     tone: "neutral" as const,
   };
 }
@@ -179,4 +247,156 @@ export function getPerformanceSuggestion(post: PostListItem) {
   }
 
   return "这类主题反馈还一般，建议换角度或缩小切口，再试一版。";
+}
+
+export function buildAccountOverview(posts: PostListItem[]): AccountOverview[] {
+  return accountSeeds.map((seed) => {
+    const accountPosts = posts.filter((post) => getAssignedAccountSeed(post).id === seed.id);
+    const publishedCount = accountPosts.filter((post) => post.status === "published").length;
+    const waitingCount = accountPosts.filter((post) => post.status === "draft" || post.status === "in_review" || post.status === "approved").length;
+    const totalEngagement = accountPosts.reduce((sum, post) => sum + post.latestMetrics.likes + post.latestMetrics.favorites + post.latestMetrics.comments, 0);
+    const bestPost = [...accountPosts].sort((left, right) => (right.latestMetrics.likes + right.latestMetrics.favorites + right.latestMetrics.comments) - (left.latestMetrics.likes + left.latestMetrics.favorites + left.latestMetrics.comments))[0];
+
+    return {
+      ...seed,
+      todayTaskCount: accountPosts.length,
+      waitingCount,
+      publishedCount,
+      totalEngagement,
+      bestTopic: bestPost?.topic ?? "今天还没有已发布样本",
+    };
+  });
+}
+
+export function getAccountForPost(post: Pick<PostListItem, "id" | "topic">, accounts?: AccountOverview[]) {
+  const seed = getAssignedAccountSeed(post);
+  return accounts?.find((item) => item.id === seed.id) ?? {
+    ...seed,
+    todayTaskCount: 0,
+    waitingCount: 0,
+    publishedCount: 0,
+    totalEngagement: 0,
+    bestTopic: "今天还没有已发布样本",
+  };
+}
+
+function getMessageTaskStage(post: PostListItem): Pick<MessageTask, "stage" | "stageLabel" | "stageTone" | "requiresReview" | "nextAction"> {
+  if (post.status === "draft") {
+    return {
+      stage: "waiting_generation",
+      stageLabel: "等待生成完成",
+      stageTone: "neutral",
+      requiresReview: false,
+      nextAction: "等待系统把候选文案和图片补齐，再进入内容确认台。",
+    };
+  }
+
+  if (post.status === "in_review") {
+    return {
+      stage: "ready_to_confirm",
+      stageLabel: "待人工确认",
+      stageTone: "warm",
+      requiresReview: true,
+      nextAction: "已经有候选内容，需要你确认文案、图片和发布账号。",
+    };
+  }
+
+  if (post.status === "approved") {
+    return {
+      stage: "waiting_publish",
+      stageLabel: "待交给 OpenClaw",
+      stageTone: "positive",
+      requiresReview: false,
+      nextAction: "内容已确认完成，下一步可以直接交给 OpenClaw 代发。",
+    };
+  }
+
+  if (post.status === "publishing") {
+    return {
+      stage: "publishing",
+      stageLabel: "发送与审核中",
+      stageTone: "warm",
+      requiresReview: false,
+      nextAction: "OpenClaw 正在执行，不需要重复处理。",
+    };
+  }
+
+  if (post.status === "publish_failed") {
+    return {
+      stage: "failed",
+      stageLabel: "发送失败待处理",
+      stageTone: "critical",
+      requiresReview: true,
+      nextAction: "需要判断是重试、换账号，还是回内容确认台改稿。",
+    };
+  }
+
+  return {
+    stage: "published",
+    stageLabel: "已发布可复盘",
+    stageTone: "positive",
+    requiresReview: false,
+    nextAction: "去帖子与数据页看这条内容的表现。",
+  };
+}
+
+export function buildMessageTasks(posts: PostListItem[], accounts?: AccountOverview[]) {
+  return sortByUpdatedDesc(posts).map((post, index) => {
+    const account = getAccountForPost(post, accounts);
+    const stage = getMessageTaskStage(post);
+    const hasCopy = post.title.trim().length > 0 && post.body.trim().length > 0;
+    const hasImages = post.assetIds.length > 0;
+
+    return {
+      id: `message-task-${post.id}`,
+      postId: post.id,
+      accountId: account.id,
+      accountName: account.name,
+      sourceMessage: `OpenClaw，我今天想发一条关于“${post.topic}”的内容，优先安排给${account.name}${index % 2 === 0 ? "，今晚 19:30 前确认。" : "，如果内容合适今天就发。"}`,
+      requestedAt: post.createdAt,
+      plannedAt: new Date(new Date(post.updatedAt).getTime() + 1000 * 60 * 90).toISOString(),
+      topic: post.topic,
+      title: post.title,
+      stage: stage.stage,
+      stageLabel: stage.stageLabel,
+      stageTone: stage.stageTone,
+      hasCopy,
+      hasImages,
+      requiresReview: stage.requiresReview,
+      nextAction: stage.nextAction,
+    } satisfies MessageTask;
+  });
+}
+
+export function getTaskOverview(tasks: MessageTask[]) {
+  return {
+    total: tasks.length,
+    ready: tasks.filter((task) => task.hasCopy && task.hasImages).length,
+    waitingReview: tasks.filter((task) => task.requiresReview).length,
+    todayAccounts: new Set(tasks.map((task) => task.accountId)).size,
+  };
+}
+
+export function getAccountStatusLabel(status: AccountStatus) {
+  if (status === "online") {
+    return "在线";
+  }
+
+  if (status === "busy") {
+    return "执行中";
+  }
+
+  return "离线";
+}
+
+export function getAccountStatusTone(status: AccountStatus) {
+  if (status === "online") {
+    return "positive" as const;
+  }
+
+  if (status === "busy") {
+    return "warm" as const;
+  }
+
+  return "critical" as const;
 }

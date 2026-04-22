@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-import { getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 function getPublishSummary(post: PostDetail) {
   const latestRecord = post.publishRecords.at(-1);
@@ -83,6 +83,7 @@ function getMetricsState(post: PostDetail) {
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const postList = await apiClient.posts.list();
   let post: PostDetail;
 
   try {
@@ -101,6 +102,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const metricsState = getMetricsState(post);
   const latestPublishRecord = post.publishRecords.at(-1);
   const publishNarrative = getPublishNarrative(post);
+  const accounts = buildAccountOverview(postList);
+  const account = getAccountForPost(post, accounts);
+  const messageTask = buildMessageTasks(postList, accounts).find((task) => task.postId === post.id) ?? null;
 
   return (
     <div className="page-stack">
@@ -203,6 +207,22 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           </div>
 
           <div className="detail-secondary">
+            <SectionCard className="nested-card">
+              <SectionHeading eyebrow="任务上下文" title="这条内容属于哪个账号、最初来自什么消息" />
+              <div className="detail-meta-grid">
+                <article className="detail-meta-card">
+                  <span className="eyebrow">归属账号</span>
+                  <strong>{account.name}</strong>
+                  <p>{account.handle}，当前账号状态会在多账号运营页继续跟进。</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">原始消息任务</span>
+                  <strong>{messageTask?.stageLabel ?? "已进入帖子详情视图"}</strong>
+                  <p>{messageTask?.sourceMessage ?? "这条内容已经脱离消息中心的待办队列，正在查看完整记录。"}</p>
+                </article>
+              </div>
+            </SectionCard>
+
             <SectionCard className="nested-card">
               <SectionHeading eyebrow="人工确认记录" title="这条内容是怎么被确认下来的" />
               <div className="history-stack">
