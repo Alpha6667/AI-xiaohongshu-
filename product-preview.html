@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小红书 AI 发帖平台 - 产品原型</title>
+    <style>
+      :root {
+        --bg: #f5f1eb;
+        --panel: rgba(255, 252, 247, 0.88);
+        --panel-strong: #fffaf3;
+        --text: #231815;
+        --muted: #6f6256;
+        --line: rgba(65, 46, 31, 0.12);
+        --accent: #d74f3f;
+        --accent-soft: rgba(215, 79, 63, 0.1);
+        --gold: #b98a49;
+        --green: #2f7d61;
+        --orange: #d8892e;
+        --shadow: 0 18px 60px rgba(73, 47, 25, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(215, 79, 63, 0.12), transparent 24%),
+          radial-gradient(circle at top right, rgba(185, 138, 73, 0.14), transparent 24%),
+          linear-gradient(180deg, #f8f3ed 0%, #f3ede5 48%, #efe8de 100%);
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        padding: 28px 22px;
+        border-right: 1px solid var(--line);
+        background: rgba(255, 248, 240, 0.72);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        padding: 18px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, #312019 0%, #54352b 100%);
+        color: #fff8f2;
+        box-shadow: var(--shadow);
+      }
+
+      .brand small,
+      .user-card small,
+      .nav small,
+      .section-head span,
+      .meta,
+      .helper,
+      .status-note,
+      .field small,
+      .timeline time,
+      .chip.soft,
+      .metric small,
+      .queue small {
+        color: var(--muted);
+      }
+
+      .brand h1 {
+        margin: 10px 0 8px;
+        font-size: 24px;
+      }
+
+      .brand p {
+        margin: 0;
+        line-height: 1.6;
+        color: rgba(255, 248, 240, 0.78);
+      }
+
+      .nav {
+        margin-top: 22px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .nav-item {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: transparent;
+        border: 1px solid transparent;
+      }
+
+      .nav-item.active {
+        background: var(--panel-strong);
+        border-color: var(--line);
+        box-shadow: 0 8px 24px rgba(73, 47, 25, 0.06);
+      }
+
+      .nav-item strong,
+      .user-card strong,
+      .section-head strong,
+      .hero h2,
+      .card h3,
+      .publish-card h3,
+      .queue h3,
+      .insight h3 {
+        display: block;
+      }
+
+      .user-card {
+        margin-top: 22px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+      }
+
+      .main {
+        padding: 26px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 22px;
+      }
+
+      .hero {
+        flex: 1;
+        padding: 28px 30px;
+        border-radius: 30px;
+        background: linear-gradient(135deg, rgba(255, 250, 243, 0.9), rgba(247, 236, 224, 0.9));
+        border: 1px solid rgba(87, 57, 38, 0.08);
+        box-shadow: var(--shadow);
+      }
+
+      .hero h2 {
+        margin: 0 0 10px;
+        font-size: 34px;
+        line-height: 1.2;
+      }
+
+      .hero p {
+        max-width: 780px;
+        margin: 0;
+        line-height: 1.75;
+        color: #59493e;
+      }
+
+      .hero-actions {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .btn {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        color: white;
+      }
+
+      .btn.secondary {
+        background: white;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .metric {
+        padding: 18px;
+        border-radius: 24px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: 0 10px 30px rgba(73, 47, 25, 0.05);
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 30px;
+      }
+
+      .workflow,
+      .studio-grid {
+        margin-bottom: 18px;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .workflow-step,
+      .asset-card,
+      .calendar-card,
+      .preview-card {
+        padding: 20px;
+        border-radius: 24px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: 0 10px 30px rgba(73, 47, 25, 0.05);
+      }
+
+      .workflow-step em {
+        display: inline-flex;
+        width: 28px;
+        height: 28px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #f6ebdd;
+        color: #7a5731;
+        font-style: normal;
+        font-weight: 700;
+      }
+
+      .workflow-step strong,
+      .asset-card strong,
+      .calendar-card strong,
+      .preview-card strong {
+        display: block;
+        margin: 14px 0 8px;
+        font-size: 17px;
+      }
+
+      .workflow-step p,
+      .asset-card p,
+      .calendar-card p,
+      .preview-card p {
+        margin: 0;
+        line-height: 1.7;
+        color: #5a4a3f;
+      }
+
+      .studio-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+      }
+
+      .preview-phone {
+        margin-top: 16px;
+        margin-inline: auto;
+        width: 250px;
+        border-radius: 34px;
+        background: linear-gradient(180deg, #2d211b, #120d0b);
+        padding: 14px;
+        box-shadow: 0 18px 48px rgba(37, 22, 13, 0.24);
+      }
+
+      .preview-screen {
+        border-radius: 24px;
+        background: linear-gradient(180deg, #fffaf3, #f8efe3);
+        padding: 18px;
+        min-height: 420px;
+      }
+
+      .post-cover {
+        height: 188px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(215, 79, 63, 0.18), rgba(185, 138, 73, 0.22));
+        padding: 18px;
+        display: flex;
+        align-items: flex-end;
+        color: #40261c;
+        font-size: 22px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      .post-lines {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .post-line {
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(73, 47, 25, 0.12);
+      }
+
+      .post-line.short {
+        width: 58%;
+      }
+
+      .asset-grid,
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .asset-thumb {
+        aspect-ratio: 1 / 1;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #efdcc7, #f9f2e8);
+        border: 1px solid rgba(65, 46, 31, 0.08);
+        display: flex;
+        align-items: end;
+        justify-content: start;
+        padding: 10px;
+        font-size: 12px;
+        color: #6f5643;
+      }
+
+      .calendar-slot {
+        padding: 12px;
+        border-radius: 18px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+      }
+
+      .calendar-slot strong {
+        margin: 0 0 6px;
+        font-size: 14px;
+      }
+
+      .calendar-slot small {
+        color: var(--muted);
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .card,
+      .publish-card,
+      .queue,
+      .insight {
+        padding: 22px;
+        border-radius: 28px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: 0 14px 40px rgba(73, 47, 25, 0.06);
+      }
+
+      .section-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .section-head strong {
+        font-size: 22px;
+        margin-bottom: 6px;
+      }
+
+      .badge {
+        align-self: center;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.ai {
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .badge.success {
+        color: var(--green);
+        background: rgba(47, 125, 97, 0.12);
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .field {
+        padding: 16px;
+        border-radius: 20px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+      }
+
+      .field strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 16px;
+      }
+
+      .textarea {
+        margin-top: 14px;
+        padding: 18px;
+        border-radius: 20px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+        line-height: 1.8;
+      }
+
+      .chips {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        background: #f7efe4;
+      }
+
+      .chip.soft {
+        background: #fbf7f0;
+        border: 1px solid var(--line);
+      }
+
+      .timeline {
+        display: grid;
+        gap: 14px;
+      }
+
+      .timeline-item,
+      .queue-item,
+      .insight-item {
+        padding: 16px;
+        border-radius: 20px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+      }
+
+      .timeline-item strong,
+      .queue-item strong,
+      .insight-item strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 16px;
+      }
+
+      .timeline-item p,
+      .queue-item p,
+      .insight-item p {
+        margin: 0;
+        line-height: 1.7;
+        color: #54463b;
+      }
+
+      .status-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .pill {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .pill.publishing {
+        color: var(--orange);
+        background: rgba(216, 137, 46, 0.12);
+      }
+
+      .pill.success {
+        color: var(--green);
+        background: rgba(47, 125, 97, 0.12);
+      }
+
+      .pill.failed {
+        color: var(--accent);
+        background: rgba(215, 79, 63, 0.12);
+      }
+
+      .queue-list,
+      .insight-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .queue-head,
+      .insight-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .mini-actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .mini-btn {
+        padding: 10px 14px;
+        border-radius: 14px;
+        background: #fff;
+        border: 1px solid var(--line);
+        font-weight: 600;
+      }
+
+      .mini-btn.primary {
+        background: #2f7d61;
+        color: #fff;
+        border-color: transparent;
+      }
+
+      @media (max-width: 1180px) {
+        .shell {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          border-right: none;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .summary,
+        .workflow,
+        .studio-grid,
+        .content-grid,
+        .field-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .asset-grid,
+        .calendar-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .main,
+        .sidebar {
+          padding: 18px;
+        }
+
+        .hero h2 {
+          font-size: 28px;
+        }
+
+        .summary,
+        .workflow,
+        .studio-grid,
+        .content-grid,
+        .field-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .asset-grid,
+        .calendar-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .preview-phone {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>内容运营工作台</small>
+          <h1>小红书 AI 发帖平台</h1>
+          <p>我理解你想要的，不是技术后台，而是一个“今天该发什么、现在卡在哪、下一步怎么做”一眼能看懂的运营台。</p>
+        </div>
+
+        <div class="nav">
+          <div class="nav-item active">
+            <strong>今日首页</strong>
+            <small>先看待处理内容、发布结果和风险提醒</small>
+          </div>
+          <div class="nav-item">
+            <strong>发帖工作台</strong>
+            <small>主题输入、AI 生成、人工修改、发布前确认</small>
+          </div>
+          <div class="nav-item">
+            <strong>待审核内容</strong>
+            <small>谁提交的、为什么退回、还差什么</small>
+          </div>
+          <div class="nav-item">
+            <strong>已发布结果</strong>
+            <small>成功、失败、限流、后续补救动作</small>
+          </div>
+          <div class="nav-item">
+            <strong>素材和数据</strong>
+            <small>图片、封面、指标快照、表现趋势</small>
+          </div>
+        </div>
+
+        <div class="user-card">
+          <small>当前角色</small>
+          <strong>运营负责人</strong>
+          <p class="helper">页面重点不是 API 名词，而是帮你快速判断今天要发哪篇、哪篇有风险、哪些需要 AI 再改一轮。</p>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section class="topbar">
+          <div class="hero">
+            <small class="meta">产品原型预览 · 中文方向稿</small>
+            <h2>先把“今天该做什么”放到第一屏，而不是先让你看一堆英文状态。</h2>
+            <p>
+              我把首页理解成一个运营视角的总控台：先看到今日待发内容、审核阻塞、AI 推荐动作和最新发布结果。
+              页面会更像“内容创作工作台”，而不是传统模板后台。
+            </p>
+            <div class="hero-actions">
+              <button class="btn primary">开始生成今天的选题</button>
+              <button class="btn secondary">查看待审核内容</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="summary">
+          <div class="metric">
+            <small>今天待处理</small>
+            <strong>06</strong>
+            <small>2 篇待审核，3 篇待发布，1 篇发布失败待处理</small>
+          </div>
+          <div class="metric">
+            <small>今日已发布</small>
+            <strong>12</strong>
+            <small>其中 10 篇成功，2 篇仍在回写结果</small>
+          </div>
+          <div class="metric">
+            <small>AI 已产出草稿</small>
+            <strong>18</strong>
+            <small>其中 5 篇建议直接进入人工微调</small>
+          </div>
+          <div class="metric">
+            <small>需要你关注</small>
+            <strong>03</strong>
+            <small>1 篇限流，1 篇标题弱，1 篇封面点击率偏低</small>
+          </div>
+        </section>
+
+        <section class="workflow">
+          <div class="workflow-step">
+            <em>1</em>
+            <strong>先定今天要发什么</strong>
+            <p>先看今天最值得发的题材，不让你从几十条草稿里自己找重点。</p>
+          </div>
+          <div class="workflow-step">
+            <em>2</em>
+            <strong>AI 先出可用版本</strong>
+            <p>标题、正文、封面建议和标签一次给到，再由你只改关键几处。</p>
+          </div>
+          <div class="workflow-step">
+            <em>3</em>
+            <strong>人工审核后直接发</strong>
+            <p>页面要清楚显示为什么能发、为什么不能发，而不是只给技术状态。</p>
+          </div>
+          <div class="workflow-step">
+            <em>4</em>
+            <strong>结果回来后告诉你该怎么办</strong>
+            <p>成功就跟指标，失败就给明确原因和下一步动作，而不是扔给你一条报错。</p>
+          </div>
+        </section>
+
+        <section class="studio-grid">
+          <article class="asset-card">
+            <div class="section-head">
+              <div>
+                <span>素材区</span>
+                <strong>这块应该让你一眼看出这篇内容长什么样</strong>
+              </div>
+              <div class="badge ai">封面建议</div>
+            </div>
+            <p>不是只显示“已上传 3 张素材”，而是直接看到候选封面、图组顺序和 AI 给你的改图建议。</p>
+            <div class="asset-grid">
+              <div class="asset-thumb">当前主图</div>
+              <div class="asset-thumb">备选封面</div>
+              <div class="asset-thumb">详情图 01</div>
+              <div class="asset-thumb">详情图 02</div>
+              <div class="asset-thumb">详情图 03</div>
+              <div class="asset-thumb">封面文案稿</div>
+            </div>
+          </article>
+
+          <article class="preview-card">
+            <div class="section-head">
+              <div>
+                <span>手机预览</span>
+                <strong>你最终关心的是发出去像不像一篇会有人点开的笔记</strong>
+              </div>
+            </div>
+            <p>这里应该像手机里的真实笔记预览，而不是后台文字表格。你可以快速判断封面、标题、排版和整体气质对不对。</p>
+            <div class="preview-phone">
+              <div class="preview-screen">
+                <div class="post-cover">春夏通勤穿搭 3 个最容易出片的角度</div>
+                <div class="post-lines">
+                  <div class="post-line"></div>
+                  <div class="post-line"></div>
+                  <div class="post-line short"></div>
+                </div>
+                <div class="chips">
+                  <div class="chip">通勤穿搭</div>
+                  <div class="chip">显高技巧</div>
+                  <div class="chip soft">适合今天发布</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <div class="stack">
+            <article class="card">
+              <div class="section-head">
+                <div>
+                  <span>发帖工作台</span>
+                  <strong>今天优先处理的内容</strong>
+                </div>
+                <div class="badge ai">AI 推荐优先级</div>
+              </div>
+
+              <div class="field-grid">
+                <div class="field">
+                  <small>当前选题</small>
+                  <strong>春夏通勤穿搭怎么拍更有点击感</strong>
+                </div>
+                <div class="field">
+                  <small>目标动作</small>
+                  <strong>先补一版更口语化标题，再确认封面图</strong>
+                </div>
+              </div>
+
+              <div class="textarea">
+                <strong>我理解你想看的工作方式</strong>
+                <div class="helper">
+                  不是让你自己去猜“generate-copy / publish / metrics”是什么意思，而是直接告诉你：
+                  这篇内容为什么值得发、AI 已经帮你做了什么、你只需要决定要不要改标题、要不要换封面、要不要现在发布。
+                </div>
+              </div>
+
+              <div class="chips">
+                <div class="chip">建议标题更短</div>
+                <div class="chip">封面主字再放大 12%</div>
+                <div class="chip">发布时间建议 19:30</div>
+                <div class="chip soft">适合做“打工人通勤”标签</div>
+              </div>
+
+              <div class="mini-actions">
+                <button class="mini-btn primary">一键生成优化版</button>
+                <button class="mini-btn">人工修改后提交审核</button>
+                <button class="mini-btn">仅保存草稿</button>
+              </div>
+            </article>
+
+            <article class="publish-card">
+              <div class="section-head">
+                <div>
+                  <span>发布结果</span>
+                  <strong>你最关心的不是接口，而是到底发出去没有</strong>
+                </div>
+                <div class="badge success">自动回写已接入</div>
+              </div>
+
+              <div class="timeline">
+                <div class="timeline-item">
+                  <div class="status-row">
+                    <span class="pill success">发布成功</span>
+                    <span class="pill publishing">平台已回写</span>
+                  </div>
+                  <strong>职场女生春夏穿搭清单</strong>
+                  <p>平台帖子 ID：`xh_20260422_0192`，发布时间 19:32。表现正常，建议 2 小时后补抓一次指标。</p>
+                  <time>刚刚更新</time>
+                </div>
+
+                <div class="timeline-item">
+                  <div class="status-row">
+                    <span class="pill failed">平台限流</span>
+                  </div>
+                  <strong>厨房收纳 3 个低成本改造技巧</strong>
+                  <p>失败原因已分类为“平台限流”。页面应该直接告诉你这属于限流，不是笼统地只写一行 failed。</p>
+                  <time>12 分钟前</time>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="stack">
+            <article class="queue">
+              <div class="queue-head">
+                <div>
+                  <small>审核队列</small>
+                  <h3>今天待你拍板的内容</h3>
+                </div>
+                <div class="badge ai">2 条高优先</div>
+              </div>
+
+              <div class="queue-list">
+                <div class="queue-item">
+                  <strong>露营早餐摆盘灵感</strong>
+                  <small>AI 初稿完成，封面偏平，建议人工补一句更有生活感的开头。</small>
+                </div>
+                <div class="queue-item">
+                  <strong>低预算租房改造</strong>
+                  <small>标题吸引力高，但图片顺序略乱，建议先换第 2 张做首图。</small>
+                </div>
+                <div class="queue-item">
+                  <strong>通勤鞋选购避坑</strong>
+                  <small>正文信息足够，但缺一条明确结论，容易显得像堆信息。</small>
+                </div>
+              </div>
+            </article>
+
+            <article class="insight">
+              <div class="insight-head">
+                <div>
+                  <small>数据提醒</small>
+                  <h3>今天不是看复杂图表，而是看该不该继续发</h3>
+                </div>
+              </div>
+
+              <div class="insight-list">
+                <div class="insight-item">
+                  <strong>近 3 篇穿搭内容点赞率在上升</strong>
+                  <p>说明当前题材仍值得继续做，可以让 AI 再生成 2 个同主题备选。</p>
+                </div>
+                <div class="insight-item">
+                  <strong>家居类内容评论高但收藏低</strong>
+                  <p>可能是“能聊但不够想保存”，建议改成更具体的清单型标题。</p>
+                </div>
+                <div class="insight-item">
+                  <strong>失败内容最好直接给操作建议</strong>
+                  <p>例如：限流就提示晚点重试，非重试错误就提醒改文案或素材，不要只显示技术状态。</p>
+                </div>
+              </div>
+            </article>
+
+            <article class="calendar-card">
+              <div class="insight-head">
+                <div>
+                  <small>发布节奏</small>
+                  <h3>你还需要一块“今天什么时候发”的区域</h3>
+                </div>
+              </div>
+              <p>如果这个项目真是给运营用的，首页最好直接告诉你今天的发布时间建议和待补位时段，而不是只有数据回看。</p>
+              <div class="calendar-grid">
+                <div class="calendar-slot">
+                  <strong>10:30</strong>
+                  <small>早餐类内容已排</small>
+                </div>
+                <div class="calendar-slot">
+                  <strong>14:00</strong>
+                  <small>家居类待确认封面</small>
+                </div>
+                <div class="calendar-slot">
+                  <strong>19:30</strong>
+                  <small>通勤穿搭建议优先发</small>
+                </div>
+                <div class="calendar-slot">
+                  <strong>21:00</strong>
+                  <small>限流内容不建议补发</small>
+                </div>
+                <div class="calendar-slot">
+                  <strong>22:00</strong>
+                  <small>可补一条轻内容笔记</small>
+                </div>
+                <div class="calendar-slot">
+                  <strong>待定</strong>
+                  <small>审核通过后自动占位</small>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
