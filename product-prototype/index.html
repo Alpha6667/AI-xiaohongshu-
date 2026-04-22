@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>总览 - 小红书 AI 发帖平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>正式后台原型</small>
+          <h1>小红书 AI 发帖平台</h1>
+          <p>这是更像正式后台的版本，重点不是技术字段，而是让你一眼看懂今天要发什么、系统会怎么帮你发、发完后怎么看结果。</p>
+        </div>
+        <nav class="nav">
+          <a class="nav-item active" href="./index.html"><strong>总览首页</strong><small>账号状态、今日任务、整体结果</small></a>
+          <a class="nav-item" href="./composer.html"><strong>发帖工作台</strong><small>输入主题、选文案、选图片</small></a>
+          <a class="nav-item" href="./publish-center.html"><strong>发布中心</strong><small>OpenClaw 执行、审核和回写</small></a>
+          <a class="nav-item" href="./posts.html"><strong>帖子与数据</strong><small>查看帖子链接和点赞互动</small></a>
+        </nav>
+        <div class="sidebar-card">
+          <strong>你要的核心闭环</strong>
+          <p class="sidebar-note">账号接入 -> 输入主题 -> AI 出文案和图片 -> 你来挑 -> OpenClaw 代发 -> 平台审核 -> 查看帖子和数据。</p>
+        </div>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="title">
+            <h2>总览首页</h2>
+            <p>正式后台的首页应该先回答 3 个问题：今天哪个账号在发、今天准备发什么、最近发出去的内容结果怎么样。</p>
+          </div>
+          <div class="toolbar">
+            <a class="btn primary" href="./composer.html">开始今天发帖</a>
+            <a class="btn secondary" href="./posts.html">看已发帖子</a>
+          </div>
+        </div>
+
+        <section class="hero">
+          <small class="subtle">首页应该是你的日常入口</small>
+          <strong>先确认账号在线，再开始今天的主题，不让你在一堆后台菜单里找路。</strong>
+          <p>如果这是你每天真的会用的产品，第一屏最重要的不是看图表，而是看“我的账号能不能发”“今天要发哪条”“AI 已经帮我准备到哪一步了”。</p>
+        </section>
+
+        <section class="stats">
+          <div class="stat"><small>当前发帖账号</small><strong>小鹿的穿搭日记</strong><small>OpenClaw 已连接，可直接发帖</small></div>
+          <div class="stat"><small>今天主题</small><strong>1</strong><small>今天先做 1 个主题，走完整条发帖链路</small></div>
+          <div class="stat"><small>待你确认</small><strong>3 版文案 / 6 张图</strong><small>AI 已生成候选内容，等待你挑选</small></div>
+          <div class="stat"><small>昨日已过审</small><strong>4 篇</strong><small>可继续查看帖子链接与互动数据</small></div>
+        </section>
+
+        <section class="steps">
+          <div class="step"><strong>1. 账号在线</strong><p>先看今天要用哪个账号发，避免内容准备好了却发现账号没连上。</p></div>
+          <div class="step"><strong>2. 输入主题</strong><p>你只需要说今天想发什么，系统负责往后展开成内容。</p></div>
+          <div class="step"><strong>3. AI 备好内容</strong><p>自动出多版文案和配图，不用你从零开始写和找图。</p></div>
+          <div class="step"><strong>4. 你做最后选择</strong><p>挑今天要发的版本，必要时改一两句，不需要重做整篇内容。</p></div>
+          <div class="step"><strong>5. OpenClaw 代发</strong><p>你确认后，上传、提交审核和回写都交给系统去完成。</p></div>
+        </section>
+
+        <section class="grid-2">
+          <article class="card">
+            <div class="panel-head">
+              <div><span>账号接入</span><strong>今天发帖前先看这块</strong></div>
+              <div class="badge success">账号在线</div>
+            </div>
+            <div class="kv">
+              <div class="kv-item"><strong>当前账号</strong><p>小鹿的穿搭日记</p></div>
+              <div class="kv-item"><strong>连接状态</strong><p>OpenClaw 已登录，当前可发帖</p></div>
+              <div class="kv-item"><strong>最近同步</strong><p>2 分钟前</p></div>
+              <div class="kv-item"><strong>今日发布计划</strong><p>19:30 发 1 篇穿搭主题内容</p></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="panel-head">
+              <div><span>最近结果</span><strong>你最想知道的是有没有发成功</strong></div>
+              <a class="badge gold" href="./publish-center.html">去发布中心</a>
+            </div>
+            <div class="log-list">
+              <div class="publish-log"><div class="row"><span class="pill success">审核通过</span><span class="pill pending">平台已回写</span></div><strong>职场女生春夏通勤穿搭</strong><p>帖子已创建成功，后台可直接查看链接和点赞数据。</p></div>
+              <div class="publish-log"><div class="row"><span class="pill failed">审核未通过</span></div><strong>厨房收纳低成本改造</strong><p>建议直接返回工作台修改文案和图片，不要只显示一个失败状态。</p></div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

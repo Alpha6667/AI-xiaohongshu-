@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>发帖工作台 - 小红书 AI 发帖平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>正式后台原型</small>
+          <h1>发帖工作台</h1>
+          <p>这一页应该是你每天最常用的页面：输入主题，挑文案，挑图片，然后确认交给 OpenClaw 去发。</p>
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="./index.html"><strong>总览首页</strong><small>回到整体总览</small></a>
+          <a class="nav-item active" href="./composer.html"><strong>发帖工作台</strong><small>主题、文案、图片、预览</small></a>
+          <a class="nav-item" href="./publish-center.html"><strong>发布中心</strong><small>看执行与审核状态</small></a>
+          <a class="nav-item" href="./posts.html"><strong>帖子与数据</strong><small>看链接和互动结果</small></a>
+        </nav>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="title">
+            <h2>发帖工作台</h2>
+            <p>这里要像一个真正能工作的页面，而不是只给按钮。你输入主题后，AI 的候选内容应该直接摆在你面前，让你快速做决定。</p>
+          </div>
+          <div class="toolbar">
+            <a class="btn secondary" href="./index.html">返回总览</a>
+            <a class="btn primary" href="./publish-center.html">确认后去发布</a>
+          </div>
+        </div>
+
+        <section class="grid-2">
+          <article class="card">
+            <div class="panel-head">
+              <div><span>主题输入</span><strong>你今天想发什么</strong></div>
+              <div class="badge ai">AI 生成入口</div>
+            </div>
+            <div class="note">
+              <strong>当前主题</strong>
+              <p>春夏通勤穿搭怎么拍更容易出片</p>
+            </div>
+            <div class="chips">
+              <div class="chip">目标风格：真实分享</div>
+              <div class="chip">目标人群：通勤女生</div>
+              <div class="chip soft">发布时间建议：19:30</div>
+            </div>
+            <div class="actions" style="margin-top:14px">
+              <button class="btn ghost">重新生成主题方向</button>
+              <button class="btn secondary">补一版更口语的标题</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="panel-head">
+              <div><span>最终预览</span><strong>这篇笔记发出去会长什么样</strong></div>
+              <div class="badge gold">手机视角</div>
+            </div>
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="phone-cover">打工人春夏通勤穿搭 这样拍更显高更有氛围感</div>
+                <div class="phone-lines">
+                  <div class="phone-line"></div>
+                  <div class="phone-line"></div>
+                  <div class="phone-line short"></div>
+                </div>
+                <div class="chips">
+                  <div class="chip">通勤穿搭</div>
+                  <div class="chip">上班拍照</div>
+                  <div class="chip soft">当前确认版</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="grid-2" style="margin-top:18px">
+          <article class="card">
+            <div class="panel-head">
+              <div><span>文案候选</span><strong>AI 给你的 3 版文案</strong></div>
+              <div class="badge ai">3 选 1</div>
+            </div>
+            <div class="candidate-list">
+              <div class="candidate active"><strong>文案 A · 当前选中</strong><p>今天试了 3 套通勤穿搭，终于找到那种不费力但很出片的感觉。上班前 5 分钟拍一组，也能显得整个人很轻松很利落。</p></div>
+              <div class="candidate"><strong>文案 B · 更像清单种草</strong><p>如果你也是通勤党，又想穿得不太普通，可以直接抄这套思路：颜色别太满、版型别太紧、拍照角度尽量留一点空气感。</p></div>
+              <div class="candidate"><strong>文案 C · 更像生活分享</strong><p>最近上班拍照终于不再像路过顺便拍一下了，总结了 3 个最容易出氛围感的通勤穿搭拍法，真的很适合打工人。</p></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="panel-head">
+              <div><span>图片候选</span><strong>AI 生成的 6 张图，你选 4 张发</strong></div>
+              <div class="badge success">4 张已选</div>
+            </div>
+            <div class="image-grid">
+              <div class="image selected">候选图 A</div>
+              <div class="image selected">候选图 B</div>
+              <div class="image selected">候选图 C</div>
+              <div class="image selected">候选图 D</div>
+              <div class="image">候选图 E</div>
+              <div class="image">候选图 F</div>
+            </div>
+            <div class="chips">
+              <div class="chip">建议首图：B</div>
+              <div class="chip">图片张数：4</div>
+              <div class="chip soft">不满意可继续生成</div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

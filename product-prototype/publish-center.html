@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>发布中心 - 小红书 AI 发帖平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>正式后台原型</small>
+          <h1>发布中心</h1>
+          <p>你确认文案和图片后，这一页要清楚告诉你 OpenClaw 做到了哪一步，小红书审核回来了没有，出问题时下一步该怎么处理。</p>
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="./index.html"><strong>总览首页</strong><small>回到整体总览</small></a>
+          <a class="nav-item" href="./composer.html"><strong>发帖工作台</strong><small>去选文案和图片</small></a>
+          <a class="nav-item active" href="./publish-center.html"><strong>发布中心</strong><small>执行状态和审核结果</small></a>
+          <a class="nav-item" href="./posts.html"><strong>帖子与数据</strong><small>查看帖子表现</small></a>
+        </nav>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="title">
+            <h2>发布中心</h2>
+            <p>这里要把 OpenClaw 执行链路完整展开，不只是显示一个“publishing”，而是明确告诉你上传了没有、提交了没有、审核通过了没有。</p>
+          </div>
+          <div class="toolbar">
+            <a class="btn secondary" href="./composer.html">返回工作台</a>
+            <a class="btn primary" href="./posts.html">看已过审帖子</a>
+          </div>
+        </div>
+
+        <section class="grid-2">
+          <article class="card">
+            <div class="panel-head">
+              <div><span>OpenClaw 执行状态</span><strong>系统现在进行到哪一步</strong></div>
+              <div class="badge success">可自动回写</div>
+            </div>
+            <div class="stack">
+              <div class="status-box"><strong>1. 已接收最终内容</strong><p>你确认的文案 A 和 4 张图片已经进入 OpenClaw 队列。</p></div>
+              <div class="status-box"><strong>2. 已上传到小红书</strong><p>图片、标题、正文、标签和账号都已提交。</p></div>
+              <div class="status-box"><strong>3. 等待平台审核</strong><p>这一段应该告诉你是“平台处理中”，而不是笼统的 running。</p></div>
+              <div class="status-box"><strong>4. 审核通过后自动回写</strong><p>通过后直接生成帖子入口，不需要你再去手工确认。</p></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="panel-head">
+              <div><span>审核结果</span><strong>这部分应该最贴近你真实关心的问题</strong></div>
+              <div class="badge gold">按结果分类</div>
+            </div>
+            <div class="log-list">
+              <div class="publish-log"><div class="row"><span class="pill success">审核通过</span><span class="pill pending">帖子已创建</span></div><strong>职场女生春夏通勤穿搭</strong><p>现在应该直接展示帖子链接和发布时间，而不是只给内部 ID。</p></div>
+              <div class="publish-log"><div class="row"><span class="pill failed">平台限流</span></div><strong>厨房收纳低成本改造</strong><p>应该告诉你这是限流，建议晚点重试，而不是只显示失败。</p></div>
+              <div class="publish-log"><div class="row"><span class="pill failed">审核未通过</span></div><strong>露营早餐摆盘灵感</strong><p>应该告诉你更像是图片问题还是文案问题，便于你快速回工作台修正。</p></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="table-wrap" style="margin-top:18px">
+          <div class="panel-head">
+            <div><span>发布记录</span><strong>更像正式后台的记录区</strong></div>
+            <div class="badge ai">OpenClaw 代发日志</div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>主题</th><th>账号</th><th>执行状态</th><th>平台结果</th><th>下一步</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>春夏通勤穿搭怎么拍更容易出片</td><td>小鹿的穿搭日记</td><td><span class="pill success">已提交</span></td><td>审核通过，帖子已生成</td><td><a class="link" href="./posts.html">去看帖子数据</a></td></tr>
+              <tr><td>厨房收纳低成本改造</td><td>小鹿的穿搭日记</td><td><span class="pill failed">限流</span></td><td>建议晚点重试</td><td><a class="link" href="./composer.html">回工作台调整</a></td></tr>
+              <tr><td>露营早餐摆盘灵感</td><td>小鹿的穿搭日记</td><td><span class="pill failed">审核未过</span></td><td>需修改图片与文案</td><td><a class="link" href="./composer.html">重新选图选文案</a></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

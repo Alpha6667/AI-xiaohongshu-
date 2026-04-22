@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>帖子与数据 - 小红书 AI 发帖平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>正式后台原型</small>
+          <h1>帖子与数据</h1>
+          <p>你发完以后不应该只看到历史记录，而是要能直接看到帖子链接、点赞、收藏、评论和下一步建议。</p>
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="./index.html"><strong>总览首页</strong><small>回到整体总览</small></a>
+          <a class="nav-item" href="./composer.html"><strong>发帖工作台</strong><small>继续生成和编辑</small></a>
+          <a class="nav-item" href="./publish-center.html"><strong>发布中心</strong><small>看执行和审核状态</small></a>
+          <a class="nav-item active" href="./posts.html"><strong>帖子与数据</strong><small>查看帖子和互动表现</small></a>
+        </nav>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="title">
+            <h2>帖子与数据</h2>
+            <p>这页不是简单的数据看板，而是“我发出去的内容现在怎么样”。你应该能直接点进帖子、看点赞数据、判断下一个选题要不要继续跟进。</p>
+          </div>
+          <div class="toolbar">
+            <a class="btn secondary" href="./publish-center.html">返回发布中心</a>
+            <a class="btn primary" href="./composer.html">继续发下一条</a>
+          </div>
+        </div>
+
+        <section class="stats">
+          <div class="stat"><small>近 7 天已过审</small><strong>18</strong><small>都应该能直接看到帖子入口</small></div>
+          <div class="stat"><small>平均点赞</small><strong>326</strong><small>这是你最直观想看的指标之一</small></div>
+          <div class="stat"><small>平均收藏</small><strong>84</strong><small>判断内容是否值得继续扩写</small></div>
+          <div class="stat"><small>今日最佳主题</small><strong>通勤穿搭</strong><small>建议继续生成同类衍生内容</small></div>
+        </section>
+
+        <section class="grid-2">
+          <article class="table-wrap">
+            <div class="panel-head">
+              <div><span>帖子列表</span><strong>审核通过后的帖子应该长这样</strong></div>
+              <div class="badge success">可直接点开</div>
+            </div>
+            <table class="table">
+              <thead>
+                <tr><th>帖子</th><th>发布时间</th><th>点赞 / 收藏 / 评论</th><th>平台入口</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong>职场女生春夏通勤穿搭</strong><br /><small>这条是今天想重点继续观察的数据样板</small></td><td>今天 19:32</td><td>412 / 96 / 38</td><td><a class="link" href="#">查看帖子</a></td></tr>
+                <tr><td><strong>低预算租房改造</strong><br /><small>收藏偏高，适合继续做同主题内容</small></td><td>昨天 14:10</td><td>286 / 121 / 24</td><td><a class="link" href="#">查看帖子</a></td></tr>
+                <tr><td><strong>露营早餐摆盘灵感</strong><br /><small>评论不错，但点赞一般</small></td><td>昨天 09:45</td><td>198 / 52 / 41</td><td><a class="link" href="#">查看帖子</a></td></tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="card">
+            <div class="panel-head">
+              <div><span>表现建议</span><strong>数据要转成下一步动作</strong></div>
+              <div class="badge gold">继续怎么发</div>
+            </div>
+            <div class="metric-list">
+              <div class="metric-card"><strong>通勤穿搭表现最好</strong><p>点赞和收藏都高，系统应该直接建议你让 AI 再生成 2 个同主题衍生选题。</p></div>
+              <div class="metric-card"><strong>租房改造适合做系列</strong><p>收藏高，说明用户愿意留存，下一条可以继续往“低预算可复制”方向延伸。</p></div>
+              <div class="metric-card"><strong>表现不好的内容别只留在列表里</strong><p>应该给你明确建议，是换题材、换图，还是改发布时间，而不是让数据只是数字。</p></div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
