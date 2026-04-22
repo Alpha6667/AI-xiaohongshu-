@@ -295,6 +295,7 @@ class BackendApiMinimalTests(unittest.TestCase):
                 "operator": "worker",
                 "detail": "发布失败",
                 "errorMessage": "platform timeout",
+                "failureType": "retryable",
             },
         )
         self.assertEqual(writeback_failed_resp.status_code, 200)
@@ -302,6 +303,43 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(failed_payload["status"], "publish_failed")
         self.assertEqual(failed_payload["publishStatus"], "failed")
         self.assertEqual(failed_payload["errorMessage"], "platform timeout")
+        self.assertEqual(failed_payload["failureType"], "retryable")
+
+        rate_limited_post_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "限流失败回写",
+                "title": "限流失败标题",
+                "body": "限流失败正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        rate_limited_post_id = rate_limited_post_resp.json()["id"]
+        self.client.post(
+            f"/api/posts/{rate_limited_post_id}/submit-review",
+            json={"comment": "提交", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{rate_limited_post_id}/approve",
+            json={"comment": "通过", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{rate_limited_post_id}/publish",
+            json={"comment": "进入发布", "operator": "qa"},
+        )
+        rate_limited_resp = self.client.post(
+            f"/api/posts/{rate_limited_post_id}/publish-result",
+            json={
+                "publishStatus": "failed",
+                "operator": "worker",
+                "detail": "平台限流",
+                "errorMessage": "too many requests",
+                "failureType": "rate_limited",
+            },
+        )
+        self.assertEqual(rate_limited_resp.status_code, 200)
+        self.assertEqual(rate_limited_resp.json()["failureType"], "rate_limited")
 
     def test_append_metrics_snapshot_keeps_history(self) -> None:
         before_detail_resp = self.client.get("/api/posts/post_seed_published")

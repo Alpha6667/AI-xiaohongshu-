@@ -289,24 +289,24 @@
 ## 本轮同步区
 
 ## 已完成
-- 第五轮第二步已完成发布结果回写入口：新增 `POST /api/posts/{post_id}/publish-result`，支持把帖子从 `publishing` 回写到 `published` 或 `publish_failed`。
-- 回写能力已支持并落盘：`platform_post_id` 写回、失败错误信息 `errorMessage` 写回、`publishRecords` 历史记录同步保留。
-- 指标追加写入入口已完成：新增 `POST /api/posts/{post_id}/metrics-snapshots`，采用 append 模式写入，保证历史快照不覆盖。
-- 已更新 `.monkeycode/docs/API_CONTRACT.md`，文档化新增接口和 `publish` 相关新增字段（`platformPostId`、`errorMessage`）。
-- 已补第五轮第二步测试：
-  - `test_publish_result_writeback_success_and_failed`
-  - `test_append_metrics_snapshot_keeps_history`
+- 第六轮已完成 worker 自动发布回写外壳：`worker/app/tasks/publish.py` 在任务完成后自动调用 `POST /api/posts/{post_id}/publish-result`，不再只依赖手动触发。
+- 第六轮已完成 worker 自动指标追加外壳：`worker/app/tasks/metrics_collection.py` 在任务完成后自动调用 `POST /api/posts/{post_id}/metrics-snapshots`，保持 append 语义。
+- 已完成失败语义收口：新增稳定失败分类 `retryable`、`non_retryable`、`rate_limited`，并在 `publish-result` 回写与 `publishRecords` 返回中提供 `failureType`。
+- 已保持前端既有字段稳定：`publishStatus`、`platformPostId`、`publishedAt`、`errorMessage`、`publishRecords` 结构不改名，仅追加最小新字段。
+- 已更新 `.monkeycode/docs/API_CONTRACT.md`，补充 worker 自动回写约束与 `failureType` 契约说明。
+- 已补第六轮最小测试：
+  - `worker/tests/test_task_writeback.py::test_publish_task_triggers_auto_writeback`
+  - `worker/tests/test_task_writeback.py::test_metrics_task_triggers_auto_append`
+  - `backend/tests/test_api_minimal.py` 增加失败分类断言（`retryable`、`rate_limited`）
 
 ## 当前问题
-- 当前发布回写仍为后端手动/任务回调触发，尚未接入真实小红书平台异步回执。
-- 指标快照目前提供手动追加入口，尚未接入真实采集任务自动回填。
-- 测试环境依赖 `fastapi.testclient`，若环境未安装依赖将无法执行 API 级测试。
+- 当前 worker 自动回写为外壳实现，依赖 `BACKEND_BASE_URL` 可达；尚未接入真实小红书平台异步回执。
+- API 级测试仍依赖 `fastapi.testclient`，当前环境缺少 `fastapi` 导致 `backend/tests/test_api_minimal.py` 无法执行。
 
 ## 需要协作
-- 前端需要验证发布状态展示从 `publishing` 到 `published/publish_failed` 的实时反馈。
-- 前端需要验证详情页 `publishRecords` 中 `platformPostId` 和 `errorMessage` 的展示策略。
-- 前端可基于 `metricsHistory` 验证指标快照追加后的历史曲线渲染。
+- 前端需在第六轮远程预览点击回归中验证 `failureType` 的三类展示映射（可重试、不可重试、平台限流）。
+- 前端需验证 worker 自动触发后 `publishRecords` 与 `metricsHistory` 的刷新时序是否满足页面体验。
 
 ## 下一步
-- 评估是否需要在 worker 发布任务里直接接入 `publish-result` 回写调用，减少手动触发。
-- 规划下一轮真实平台接入前的错误码与重试策略（仅接口层，不扩展外部平台实现）。
+- 在不接真实平台前提下，评估是否需要补一个轻量轮询或事件通知机制，减少前端等待回写的不确定性。
+- 待环境补齐 `fastapi` 后补跑 API 最小测试，确认失败分类字段在真实接口回包中稳定。

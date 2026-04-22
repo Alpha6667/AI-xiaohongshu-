@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.models.enums import GenerationTaskType, PostStatus, PublishStatus, ReviewAction, TaskStatus
+from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
 
 
 class PostCreateRequest(BaseModel):
@@ -48,6 +48,7 @@ class PublishResponse(BaseModel):
     message: str
     platformPostId: str | None = None
     errorMessage: str | None = None
+    failureType: PublishFailureType | None = None
 
 
 class PublishResultWritebackRequest(BaseModel):
@@ -56,6 +57,7 @@ class PublishResultWritebackRequest(BaseModel):
     detail: str = ""
     platformPostId: str | None = None
     errorMessage: str | None = None
+    failureType: PublishFailureType | None = None
 
 
 class MetricsSnapshotAppendRequest(BaseModel):
@@ -99,6 +101,7 @@ class PublishLogResponse(BaseModel):
     createdAt: str
     platformPostId: str | None = None
     errorMessage: str | None = None
+    failureType: PublishFailureType | None = None
 
 
 class MetricsSnapshotResponse(BaseModel):

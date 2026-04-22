@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 
-from app.models.enums import GenerationTaskType, PostStatus, PublishStatus, ReviewAction, TaskStatus
+from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
 from app.models.generation_task import GenerationTask
 from app.models.metrics_snapshot import MetricsSnapshot
 from app.models.post import Post
@@ -70,6 +70,7 @@ def _serialize_publish_records(post: Post) -> list[PublishLogResponse]:
             createdAt=record.created_at,
             platformPostId=record.platform_post_id,
             errorMessage=record.error_message,
+            failureType=record.failure_type,
         )
         for record_id in post.publish_log_ids
         if (record := repository.publish_logs.get(record_id)) is not None
@@ -288,6 +289,7 @@ def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
         message="Publish request accepted and queued",
         platformPostId=log.platform_post_id,
         errorMessage=log.error_message,
+        failureType=log.failure_type,
     )
 
 
@@ -321,10 +323,12 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
             post.platform_post_id = payload.platformPostId
             log.platform_post_id = payload.platformPostId
         log.error_message = None
+        log.failure_type = None
     else:
         post.status = PostStatus.PUBLISH_FAILED
         log.error_message = payload.errorMessage or payload.detail or "Publish failed"
         log.platform_post_id = None
+        log.failure_type = payload.failureType or PublishFailureType.NON_RETRYABLE
 
     post.updated_at = now_iso()
     repository.save()
@@ -338,6 +342,7 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
         message="Publish result writeback completed",
         platformPostId=log.platform_post_id,
         errorMessage=log.error_message,
+        failureType=log.failure_type,
     )
 
 

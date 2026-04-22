@@ -32,3 +32,9 @@ class PublishStatus(StrEnum):
     QUEUED = "queued"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+
+
+class PublishFailureType(StrEnum):
+    RETRYABLE = "retryable"
+    NON_RETRYABLE = "non_retryable"
+    RATE_LIMITED = "rate_limited"

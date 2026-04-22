@@ -8,7 +8,7 @@ from uuid import uuid4
 from dataclasses import asdict
 
 from app.models.asset import Asset
-from app.models.enums import GenerationTaskType, PostStatus, PublishStatus, ReviewAction, TaskStatus
+from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
 from app.models.generation_task import GenerationTask
 from app.models.metrics_snapshot import MetricsSnapshot
 from app.models.post import Post
@@ -110,6 +110,11 @@ class InMemoryRepository:
                 created_at=value["created_at"],
                 platform_post_id=value.get("platform_post_id"),
                 error_message=value.get("error_message"),
+                failure_type=(
+                    PublishFailureType(value["failure_type"])
+                    if value.get("failure_type") is not None
+                    else None
+                ),
             )
             for key, value in (payload.get("publish_logs", {}) or {}).items()
         }
