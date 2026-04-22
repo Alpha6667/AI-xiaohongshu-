@@ -44,6 +44,22 @@ function getPublishSummary(post: PostDetail) {
   return post.platformPostId ? `当前已记录平台 ID：${post.platformPostId}` : "当前还未进入平台发布结果回写阶段。";
 }
 
+function getFailureTypeLabel(failureType: PostDetail["publishRecords"][number]["failureType"]) {
+  if (failureType === "retryable") {
+    return "可重试失败";
+  }
+
+  if (failureType === "non_retryable") {
+    return "不可重试失败";
+  }
+
+  if (failureType === "rate_limited") {
+    return "平台限流失败";
+  }
+
+  return null;
+}
+
 function getMetricsState(post: PostDetail) {
   if (post.metricsHistory.length === 0) {
     if (post.status === "published") {
@@ -163,6 +179,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <span className="eyebrow">Latest Result</span>
                   <strong>{latestPublishRecord?.status || "暂无结果"}</strong>
                   <p>{latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "当前还没有发布结果记录。"}</p>
+                  {getFailureTypeLabel(latestPublishRecord?.failureType) ? <p>失败分类：{getFailureTypeLabel(latestPublishRecord?.failureType)}</p> : null}
                 </article>
               </div>
             </SectionCard>
@@ -241,6 +258,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                       <p>{record.detail}</p>
                       {record.platformPostId ? <p className="muted-copy">平台帖子 ID：{record.platformPostId}</p> : null}
                       {record.errorMessage ? <p className="muted-copy">失败原因：{record.errorMessage}</p> : null}
+                      {getFailureTypeLabel(record.failureType) ? <p className="muted-copy">失败分类：{getFailureTypeLabel(record.failureType)}</p> : null}
                     </article>
                   ))
                 ) : (

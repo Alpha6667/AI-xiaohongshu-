@@ -51,6 +51,22 @@ function getPublishFeedback(post: PostDetail) {
   return "当前还处于编辑或审核前阶段。";
 }
 
+function getFailureTypeLabel(failureType: PostDetail["publishRecords"][number]["failureType"]) {
+  if (failureType === "retryable") {
+    return "可重试失败";
+  }
+
+  if (failureType === "non_retryable") {
+    return "不可重试失败";
+  }
+
+  if (failureType === "rate_limited") {
+    return "平台限流失败";
+  }
+
+  return null;
+}
+
 export function WorkspaceForm({ post }: { post: PostDetail }) {
   const router = useRouter();
   const [topic, setTopic] = useState(post.topic);
@@ -150,7 +166,9 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
         : publishLog.errorMessage
           ? ` 失败原因 ${publishLog.errorMessage}。`
           : "";
-      setNotice(`${publishLog.message} 发布状态 ${publishLog.publishStatus}。${publishMeta}`);
+      const failureType = getFailureTypeLabel(publishLog.failureType);
+      const failureMeta = failureType ? ` 失败分类 ${failureType}。` : "";
+      setNotice(`${publishLog.message} 发布状态 ${publishLog.publishStatus}。${publishMeta}${failureMeta}`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "触发发布失败");
@@ -188,6 +206,7 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
           <StatusPill label={post.status} tone={getStatusTone(post.status)} />
           {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
           {post.status === "publish_failed" && post.publishRecords.at(-1)?.errorMessage ? <StatusPill label="失败原因已回写" tone="critical" /> : null}
+          {getFailureTypeLabel(post.publishRecords.at(-1)?.failureType) ? <StatusPill label={getFailureTypeLabel(post.publishRecords.at(-1)?.failureType) ?? ""} tone="critical" /> : null}
           {tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag) => (
             <StatusPill key={tag} label={`#${tag}`} />
           ))}
@@ -195,6 +214,7 @@ export function WorkspaceForm({ post }: { post: PostDetail }) {
         <p className="muted-copy">{getPublishFeedback(post)}</p>
         {post.publishedAt ? <p className="muted-copy">发布时间：{new Date(post.publishedAt).toLocaleString("zh-CN")}</p> : null}
         {post.publishRecords.at(-1)?.errorMessage ? <p className="feedback-text">失败原因：{post.publishRecords.at(-1)?.errorMessage}</p> : null}
+        {getFailureTypeLabel(post.publishRecords.at(-1)?.failureType) ? <p className="feedback-text">失败分类：{getFailureTypeLabel(post.publishRecords.at(-1)?.failureType)}</p> : null}
       </div>
 
       <label className="field-block">

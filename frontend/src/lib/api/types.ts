@@ -71,6 +71,7 @@ export interface PublishResponse {
   message: string;
   platformPostId?: string | null;
   errorMessage?: string | null;
+  failureType?: "retryable" | "non_retryable" | "rate_limited" | null;
 }
 
 export interface PostMetrics {
@@ -96,6 +97,7 @@ export interface PublishRecord {
   detail: string;
   platformPostId?: string | null;
   errorMessage?: string | null;
+  failureType?: "retryable" | "non_retryable" | "rate_limited" | null;
 }
 
 export interface MetricsHistoryItem {
