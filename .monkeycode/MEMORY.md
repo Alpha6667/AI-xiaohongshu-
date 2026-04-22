@@ -125,3 +125,11 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 本轮仅做第六轮后端任务，不扩新范围，不接真实小红书平台，不做大契约改名。
   - 必须交付 worker 自动发布回写、worker 自动指标追加、失败语义三分类与对应最小测试。
   - 完成后需更新 `backend.md` 同步区并提交 push，再回传 commit 与测试结果。
+
+[测试环境最小补齐优先]
+- Date: 2026-04-22
+- Context: 用户要求先修复 backend 测试依赖，目标仅为跑通 `backend/tests/test_api_minimal.py`
+- Instructions:
+  - 仅做最小依赖补齐，不扩功能、不改 API 契约、不顺手重构。
+  - 在 `backend/pyproject.toml` 增加测试依赖组并至少包含 `httpx>=0.27.0`。
+  - 安装 backend 包及测试依赖后重跑 `python3 -m unittest tests.test_api_minimal`，并同步结果到 `backend.md`。

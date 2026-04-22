@@ -298,10 +298,12 @@
   - `worker/tests/test_task_writeback.py::test_publish_task_triggers_auto_writeback`
   - `worker/tests/test_task_writeback.py::test_metrics_task_triggers_auto_append`
   - `backend/tests/test_api_minimal.py` 增加失败分类断言（`retryable`、`rate_limited`）
+- 已完成 backend 测试环境最小补齐：`backend/pyproject.toml` 新增测试依赖组 `test`，并补充 `httpx>=0.27.0`。
+- 已在 `backend/` 安装项目和测试依赖后重跑 `python3 -m unittest tests.test_api_minimal`，当前 8 个用例全部通过。
 
 ## 当前问题
 - 当前 worker 自动回写为外壳实现，依赖 `BACKEND_BASE_URL` 可达；尚未接入真实小红书平台异步回执。
-- API 级测试仍依赖 `fastapi.testclient`，当前环境缺少 `fastapi` 导致 `backend/tests/test_api_minimal.py` 无法执行。
+- API 最小测试当前可执行；后续新环境需按 `pip install --break-system-packages -e ".[test]"` 先补齐依赖。
 
 ## 需要协作
 - 前端需在第六轮远程预览点击回归中验证 `failureType` 的三类展示映射（可重试、不可重试、平台限流）。
