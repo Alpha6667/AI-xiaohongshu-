@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>多账号运营 - 小红书 AI 发帖平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>下一阶段原型</small>
+          <h1>多账号运营</h1>
+          <p>后台不再只服务一个账号。你应该能同时看到多个账号现在分别在发什么、谁在线、谁有待确认任务。</p>
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="./index.html"><strong>总览首页</strong><small>看整体进展</small></a>
+          <a class="nav-item" href="./message-center.html"><strong>消息任务中心</strong><small>OpenClaw 对话入口</small></a>
+          <a class="nav-item active" href="./accounts.html"><strong>多账号运营</strong><small>多个账号同时管理</small></a>
+          <a class="nav-item" href="./composer.html"><strong>内容确认台</strong><small>选文案、选图、确认发布</small></a>
+          <a class="nav-item" href="./publish-center.html"><strong>发布中心</strong><small>OpenClaw 执行与审核</small></a>
+          <a class="nav-item" href="./posts.html"><strong>帖子与数据</strong><small>查看帖子和互动</small></a>
+        </nav>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="title">
+            <h2>多账号运营</h2>
+            <p>这里应该把账号管理从“账号设置”提升为真正的运营主视角：哪个账号在线、今天谁发什么、哪个账号表现更好、哪个账号有待处理任务。</p>
+          </div>
+          <div class="toolbar">
+            <a class="btn primary" href="./message-center.html">查看消息任务</a>
+            <a class="btn secondary" href="./posts.html">看账号数据</a>
+          </div>
+        </div>
+
+        <section class="stats">
+          <div class="stat"><small>已接入账号</small><strong>3</strong><small>都应可单独查看在线状态与任务</small></div>
+          <div class="stat"><small>今日有任务账号</small><strong>2</strong><small>1 个今晚发，1 个明早发</small></div>
+          <div class="stat"><small>待确认任务</small><strong>4</strong><small>需要用户选文案和选图</small></div>
+          <div class="stat"><small>表现最佳账号</small><strong>小鹿的穿搭日记</strong><small>近 7 天互动率最高</small></div>
+        </section>
+
+        <section class="table-wrap">
+          <div class="panel-head">
+            <div><span>账号列表</span><strong>这页应该像运营中台，而不是简单的账号设置页</strong></div>
+            <div class="badge success">支持同时运营</div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr><th>账号</th><th>状态</th><th>今日任务</th><th>最近结果</th><th>下一步</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>小鹿的穿搭日记</strong><br /><small>主账号</small></td><td><span class="pill success">在线</span></td><td>今晚 19:30 发通勤穿搭</td><td>最近 3 篇互动稳定</td><td><a class="link" href="./composer.html">去确认内容</a></td></tr>
+              <tr><td><strong>租房改造研究所</strong><br /><small>副账号</small></td><td><span class="pill success">在线</span></td><td>明早 09:30 发早餐摆盘</td><td>收藏高于点赞</td><td><a class="link" href="./message-center.html">看消息任务</a></td></tr>
+              <tr><td><strong>生活慢一点</strong><br /><small>备用账号</small></td><td><span class="pill failed">离线</span></td><td>暂无</td><td>本周未安排内容</td><td><a class="link" href="#">重新连接</a></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

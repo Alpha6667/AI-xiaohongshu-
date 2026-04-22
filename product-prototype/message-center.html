@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>消息任务中心 - 小红书 AI 发帖平台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <small>下一阶段原型</small>
+          <h1>消息任务中心</h1>
+          <p>用户不一定先进入后台，而是先给 OpenClaw 发消息。后台要能接住这些消息任务，并把它们转成可确认、可发布的内容流。</p>
+        </div>
+        <nav class="nav">
+          <a class="nav-item" href="./index.html"><strong>总览首页</strong><small>看整体进展</small></a>
+          <a class="nav-item active" href="./message-center.html"><strong>消息任务中心</strong><small>OpenClaw 对话入口</small></a>
+          <a class="nav-item" href="./accounts.html"><strong>多账号运营</strong><small>多个账号同时管理</small></a>
+          <a class="nav-item" href="./composer.html"><strong>内容确认台</strong><small>选文案、选图、确认发布</small></a>
+          <a class="nav-item" href="./publish-center.html"><strong>发布中心</strong><small>OpenClaw 执行与审核</small></a>
+          <a class="nav-item" href="./posts.html"><strong>帖子与数据</strong><small>查看帖子和互动</small></a>
+        </nav>
+      </aside>
+      <main class="content">
+        <div class="topbar">
+          <div class="title">
+            <h2>消息任务中心</h2>
+            <p>这一页是“OpenClaw 聊天入口”和“后台确认入口”之间的桥。用户先发消息，系统再把结果整理成任务给用户确认。</p>
+          </div>
+          <div class="toolbar">
+            <a class="btn primary" href="./composer.html">查看当前候选内容</a>
+            <a class="btn secondary" href="./accounts.html">切到多账号</a>
+          </div>
+        </div>
+
+        <section class="hero">
+          <small class="subtle">新阶段核心变化</small>
+          <strong>先通过 OpenClaw 发消息，再回后台确认，不让后台承担所有起点。</strong>
+          <p>例如你直接发“今天晚上 7 点帮我发一条通勤穿搭，给我 3 版文案和 6 张图”，OpenClaw 回你候选内容，后台这里则把它组织成一个待确认任务。</p>
+        </section>
+
+        <section class="grid-2">
+          <article class="card">
+            <div class="panel-head">
+              <div><span>最近消息任务</span><strong>OpenClaw 对话应落成可管理的任务</strong></div>
+              <div class="badge ai">聊天转任务</div>
+            </div>
+            <div class="candidate-list">
+              <div class="candidate active">
+                <strong>任务 01 · 今天晚上 7 点发通勤穿搭</strong>
+                <p>OpenClaw 已返回 3 版文案和 6 张图，等待你确认发布账号、最终文案和最终图片。</p>
+              </div>
+              <div class="candidate">
+                <strong>任务 02 · 明早发早餐摆盘灵感</strong>
+                <p>已生成首轮文案，图片还在生成中。后台应提示“内容未准备完，不可直接发”。</p>
+              </div>
+              <div class="candidate">
+                <strong>任务 03 · 周末发租房改造</strong>
+                <p>已排期到周六，当前不需要立即确认，可留在待办里。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="panel-head">
+              <div><span>消息内容预览</span><strong>后台里要看得见用户是怎么下达需求的</strong></div>
+              <div class="badge gold">对话上下文</div>
+            </div>
+            <div class="stack">
+              <div class="note"><strong>你发给 OpenClaw</strong><p>“我今天晚上 7 点想发一条通勤穿搭，给我 3 版文案和 6 张图，偏真实分享一点。”</p></div>
+              <div class="note"><strong>OpenClaw 返回</strong><p>“已为你生成 3 版文案和 6 张候选图，建议发布账号：小鹿的穿搭日记，建议发布时间：19:30。”</p></div>
+              <div class="actions"><a class="btn primary" href="./composer.html">去确认内容</a><a class="btn secondary" href="./publish-center.html">去看执行状态</a></div>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
