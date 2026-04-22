@@ -200,6 +200,62 @@
         font-size: 30px;
       }
 
+      .account-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .account-card,
+      .execution-card {
+        padding: 22px;
+        border-radius: 28px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: 0 14px 40px rgba(73, 47, 25, 0.06);
+      }
+
+      .account-strip {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .mini-stat {
+        flex: 1;
+        min-width: 160px;
+        padding: 16px;
+        border-radius: 18px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+      }
+
+      .mini-stat strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 18px;
+      }
+
+      .execution-flow {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .execution-item {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+      }
+
+      .execution-item strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
       .workflow,
       .studio-grid {
         margin-bottom: 18px;
@@ -507,6 +563,35 @@
         gap: 12px;
       }
 
+      .option-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .option-item {
+        padding: 16px;
+        border-radius: 20px;
+        background: #fffdf9;
+        border: 1px solid rgba(65, 46, 31, 0.09);
+      }
+
+      .option-item.active {
+        border-color: rgba(215, 79, 63, 0.28);
+        box-shadow: inset 0 0 0 1px rgba(215, 79, 63, 0.16);
+      }
+
+      .option-item strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .option-item p {
+        margin: 0;
+        line-height: 1.7;
+        color: #54463b;
+      }
+
       .queue-head,
       .insight-head {
         display: flex;
@@ -547,6 +632,7 @@
         }
 
         .summary,
+        .account-grid,
         .workflow,
         .studio-grid,
         .content-grid,
@@ -571,6 +657,7 @@
         }
 
         .summary,
+        .account-grid,
         .workflow,
         .studio-grid,
         .content-grid,
@@ -593,100 +680,149 @@
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <small>内容运营工作台</small>
+          <small>账号发帖工作台</small>
           <h1>小红书 AI 发帖平台</h1>
-          <p>我理解你想要的，不是技术后台，而是一个“今天该发什么、现在卡在哪、下一步怎么做”一眼能看懂的运营台。</p>
+          <p>这版原型改成了更接近你真实使用方式的产品：接自己的账号、输入主题、让 AI 出文案和配图、你来挑，最后交给 OpenClaw 去发。</p>
         </div>
 
         <div class="nav">
           <div class="nav-item active">
-            <strong>今日首页</strong>
-            <small>先看待处理内容、发布结果和风险提醒</small>
+            <strong>我的账号</strong>
+            <small>先看今天准备用哪个小红书账号发内容</small>
           </div>
           <div class="nav-item">
-            <strong>发帖工作台</strong>
-            <small>主题输入、AI 生成、人工修改、发布前确认</small>
+            <strong>今日发帖</strong>
+            <small>输入主题、生成文案、挑图、确认发布</small>
           </div>
           <div class="nav-item">
-            <strong>待审核内容</strong>
-            <small>谁提交的、为什么退回、还差什么</small>
+            <strong>AI 备选内容</strong>
+            <small>多版文案、多组图片、人工筛选</small>
           </div>
           <div class="nav-item">
-            <strong>已发布结果</strong>
-            <small>成功、失败、限流、后续补救动作</small>
+            <strong>OpenClaw 执行</strong>
+            <small>上传、提交审核、等待平台回写</small>
           </div>
           <div class="nav-item">
-            <strong>素材和数据</strong>
-            <small>图片、封面、指标快照、表现趋势</small>
+            <strong>帖子和数据</strong>
+            <small>审核通过后看帖子链接、点赞和互动</small>
           </div>
         </div>
 
         <div class="user-card">
-          <small>当前角色</small>
-          <strong>运营负责人</strong>
-          <p class="helper">页面重点不是 API 名词，而是帮你快速判断今天要发哪篇、哪篇有风险、哪些需要 AI 再改一轮。</p>
+          <small>你的使用方式</small>
+          <strong>我发主题，AI 出内容，OpenClaw 去代发</strong>
+          <p class="helper">这版原型不再只是“运营后台”，而是围绕你自己的小红书账号日常发帖闭环来设计。</p>
         </div>
       </aside>
 
       <main class="main">
         <section class="topbar">
           <div class="hero">
-            <small class="meta">产品原型预览 · 中文方向稿</small>
-            <h2>先把“今天该做什么”放到第一屏，而不是先让你看一堆英文状态。</h2>
+            <small class="meta">产品原型预览 · 真实业务闭环稿</small>
+            <h2>先连上你的小红书账号，再让 AI 帮你把“今天要发什么”真正变成一篇可发布的笔记。</h2>
             <p>
-              我把首页理解成一个运营视角的总控台：先看到今日待发内容、审核阻塞、AI 推荐动作和最新发布结果。
-              页面会更像“内容创作工作台”，而不是传统模板后台。
+              这版首页不是泛化内容后台，而是按照你的实际使用顺序来排：账号接入、输入主题、AI 生成多版文案和图片、人工选择、OpenClaw 代发、小红书审核、回看帖子和点赞数据。
             </p>
             <div class="hero-actions">
-              <button class="btn primary">开始生成今天的选题</button>
-              <button class="btn secondary">查看待审核内容</button>
+              <button class="btn primary">开始发今天的主题</button>
+              <button class="btn secondary">查看已发布帖子</button>
             </div>
           </div>
         </section>
 
+        <section class="account-grid">
+          <article class="account-card">
+            <div class="section-head">
+              <div>
+                <span>账号接入</span>
+                <strong>先明确今天是哪个小红书账号在发</strong>
+              </div>
+              <div class="badge success">OpenClaw 已连接</div>
+            </div>
+            <p>这里应该先看到你当前绑定的账号是谁、是否在线、最近一次同步时间，以及今天要不要切换到另一个账号发内容。</p>
+            <div class="account-strip">
+              <div class="mini-stat">
+                <small>当前发帖账号</small>
+                <strong>小鹿的穿搭日记</strong>
+              </div>
+              <div class="mini-stat">
+                <small>账号状态</small>
+                <strong>已连接，可发帖</strong>
+              </div>
+              <div class="mini-stat">
+                <small>最近同步</small>
+                <strong>2 分钟前</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="execution-card">
+            <div class="section-head">
+              <div>
+                <span>OpenClaw 执行链路</span>
+                <strong>你选完内容后，剩下的交给 OpenClaw</strong>
+              </div>
+            </div>
+            <div class="execution-flow">
+              <div class="execution-item">
+                <strong>1. 接收你确认后的文案和图片</strong>
+                <small>只把你最后选中的版本送去执行，不会误发草稿。</small>
+              </div>
+              <div class="execution-item">
+                <strong>2. 自动上传到小红书并提交</strong>
+                <small>包括图片、标题、正文、标签和发布时间。</small>
+              </div>
+              <div class="execution-item">
+                <strong>3. 等待平台审核并回写结果</strong>
+                <small>审核通过后自动在后台出现帖子和数据入口。</small>
+              </div>
+            </div>
+          </article>
+        </section>
+
         <section class="summary">
           <div class="metric">
-            <small>今天待处理</small>
-            <strong>06</strong>
-            <small>2 篇待审核，3 篇待发布，1 篇发布失败待处理</small>
+            <small>今天主题</small>
+            <strong>01</strong>
+            <small>你今天先发 1 个主题，系统帮你展开成多版内容</small>
           </div>
           <div class="metric">
-            <small>今日已发布</small>
-            <strong>12</strong>
-            <small>其中 10 篇成功，2 篇仍在回写结果</small>
-          </div>
-          <div class="metric">
-            <small>AI 已产出草稿</small>
-            <strong>18</strong>
-            <small>其中 5 篇建议直接进入人工微调</small>
-          </div>
-          <div class="metric">
-            <small>需要你关注</small>
+            <small>AI 候选文案</small>
             <strong>03</strong>
-            <small>1 篇限流，1 篇标题弱，1 篇封面点击率偏低</small>
+            <small>系统生成 3 版不同风格文案供你挑选</small>
+          </div>
+          <div class="metric">
+            <small>AI 候选图片</small>
+            <strong>06</strong>
+            <small>根据文案自动出图，再由你选最终要发的几张</small>
+          </div>
+          <div class="metric">
+            <small>已发布结果</small>
+            <strong>18</strong>
+            <small>已审核通过的帖子可继续看点赞、收藏和评论</small>
           </div>
         </section>
 
         <section class="workflow">
           <div class="workflow-step">
             <em>1</em>
-            <strong>先定今天要发什么</strong>
-            <p>先看今天最值得发的题材，不让你从几十条草稿里自己找重点。</p>
+            <strong>输入今天想发的主题</strong>
+            <p>例如“春夏通勤穿搭”“低预算租房改造”“早餐摆盘灵感”。</p>
           </div>
           <div class="workflow-step">
             <em>2</em>
-            <strong>AI 先出可用版本</strong>
-            <p>标题、正文、封面建议和标签一次给到，再由你只改关键几处。</p>
+            <strong>AI 生成文案和图片</strong>
+            <p>先给你多版文案，再给你一批和文案内容接近的图片。</p>
           </div>
           <div class="workflow-step">
             <em>3</em>
-            <strong>人工审核后直接发</strong>
-            <p>页面要清楚显示为什么能发、为什么不能发，而不是只给技术状态。</p>
+            <strong>你人工挑选最终版本</strong>
+            <p>选今天要发的文案和图片，不满意就继续重生或微调。</p>
           </div>
           <div class="workflow-step">
             <em>4</em>
-            <strong>结果回来后告诉你该怎么办</strong>
-            <p>成功就跟指标，失败就给明确原因和下一步动作，而不是扔给你一条报错。</p>
+            <strong>OpenClaw 去发，平台回结果</strong>
+            <p>审核通过后，后台直接看到帖子和点赞数据，不用你再手工查。</p>
           </div>
         </section>
 
@@ -694,33 +830,33 @@
           <article class="asset-card">
             <div class="section-head">
               <div>
-                <span>素材区</span>
-                <strong>这块应该让你一眼看出这篇内容长什么样</strong>
+                  <span>素材区</span>
+                  <strong>这里不是素材仓库，而是 AI 为当前主题生成的候选图片</strong>
+                </div>
+                <div class="badge ai">今天要发的图</div>
               </div>
-              <div class="badge ai">封面建议</div>
-            </div>
-            <p>不是只显示“已上传 3 张素材”，而是直接看到候选封面、图组顺序和 AI 给你的改图建议。</p>
+            <p>你输入一个主题后，这里应该出现一批和文案内容相匹配的候选图片。你只需要点选今天想发的几张，而不是自己去别处找图再上传。</p>
             <div class="asset-grid">
-              <div class="asset-thumb">当前主图</div>
-              <div class="asset-thumb">备选封面</div>
-              <div class="asset-thumb">详情图 01</div>
-              <div class="asset-thumb">详情图 02</div>
-              <div class="asset-thumb">详情图 03</div>
-              <div class="asset-thumb">封面文案稿</div>
+              <div class="asset-thumb">候选图 A</div>
+              <div class="asset-thumb">候选图 B</div>
+              <div class="asset-thumb">候选图 C</div>
+              <div class="asset-thumb">候选图 D</div>
+              <div class="asset-thumb">候选图 E</div>
+              <div class="asset-thumb">候选图 F</div>
             </div>
           </article>
 
           <article class="preview-card">
             <div class="section-head">
               <div>
-                <span>手机预览</span>
-                <strong>你最终关心的是发出去像不像一篇会有人点开的笔记</strong>
+                  <span>手机预览</span>
+                  <strong>你最终关心的是：这篇笔记发到小红书里像不像你想要的样子</strong>
+                </div>
               </div>
-            </div>
-            <p>这里应该像手机里的真实笔记预览，而不是后台文字表格。你可以快速判断封面、标题、排版和整体气质对不对。</p>
+            <p>这里应该像真实小红书笔记预览。你挑完文案和图片后，先在后台看一眼整体效果，再决定要不要交给 OpenClaw 去发。</p>
             <div class="preview-phone">
               <div class="preview-screen">
-                <div class="post-cover">春夏通勤穿搭 3 个最容易出片的角度</div>
+                <div class="post-cover">打工人春夏通勤穿搭 这样拍更显高更有氛围感</div>
                 <div class="post-lines">
                   <div class="post-line"></div>
                   <div class="post-line"></div>
@@ -728,8 +864,8 @@
                 </div>
                 <div class="chips">
                   <div class="chip">通勤穿搭</div>
-                  <div class="chip">显高技巧</div>
-                  <div class="chip soft">适合今天发布</div>
+                  <div class="chip">上班拍照</div>
+                  <div class="chip soft">这是你最终确认版</div>
                 </div>
               </div>
             </div>
@@ -742,41 +878,55 @@
               <div class="section-head">
                 <div>
                   <span>发帖工作台</span>
-                  <strong>今天优先处理的内容</strong>
+                  <strong>输入一个主题后，系统应该把候选文案直接摆在你面前</strong>
                 </div>
-                <div class="badge ai">AI 推荐优先级</div>
+                <div class="badge ai">文案 3 选 1</div>
               </div>
 
               <div class="field-grid">
                 <div class="field">
-                  <small>当前选题</small>
-                  <strong>春夏通勤穿搭怎么拍更有点击感</strong>
+                  <small>你今天输入的主题</small>
+                  <strong>春夏通勤穿搭怎么拍更容易出片</strong>
                 </div>
                 <div class="field">
-                  <small>目标动作</small>
-                  <strong>先补一版更口语化标题，再确认封面图</strong>
+                  <small>当前要做的决定</small>
+                  <strong>从 3 版文案里选 1 版，再从 6 张图里选 4 张</strong>
                 </div>
               </div>
 
               <div class="textarea">
-                <strong>我理解你想看的工作方式</strong>
+                <strong>这块要更像“AI 帮你出方案”，而不是空白编辑器</strong>
                 <div class="helper">
-                  不是让你自己去猜“generate-copy / publish / metrics”是什么意思，而是直接告诉你：
-                  这篇内容为什么值得发、AI 已经帮你做了什么、你只需要决定要不要改标题、要不要换封面、要不要现在发布。
+                  你说一个主题，系统马上给你几版不同风格的小红书文案，例如：更像真实分享、更像清单种草、更像情绪表达。你不用从零开始写，只需要挑最像你风格的一版。
+                </div>
+              </div>
+
+              <div class="option-list">
+                <div class="option-item active">
+                  <strong>当前选中文案 A</strong>
+                  <p>今天试了 3 套通勤穿搭，终于找到那种不费力但很出片的感觉。上班前 5 分钟拍一组，也能显得整个人很轻松很利落。</p>
+                </div>
+                <div class="option-item">
+                  <strong>备选文案 B</strong>
+                  <p>如果你也是通勤党，又想穿得不太普通，可以直接抄这套思路：颜色别太满、版型别太紧、拍照角度尽量留一点空气感。</p>
+                </div>
+                <div class="option-item">
+                  <strong>备选文案 C</strong>
+                  <p>最近上班拍照终于不再“像路过顺便拍一下”了，总结了 3 个最容易出氛围感的通勤穿搭拍法，真的很适合打工人。</p>
                 </div>
               </div>
 
               <div class="chips">
-                <div class="chip">建议标题更短</div>
-                <div class="chip">封面主字再放大 12%</div>
+                <div class="chip">标题可再口语化一点</div>
+                <div class="chip">建议配 4 张竖图</div>
                 <div class="chip">发布时间建议 19:30</div>
-                <div class="chip soft">适合做“打工人通勤”标签</div>
+                <div class="chip soft">确认后交给 OpenClaw 发布</div>
               </div>
 
               <div class="mini-actions">
-                <button class="mini-btn primary">一键生成优化版</button>
-                <button class="mini-btn">人工修改后提交审核</button>
-                <button class="mini-btn">仅保存草稿</button>
+                <button class="mini-btn primary">确认这版文案和图片</button>
+                <button class="mini-btn">让 AI 再生成一版</button>
+                <button class="mini-btn">先保存，晚点再发</button>
               </div>
             </article>
 
@@ -784,28 +934,28 @@
               <div class="section-head">
                 <div>
                   <span>发布结果</span>
-                  <strong>你最关心的不是接口，而是到底发出去没有</strong>
+                  <strong>你最关心的是：OpenClaw 发出去后，小红书那边到底过没过审</strong>
                 </div>
-                <div class="badge success">自动回写已接入</div>
+                <div class="badge success">审核结果回写</div>
               </div>
 
               <div class="timeline">
                 <div class="timeline-item">
                   <div class="status-row">
-                    <span class="pill success">发布成功</span>
-                    <span class="pill publishing">平台已回写</span>
+                    <span class="pill success">审核通过</span>
+                    <span class="pill publishing">帖子已生成</span>
                   </div>
-                  <strong>职场女生春夏穿搭清单</strong>
-                  <p>平台帖子 ID：`xh_20260422_0192`，发布时间 19:32。表现正常，建议 2 小时后补抓一次指标。</p>
+                  <strong>职场女生春夏通勤穿搭清单</strong>
+                  <p>OpenClaw 已代发成功，小红书审核通过后已拿到帖子链接。现在你应该能在后台直接点进帖子，并继续看点赞和收藏。</p>
                   <time>刚刚更新</time>
                 </div>
 
                 <div class="timeline-item">
                   <div class="status-row">
-                    <span class="pill failed">平台限流</span>
+                    <span class="pill failed">审核未通过</span>
                   </div>
                   <strong>厨房收纳 3 个低成本改造技巧</strong>
-                  <p>失败原因已分类为“平台限流”。页面应该直接告诉你这属于限流，不是笼统地只写一行 failed。</p>
+                  <p>如果平台没过审，这里要直接告诉你原因，并提示是改文案、换图，还是稍后重发，而不是让你自己猜。</p>
                   <time>12 分钟前</time>
                 </div>
               </div>
@@ -816,24 +966,24 @@
             <article class="queue">
               <div class="queue-head">
                 <div>
-                  <small>审核队列</small>
-                  <h3>今天待你拍板的内容</h3>
+                  <small>待你确认</small>
+                  <h3>今天 AI 给你的候选主题和内容</h3>
                 </div>
-                <div class="badge ai">2 条高优先</div>
+                <div class="badge ai">主题池</div>
               </div>
 
               <div class="queue-list">
                 <div class="queue-item">
                   <strong>露营早餐摆盘灵感</strong>
-                  <small>AI 初稿完成，封面偏平，建议人工补一句更有生活感的开头。</small>
+                  <small>可直接继续生成图，适合明早发。</small>
                 </div>
                 <div class="queue-item">
                   <strong>低预算租房改造</strong>
-                  <small>标题吸引力高，但图片顺序略乱，建议先换第 2 张做首图。</small>
+                  <small>文案成熟，建议再补一组更生活化的图片。</small>
                 </div>
                 <div class="queue-item">
                   <strong>通勤鞋选购避坑</strong>
-                  <small>正文信息足够，但缺一条明确结论，容易显得像堆信息。</small>
+                  <small>信息足够，但更适合下周发，今天优先级不高。</small>
                 </div>
               </div>
             </article>
@@ -841,23 +991,23 @@
             <article class="insight">
               <div class="insight-head">
                 <div>
-                  <small>数据提醒</small>
-                  <h3>今天不是看复杂图表，而是看该不该继续发</h3>
+                  <small>发完之后</small>
+                  <h3>发出去以后，你想回看的应该是帖子和点赞</h3>
                 </div>
               </div>
 
               <div class="insight-list">
                 <div class="insight-item">
-                  <strong>近 3 篇穿搭内容点赞率在上升</strong>
-                  <p>说明当前题材仍值得继续做，可以让 AI 再生成 2 个同主题备选。</p>
+                  <strong>已发布帖子应该有直接入口</strong>
+                  <p>审核通过后，后台应能直接看到帖子标题、链接、发布时间，而不是只看到一条发布成功记录。</p>
                 </div>
                 <div class="insight-item">
-                  <strong>家居类内容评论高但收藏低</strong>
-                  <p>可能是“能聊但不够想保存”，建议改成更具体的清单型标题。</p>
+                  <strong>数据应该先看点赞、收藏、评论</strong>
+                  <p>你真正关心的是发出去以后有没有人互动，而不是技术侧的内部状态字段。</p>
                 </div>
                 <div class="insight-item">
-                  <strong>失败内容最好直接给操作建议</strong>
-                  <p>例如：限流就提示晚点重试，非重试错误就提醒改文案或素材，不要只显示技术状态。</p>
+                  <strong>表现好的内容要能继续复用</strong>
+                  <p>如果这条笔记点赞表现不错，系统应该提示你可以再做同主题衍生内容，而不是让数据停在历史列表里。</p>
                 </div>
               </div>
             </article>
@@ -865,35 +1015,35 @@
             <article class="calendar-card">
               <div class="insight-head">
                 <div>
-                  <small>发布节奏</small>
-                  <h3>你还需要一块“今天什么时候发”的区域</h3>
+                  <small>今天的执行节奏</small>
+                  <h3>你今天只需要顺着这个节奏完成一次发帖</h3>
                 </div>
               </div>
-              <p>如果这个项目真是给运营用的，首页最好直接告诉你今天的发布时间建议和待补位时段，而不是只有数据回看。</p>
+              <p>如果这是你自己日常会用的平台，它应该告诉你：什么时候生成、什么时候确认、什么时候让 OpenClaw 去发、什么时候回来看看审核和点赞。</p>
               <div class="calendar-grid">
                 <div class="calendar-slot">
-                  <strong>10:30</strong>
-                  <small>早餐类内容已排</small>
+                  <strong>09:30</strong>
+                  <small>输入今天主题</small>
                 </div>
                 <div class="calendar-slot">
-                  <strong>14:00</strong>
-                  <small>家居类待确认封面</small>
+                  <strong>09:40</strong>
+                  <small>AI 出 3 版文案</small>
                 </div>
                 <div class="calendar-slot">
-                  <strong>19:30</strong>
-                  <small>通勤穿搭建议优先发</small>
+                  <strong>09:50</strong>
+                  <small>AI 出 6 张候选图</small>
                 </div>
                 <div class="calendar-slot">
-                  <strong>21:00</strong>
-                  <small>限流内容不建议补发</small>
+                  <strong>10:00</strong>
+                  <small>你确认最终版本</small>
                 </div>
                 <div class="calendar-slot">
-                  <strong>22:00</strong>
-                  <small>可补一条轻内容笔记</small>
+                  <strong>10:05</strong>
+                  <small>OpenClaw 自动代发</small>
                 </div>
                 <div class="calendar-slot">
-                  <strong>待定</strong>
-                  <small>审核通过后自动占位</small>
+                  <strong>之后</strong>
+                  <small>看审核结果和点赞数据</small>
                 </div>
               </div>
             </article>
