@@ -1,28 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-
-function getStatusTone(status: PostDetail["status"]) {
-  if (status === "published") {
-    return "positive" as const;
-  }
-
-  if (status === "publish_failed") {
-    return "critical" as const;
-  }
-
-  if (status === "in_review" || status === "publishing") {
-    return "warm" as const;
-  }
-
-  if (status === "approved") {
-    return "positive" as const;
-  }
-
-  return "neutral" as const;
-}
+import { getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 function getPublishSummary(post: PostDetail) {
   const latestRecord = post.publishRecords.at(-1);
@@ -34,7 +16,7 @@ function getPublishSummary(post: PostDetail) {
   }
 
   if (post.status === "publish_failed") {
-    return latestRecord?.errorMessage || latestRecord?.detail || "发布失败，等待后端补充更明确的错误信息。";
+    return latestRecord?.errorMessage || latestRecord?.detail || "发布失败，等待更明确的错误信息回写。";
   }
 
   if (post.status === "publishing") {
@@ -42,22 +24,6 @@ function getPublishSummary(post: PostDetail) {
   }
 
   return post.platformPostId ? `当前已记录平台 ID：${post.platformPostId}` : "当前还未进入平台发布结果回写阶段。";
-}
-
-function getFailureTypeLabel(failureType: PostDetail["publishRecords"][number]["failureType"]) {
-  if (failureType === "retryable") {
-    return "可重试失败";
-  }
-
-  if (failureType === "non_retryable") {
-    return "不可重试失败";
-  }
-
-  if (failureType === "rate_limited") {
-    return "平台限流失败";
-  }
-
-  return null;
 }
 
 function getMetricsState(post: PostDetail) {
@@ -134,26 +100,27 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
   const metricsState = getMetricsState(post);
   const latestPublishRecord = post.publishRecords.at(-1);
+  const publishNarrative = getPublishNarrative(post);
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="Post Detail" title={post.title} description="详情页直接展示真实草稿、发布结果回写和指标历史快照。" />
+        <SectionHeading eyebrow="帖子记录" title={post.title} description="直接看这条内容从定稿、发送到数据回写的完整记录。" />
 
         <div className="detail-overview">
           <div>
-            <StatusPill label={post.status} tone={getStatusTone(post.status)} />
+            <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
             <p className="detail-topic">主题：{post.topic}</p>
           </div>
-          <Link href="/posts" className="text-link">
-            返回帖子列表
+          <Link href="/posts" className="text-link product-link">
+            返回帖子与数据
           </Link>
         </div>
 
         <div className="detail-layout">
           <div className="detail-primary">
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Draft" title="草稿内容" />
+              <SectionHeading eyebrow="最终稿" title="这次实际准备发出的内容" />
               <p className="body-copy">{post.body}</p>
               <div className="tag-row">
                 {post.tags.map((tag) => (
@@ -163,20 +130,24 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Publish State" title="发布状态回写" description="第五轮开始直接展示发布中、成功、失败三类真实状态。" />
+              <SectionHeading eyebrow="发送结果" title="OpenClaw 与平台回写" description="这里看发送现在走到哪一步，以及下一步该怎么处理。" />
+              <article className={`state-card state-card-${publishNarrative.tone}`}>
+                <strong>{publishNarrative.headline}</strong>
+                <p>{publishNarrative.nextAction}</p>
+              </article>
               <div className="detail-meta-grid">
                 <article className="detail-meta-card">
-                  <span className="eyebrow">Status</span>
-                  <strong>{post.status}</strong>
+                  <span className="eyebrow">当前状态</span>
+                  <strong>{getStatusLabel(post.status)}</strong>
                   <p>{getPublishSummary(post)}</p>
                 </article>
                 <article className="detail-meta-card">
-                  <span className="eyebrow">Platform</span>
-                  <strong>{post.publishRecords.at(-1)?.platformPostId || post.platformPostId || "待回写"}</strong>
+                  <span className="eyebrow">平台回写</span>
+                  <strong>{latestPublishRecord?.platformPostId || post.platformPostId || "待回写"}</strong>
                   <p>{post.publishedAt ? `发布时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : "当前还没有平台发布时间回写。"}</p>
                 </article>
                 <article className="detail-meta-card">
-                  <span className="eyebrow">Latest Result</span>
+                  <span className="eyebrow">最近一次结果</span>
                   <strong>{latestPublishRecord?.status || "暂无结果"}</strong>
                   <p>{latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "当前还没有发布结果记录。"}</p>
                   {getFailureTypeLabel(latestPublishRecord?.failureType) ? <p>失败分类：{getFailureTypeLabel(latestPublishRecord?.failureType)}</p> : null}
@@ -185,7 +156,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Assets" title="关联素材" description="当前直接使用详情接口返回的 `assets` 字段渲染真实素材。" />
+              <SectionHeading eyebrow="这次配图" title="关联素材" description="这里展示这条内容当前挂接的真实图片素材。" />
               {post.assets.length > 0 ? (
                 <div className="asset-grid">
                   {post.assets.map((asset) => (
@@ -205,7 +176,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Metrics" title="指标历史" description="当前直接渲染详情接口返回的 `metricsHistory` 真实快照。" />
+              <SectionHeading eyebrow="数据表现" title="指标历史" description="直接看这条内容回写过来的真实快照变化。" />
               <article className={`state-card state-card-${metricsState.tone}`}>
                 <strong>{metricsState.title}</strong>
                 <p>{metricsState.description}</p>
@@ -233,20 +204,24 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
           <div className="detail-secondary">
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Review Records" title="审核记录" />
+              <SectionHeading eyebrow="人工确认记录" title="这条内容是怎么被确认下来的" />
               <div className="history-stack">
-                {post.reviewRecords.map((record) => (
-                  <article key={record.id} className="plain-row-card">
-                    <strong>{record.action}</strong>
-                    <p>{record.comment}</p>
-                    <span>{record.operator}</span>
-                  </article>
-                ))}
+                {post.reviewRecords.length > 0 ? (
+                  post.reviewRecords.map((record) => (
+                    <article key={record.id} className="plain-row-card">
+                      <strong>{record.action}</strong>
+                      <p>{record.comment}</p>
+                      <span>{record.operator}</span>
+                    </article>
+                  ))
+                ) : (
+                  <p className="muted-copy">当前还没有人工确认记录。</p>
+                )}
               </div>
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Publish Records" title="发布记录" />
+              <SectionHeading eyebrow="OpenClaw 发送记录" title="发送过程明细" />
               <div className="history-stack">
                 {post.publishRecords.length > 0 ? (
                   post.publishRecords.map((record) => (
@@ -268,12 +243,16 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="Actions" title="接口边界" />
-              <div className="endpoint-stack">
-                <code>{apiClient.posts.detailEndpoint(post.id)}</code>
-                <code>{apiClient.posts.updateEndpoint(post.id)}</code>
-                <code>{apiClient.posts.publishEndpoint(post.id)}</code>
-              </div>
+              <SectionHeading eyebrow="这条内容的结论" title="下一步建议" />
+              <article className={`state-card state-card-${publishNarrative.tone}`}>
+                <strong>{publishNarrative.headline}</strong>
+                <p>{publishNarrative.nextAction}</p>
+              </article>
+              <article className="detail-meta-card">
+                <span className="eyebrow">最新汇总</span>
+                <strong>浏览 {post.latestMetrics.views.toLocaleString()}</strong>
+                <p>点赞 {post.latestMetrics.likes.toLocaleString()}，收藏 {post.latestMetrics.favorites.toLocaleString()}，评论 {post.latestMetrics.comments.toLocaleString()}，关注转化 {post.latestMetrics.followConversions.toLocaleString()}。</p>
+              </article>
             </SectionCard>
           </div>
         </div>

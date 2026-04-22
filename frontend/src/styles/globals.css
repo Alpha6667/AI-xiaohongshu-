@@ -579,6 +579,327 @@ textarea {
   border: 1px solid var(--border);
 }
 
+.product-hero,
+.product-grid,
+.product-stat-grid,
+.composer-layout,
+.composer-main-panel,
+.composer-side-panel,
+.candidate-grid,
+.candidate-image-grid,
+.preview-layout,
+.preview-summary,
+.action-column,
+.queue-list,
+.publish-center-list,
+.publish-steps,
+.publish-card-body {
+  display: grid;
+  gap: 20px;
+}
+
+.product-hero {
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+}
+
+.product-grid-two,
+.composer-layout,
+.preview-layout,
+.publish-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.product-hero-main,
+.product-hero-side,
+.product-card,
+.preview-card,
+.action-panel-card,
+.publish-card,
+.product-empty-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(247, 242, 236, 0.92));
+}
+
+.product-hero-main h2,
+.publish-card-head h3,
+.product-section-head h3,
+.queue-item strong,
+.candidate-card strong,
+.preview-summary-card strong {
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.product-hero-main h2 {
+  margin: 12px 0 14px;
+  font-size: clamp(30px, 4vw, 46px);
+  max-width: 14ch;
+}
+
+.product-hero-main p,
+.product-hero-side p,
+.decision-card p,
+.product-empty-card p,
+.candidate-card p,
+.preview-summary-card p,
+.queue-item p,
+.publish-card p,
+.product-post-row p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.product-hero-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.product-flow-line {
+  margin-top: 18px;
+}
+
+.product-grid,
+.product-stat-grid,
+.candidate-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.product-stat-grid {
+  margin-top: 8px;
+}
+
+.decision-card,
+.product-empty-card,
+.preview-summary-card,
+.queue-item,
+.candidate-card,
+.image-option,
+.publish-step {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.product-empty-card {
+  display: grid;
+  gap: 10px;
+}
+
+.product-link {
+  font-weight: 600;
+}
+
+.compact-list-column {
+  gap: 16px;
+}
+
+.product-row-card,
+.product-post-row {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.composer-main-panel,
+.composer-side-panel {
+  align-content: start;
+}
+
+.composer-toolbar,
+.product-section-head,
+.candidate-head,
+.publish-card-head,
+.queue-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.product-section-head {
+  margin-bottom: 4px;
+}
+
+.candidate-card,
+.image-option,
+.queue-item,
+.ghost-button,
+.secondary-button,
+.accent-button {
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.candidate-card,
+.image-option {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.candidate-card-active,
+.image-option-active,
+.queue-item-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(127, 97, 71, 0.18);
+}
+
+.candidate-card:hover,
+.image-option:hover,
+.queue-item:hover {
+  transform: translateY(-1px);
+}
+
+.candidate-head {
+  align-items: center;
+}
+
+.candidate-image-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.image-option-cover,
+.phone-cover {
+  background-position: center;
+  background-size: cover;
+  border-radius: 20px;
+}
+
+.image-option-cover {
+  aspect-ratio: 4 / 5;
+}
+
+.image-option-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.image-option-copy strong,
+.image-option-copy p,
+.phone-copy strong,
+.phone-copy p {
+  margin: 0;
+}
+
+.phone-frame {
+  padding: 16px;
+  border-radius: 32px;
+  background: linear-gradient(180deg, #30251d, #1f1813);
+  box-shadow: 0 28px 80px rgba(33, 24, 18, 0.2);
+}
+
+.phone-screen {
+  display: grid;
+  gap: 16px;
+  min-height: 640px;
+  padding: 18px;
+  border-radius: 26px;
+  background: #f8f2eb;
+}
+
+.phone-cover {
+  aspect-ratio: 4 / 5;
+}
+
+.phone-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.phone-copy p {
+  color: rgba(34, 29, 24, 0.8);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.action-panel-card {
+  position: sticky;
+  top: 28px;
+}
+
+.action-column button,
+.ghost-button,
+.secondary-button,
+.accent-button {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.action-column button {
+  width: 100%;
+  background: var(--text);
+  color: #fff;
+}
+
+.ghost-button,
+.secondary-button {
+  background: rgba(255, 255, 255, 0.76);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.accent-button {
+  background: linear-gradient(145deg, #7f6147, #5f4734);
+  color: #fff;
+}
+
+.action-column button:disabled,
+.ghost-button:disabled,
+.secondary-button:disabled,
+.accent-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.queue-list {
+  gap: 14px;
+}
+
+.queue-item {
+  display: grid;
+  gap: 12px;
+}
+
+.publish-center-hero,
+.posts-hero {
+  margin-top: 6px;
+}
+
+.publish-card-head h3 {
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.publish-steps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.publish-step {
+  min-height: 88px;
+}
+
+.publish-step-done {
+  background: rgba(72, 109, 84, 0.08);
+}
+
+.publish-step-active {
+  background: rgba(139, 105, 59, 0.08);
+}
+
+.publish-step-failed {
+  background: rgba(154, 74, 67, 0.1);
+}
+
+.product-post-side {
+  align-content: start;
+}
+
 @media (max-width: 1100px) {
   .shell,
   .hero-grid,
@@ -595,7 +916,16 @@ textarea {
   .quick-metrics,
   .detail-meta-grid,
   .workspace-selector-list,
-  .topbar {
+  .topbar,
+  .product-hero,
+  .product-grid-two,
+  .composer-layout,
+  .preview-layout,
+  .candidate-grid,
+  .candidate-image-grid,
+  .publish-steps,
+  .publish-card-body,
+  .product-stat-grid {
     grid-template-columns: 1fr;
   }
 
@@ -614,17 +944,24 @@ textarea {
     width: 100%;
     grid-template-columns: 1fr;
   }
+
+  .action-panel-card {
+    position: static;
+  }
 }
 
 @media (max-width: 720px) {
   .shell-main,
   .shell-sidebar,
   .ui-card,
-  .hero-card {
+  .hero-card,
+  .phone-frame {
     padding: 20px;
   }
 
-  .asset-strip {
+  .asset-strip,
+  .candidate-image-grid,
+  .publish-steps {
     grid-template-columns: 1fr;
   }
 }

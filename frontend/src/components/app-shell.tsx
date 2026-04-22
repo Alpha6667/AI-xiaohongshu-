@@ -5,11 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems: Array<{ href: Route; label: string }> = [
-  { href: "/", label: "内容工作台" },
-  { href: "/dashboard", label: "数据看板" },
-  { href: "/posts", label: "帖子库" },
-  { href: "/review", label: "审核台" },
-  { href: "/assets", label: "素材库" },
+  { href: "/", label: "总览首页" },
+  { href: "/review", label: "发帖工作台" },
+  { href: "/dashboard", label: "发布中心" },
+  { href: "/posts", label: "帖子与数据" },
 ];
 
 function matchPath(pathname: string, href: Route) {
@@ -27,9 +26,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <aside className="shell-sidebar">
         <div className="brand-panel">
-          <span className="eyebrow">AI Xiaohongshu</span>
-          <strong>内容运营工作台</strong>
-          <p>围绕生成、编辑、审核与发布组织内容流，不做通用 ERP 式后台。</p>
+          <span className="eyebrow">小红书日常模式</span>
+          <strong>发帖工作台</strong>
+          <p>今天发什么、选哪版、什么时候交给 OpenClaw、发完表现怎么样，都按真实操作顺序组织。</p>
         </div>
         <nav className="main-nav" aria-label="后台导航">
           {navItems.map((item) => {
@@ -47,17 +46,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="shell-main">
         <header className="topbar">
           <div>
-            <span className="eyebrow">First Iteration</span>
-            <h1>小红书 AI 发帖平台</h1>
+            <span className="eyebrow">单账号日常发帖闭环</span>
+            <h1>把今天要发的内容一路推进到发布和复盘</h1>
           </div>
           <div className="topbar-meta">
             <div>
-              <span className="topbar-label">目标</span>
-              <strong>可演示静态工作台</strong>
+              <span className="topbar-label">账号接入</span>
+              <strong>单账号已接入</strong>
             </div>
             <div>
-              <span className="topbar-label">数据源</span>
-              <strong>Mock + API 边界预留</strong>
+              <span className="topbar-label">执行链路</span>
+              <strong>主题到复盘一条线</strong>
             </div>
           </div>
         </header>

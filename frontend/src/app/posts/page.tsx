@@ -1,68 +1,81 @@
 import Link from "next/link";
+
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-
-function getCoverStyle(postId: string) {
-  const covers = [
-    "linear-gradient(135deg, rgba(127, 97, 71, 0.28), rgba(255, 255, 255, 0.82))",
-    "linear-gradient(135deg, rgba(96, 115, 92, 0.24), rgba(255, 255, 255, 0.78))",
-    "linear-gradient(135deg, rgba(89, 86, 118, 0.24), rgba(255, 255, 255, 0.78))",
-  ];
-  const index = postId.charCodeAt(postId.length - 1) % covers.length;
-  return covers[index];
-}
-
-function getStatusTone(status: string) {
-  if (status === "published") {
-    return "positive" as const;
-  }
-
-  if (status === "publish_failed") {
-    return "critical" as const;
-  }
-
-  if (status === "in_review") {
-    return "warm" as const;
-  }
-
-  if (status === "publishing") {
-    return "warm" as const;
-  }
-
-  return "neutral" as const;
-}
+import { getPerformanceSuggestion, sortByPublishedDesc } from "../../lib/product";
 
 export default async function PostsPage() {
-  const posts = await apiClient.posts.list();
+  const [posts, summary] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary()]);
+  const publishedPosts = sortByPublishedDesc(posts.filter((post) => post.status === "published"));
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="Posts" title="帖子列表" description="列表页先展示状态、发布时间、封面、标题和最新指标，字段命名按 API 合同预留。" />
+        <SectionHeading eyebrow="帖子与数据" title="发完以后，直接看帖子和表现，再决定要不要继续做同类主题" description="这里不按接口字段组织，而是先看哪些主题值得继续、哪些需要换角度。" />
+
+        <div className="dashboard-hero posts-hero">
+          <article className="dashboard-highlight">
+            <span className="eyebrow">已发布内容</span>
+            <strong>{publishedPosts.length}</strong>
+            <p>已经审核通过并发出的帖子数量。发完之后先来这里看表现，再决定明天发什么。</p>
+          </article>
+
+          <div className="metric-grid publish-metric-grid">
+            <article className="metric-tile">
+              <span>总点赞</span>
+              <strong>{summary.totalLikes.toLocaleString()}</strong>
+            </article>
+            <article className="metric-tile">
+              <span>总收藏</span>
+              <strong>{summary.totalFavorites.toLocaleString()}</strong>
+            </article>
+            <article className="metric-tile">
+              <span>总评论</span>
+              <strong>{summary.totalComments.toLocaleString()}</strong>
+            </article>
+            <article className="metric-tile">
+              <span>关注转化</span>
+              <strong>{summary.followConversions.toLocaleString()}</strong>
+            </article>
+          </div>
+        </div>
 
         <div className="post-list">
-          {posts.map((post) => (
-            <Link key={post.id} href={`/posts/${post.id}`} className="post-row">
-              <div className="post-cover" style={{ background: getCoverStyle(post.id) }} />
-              <div className="post-main">
-                <div className="post-headline">
-                  <StatusPill label={post.status} tone={getStatusTone(post.status)} />
-                  <span className="muted-inline">{post.topic}</span>
+          {publishedPosts.length > 0 ? (
+            publishedPosts.map((post) => (
+              <article key={post.id} className="post-row product-post-row">
+                <div className="post-main">
+                  <div className="post-headline">
+                    <div className="tag-row">
+                      <StatusPill label="已审核通过" tone="positive" />
+                      {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
+                    </div>
+                    <span className="muted-inline">{post.topic}</span>
+                  </div>
+                  <h3>{post.title}</h3>
+                  <p>{getPerformanceSuggestion(post)}</p>
+                  <div className="row-metrics">
+                    <span>浏览 {post.latestMetrics.views.toLocaleString()}</span>
+                    <span>点赞 {post.latestMetrics.likes.toLocaleString()}</span>
+                    <span>收藏 {post.latestMetrics.favorites.toLocaleString()}</span>
+                    <span>评论 {post.latestMetrics.comments.toLocaleString()}</span>
+                  </div>
                 </div>
-                <h3>{post.title}</h3>
-                <p>更新时间 {new Date(post.updatedAt).toLocaleString("zh-CN")}</p>
-              </div>
-              <div className="post-side">
-                <span>发布时间</span>
-                <strong>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("zh-CN") : "待发布"}</strong>
-                <div className="row-metrics compact-metrics">
-                  <span>浏览 {post.latestMetrics.views.toLocaleString()}</span>
-                  <span>点赞 {post.latestMetrics.likes.toLocaleString()}</span>
-                  <span>收藏 {post.latestMetrics.favorites.toLocaleString()}</span>
+                <div className="post-side product-post-side">
+                  <span>发布时间</span>
+                  <strong>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("zh-CN") : "待回写"}</strong>
+                  <Link href={`/posts/${post.id}`} className="text-link product-link">
+                    查看这条帖子的记录
+                  </Link>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </article>
+            ))
+          ) : (
+            <article className="product-empty-card">
+              <strong>当前还没有已发布内容</strong>
+              <p>等第一条内容审核通过并回写后，这里会按帖子维度展示浏览、点赞、收藏和评论表现。</p>
+            </article>
+          )}
         </div>
       </SectionCard>
     </div>

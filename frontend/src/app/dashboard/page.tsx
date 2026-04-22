@@ -1,83 +1,111 @@
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
+import { getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
 
-const metricMap = [
-  { key: "totalPosts", label: "总帖子数" },
-  { key: "totalViews", label: "浏览" },
-  { key: "totalLikes", label: "点赞" },
-  { key: "totalFavorites", label: "收藏" },
-  { key: "totalComments", label: "评论" },
-  { key: "followConversions", label: "关注转化" },
-] as const;
+function getPublishSteps(status: string, hasPublishRecord: boolean) {
+  return [
+    { label: "已交给 OpenClaw", done: hasPublishRecord },
+    { label: "正在上传与提交", done: status === "publishing" || status === "published" || status === "publish_failed", active: status === "publishing" },
+    { label: "等待平台审核", done: status === "published" || status === "publish_failed", active: status === "publishing" },
+    { label: "审核通过已发布", done: status === "published", failed: status === "publish_failed" },
+  ];
+}
 
 export default async function DashboardPage() {
-  const summary = await apiClient.dashboard.getSummary();
-  const posts = await apiClient.posts.list();
-  const publishedPosts = posts.filter((post) => post.status === "published");
+  const [summary, posts] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list()]);
+  const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "published" || post.status === "publish_failed")).slice(0, 6);
+  const details = await Promise.all(centerPosts.map((post) => apiClient.posts.getById(post.id)));
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="Dashboard" title="看板页不是一排普通统计卡" description="保留信息层级，先把核心指标、近期表现和待处理事项做出明显主次。" />
+        <SectionHeading eyebrow="发布中心" title="OpenClaw 走到哪一步、你下一步该做什么" description="这里只回答真正影响发送结果的问题：已经发出去没有、卡在哪一步、下一步是重试还是换稿。" />
 
-        <div className="dashboard-hero">
+        <div className="dashboard-hero publish-center-hero">
           <article className="dashboard-highlight">
-            <span className="eyebrow">Overview</span>
-            <strong>{summary.totalViews.toLocaleString()}</strong>
-            <p>当前发布内容累计浏览，作为第一眼看到的主指标。</p>
+            <span className="eyebrow">当前总览</span>
+            <strong>{summary.publishedCount}</strong>
+            <p>已经审核通过并成功发出的内容数量。今天如果还要继续发，优先看下面哪些内容正在等待你处理。</p>
           </article>
 
-          <div className="metric-grid">
-            {metricMap.map((metric) => (
-              <article key={metric.key} className="metric-tile">
-                <span>{metric.label}</span>
-                <strong>{summary[metric.key].toLocaleString()}</strong>
-              </article>
-            ))}
+          <div className="metric-grid publish-metric-grid">
+            <article className="metric-tile">
+              <span>等待人工确认</span>
+              <strong>{summary.pendingReviewCount}</strong>
+            </article>
+            <article className="metric-tile">
+              <span>累计点赞</span>
+              <strong>{summary.totalLikes.toLocaleString()}</strong>
+            </article>
+            <article className="metric-tile">
+              <span>累计收藏</span>
+              <strong>{summary.totalFavorites.toLocaleString()}</strong>
+            </article>
+            <article className="metric-tile">
+              <span>累计评论</span>
+              <strong>{summary.totalComments.toLocaleString()}</strong>
+            </article>
           </div>
         </div>
       </SectionCard>
 
-      <div className="two-column-grid">
-        <SectionCard>
-          <SectionHeading eyebrow="Recent Performance" title="近期内容表现" />
-          <div className="list-column">
-            {publishedPosts.map((post) => (
-              <article key={post.id} className="plain-row-card">
-                <div>
-                  <StatusPill label="已发布" tone="positive" />
-                  <h3>{post.title}</h3>
-                </div>
-                <div className="row-metrics">
-                  <span>浏览 {post.latestMetrics.views.toLocaleString()}</span>
-                  <span>点赞 {post.latestMetrics.likes.toLocaleString()}</span>
-                  <span>收藏 {post.latestMetrics.favorites.toLocaleString()}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </SectionCard>
+      <section className="publish-center-list">
+        {details.length > 0 ? (
+          details.map((post) => {
+            const latestRecord = post.publishRecords.at(-1);
+            const narrative = getPublishNarrative(post);
+            const steps = getPublishSteps(post.status, post.publishRecords.length > 0);
 
-        <SectionCard>
-          <SectionHeading eyebrow="Pending" title="待处理事项" />
-          <div className="todo-stack">
-            <article className="todo-card">
-              <span className="todo-index">01</span>
-              <div>
-                <strong>审核中稿件</strong>
-                <p>{summary.pendingReviewCount} 篇内容等待人工确认文案和封面语气。</p>
-              </div>
-            </article>
-            <article className="todo-card">
-              <span className="todo-index">02</span>
-              <div>
-                <strong>指标回填</strong>
-                <p>当前已切到真实看板接口，本轮继续保证聚合字段稳定，不扩展趋势维度。</p>
-              </div>
-            </article>
-          </div>
-        </SectionCard>
-      </div>
+            return (
+              <SectionCard key={post.id} className="product-card publish-card">
+                <div className="publish-card-head">
+                  <div>
+                    <span className="eyebrow">{post.topic}</span>
+                    <h3>{post.title}</h3>
+                  </div>
+                  <div className="tag-row">
+                    <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+                    {getFailureTypeLabel(latestRecord?.failureType) ? <StatusPill label={getFailureTypeLabel(latestRecord?.failureType) ?? ""} tone="critical" /> : null}
+                  </div>
+                </div>
+
+                <div className="publish-steps">
+                  {steps.map((step) => (
+                    <article key={step.label} className={`publish-step${step.done ? " publish-step-done" : ""}${step.active ? " publish-step-active" : ""}${step.failed ? " publish-step-failed" : ""}`}>
+                      <strong>{step.label}</strong>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="publish-card-body">
+                  <article className={`state-card state-card-${narrative.tone}`}>
+                    <strong>{narrative.headline}</strong>
+                    <p>{narrative.nextAction}</p>
+                  </article>
+
+                  <div className="detail-meta-grid">
+                    <article className="detail-meta-card">
+                      <span className="eyebrow">OpenClaw 回写</span>
+                      <strong>{latestRecord?.status ?? "尚未开始"}</strong>
+                      <p>{latestRecord?.detail ?? "还没有产生发送记录。"}</p>
+                    </article>
+                    <article className="detail-meta-card">
+                      <span className="eyebrow">平台结果</span>
+                      <strong>{post.platformPostId ?? "待回写"}</strong>
+                      <p>{post.publishedAt ? `通过时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : latestRecord?.errorMessage ?? "等待平台结果。"}</p>
+                    </article>
+                  </div>
+                </div>
+              </SectionCard>
+            );
+          })
+        ) : (
+          <SectionCard className="product-empty-card">
+            <strong>发布中心当前还没有需要跟进的内容</strong>
+            <p>等你在发帖工作台确认并交给 OpenClaw 后，这里会开始显示发送进度、审核回写和失败原因。</p>
+          </SectionCard>
+        )}
+      </section>
     </div>
   );
 }
