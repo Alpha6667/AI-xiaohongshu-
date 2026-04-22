@@ -9,6 +9,7 @@ class PostCreateRequest(BaseModel):
     body: str
     tags: list[str] = Field(default_factory=list)
     assetIds: list[str] = Field(default_factory=list)
+    accountId: str | None = None
 
 
 class PostUpdateRequest(BaseModel):
@@ -17,6 +18,7 @@ class PostUpdateRequest(BaseModel):
     body: str | None = None
     tags: list[str] | None = None
     assetIds: list[str] | None = None
+    accountId: str | None = None
 
 
 class ReviewRequest(BaseModel):
@@ -125,6 +127,8 @@ class PostSummaryResponse(BaseModel):
     latestTaskIds: list[str]
     latestMetrics: PostMetricsResponse
     platformPostId: str | None
+    accountId: str | None
+    messageTaskId: str | None
     createdAt: str
     updatedAt: str
     publishedAt: str | None

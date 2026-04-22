@@ -366,6 +366,35 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(len(after_history), before_count + 1)
         self.assertEqual(after_history[-1]["views"], 19000)
 
+    def test_tasks_accounts_and_post_ownership(self) -> None:
+        accounts_resp = self.client.get("/api/accounts")
+        self.assertEqual(accounts_resp.status_code, 200)
+        accounts = accounts_resp.json()
+        self.assertGreaterEqual(len(accounts), 1)
+        self.assertIn(accounts[0]["status"], {"online", "busy", "offline"})
+
+        tasks_resp = self.client.get("/api/tasks")
+        self.assertEqual(tasks_resp.status_code, 200)
+        tasks = tasks_resp.json()
+        self.assertGreaterEqual(len(tasks), 1)
+        self.assertIn(
+            tasks[0]["stage"],
+            {"pending_generation", "waiting_review", "waiting_publish", "publishing", "published", "failed"},
+        )
+
+        posts_resp = self.client.get("/api/posts")
+        self.assertEqual(posts_resp.status_code, 200)
+        posts = posts_resp.json()
+        self.assertGreaterEqual(len(posts), 1)
+        self.assertIn("accountId", posts[0])
+        self.assertIn("messageTaskId", posts[0])
+
+        linked_task = next((item for item in tasks if item.get("postId") and item.get("accountId")), None)
+        self.assertIsNotNone(linked_task)
+        linked_post = self.client.get(f"/api/posts/{linked_task['postId']}")
+        self.assertEqual(linked_post.status_code, 200)
+        self.assertEqual(linked_post.json()["accountId"], linked_task["accountId"])
+
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")
         self.assertEqual(summary_resp.status_code, 200)

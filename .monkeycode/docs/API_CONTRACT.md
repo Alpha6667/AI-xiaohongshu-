@@ -17,6 +17,8 @@
 - `POST /api/posts/{post_id}/publish`
 - `POST /api/posts/{post_id}/publish-result`
 - `POST /api/posts/{post_id}/metrics-snapshots`
+- `GET /api/tasks`
+- `GET /api/accounts`
 
 ## 第二轮联调固定字段
 
@@ -27,6 +29,9 @@
   - `reviewRecords`
   - `publishRecords`
   - `metricsHistory`
+- 详情与列表补充账号归属字段（兼容新增，不影响旧字段）：
+  - `accountId`（nullable）
+  - `messageTaskId`（nullable）
 
 ### `GET /api/assets`
 
@@ -89,6 +94,33 @@
   - `followConversions`
   - `snapshotAt`（可选，不传则后端自动生成）
 - 响应体：返回新写入的快照记录。
+
+### `GET /api/tasks`
+
+- 用于消息任务中心页面。
+- 返回字段：
+  - `id`
+  - `sourceMessage`
+  - `topic`
+  - `stage`（`pending_generation|waiting_review|waiting_publish|publishing|published|failed`）
+  - `postId`（nullable）
+  - `accountId`（nullable）
+  - `requestedAt`
+  - `scheduledAt`（nullable）
+  - `hasCopy`
+  - `hasImages`
+  - `requiresHumanReview`
+
+### `GET /api/accounts`
+
+- 用于多账号运营页。
+- 返回字段：
+  - `id`
+  - `name`
+  - `handle`
+  - `status`（`online|busy|offline`）
+  - `summary`
+  - `lastActiveAt`（nullable）
 
 ### `GET /api/dashboard/summary`
 

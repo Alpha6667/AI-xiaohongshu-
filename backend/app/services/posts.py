@@ -123,6 +123,8 @@ def _serialize_post(post: Post) -> PostSummaryResponse:
         latestTaskIds=post.generation_task_ids[-3:],
         latestMetrics=_latest_metrics(post.id),
         platformPostId=post.platform_post_id,
+        accountId=post.account_id,
+        messageTaskId=post.message_task_id,
         createdAt=post.created_at,
         updatedAt=post.updated_at,
         publishedAt=post.published_at,
@@ -156,6 +158,7 @@ def create_post(payload: PostCreateRequest) -> PostSummaryResponse:
         tags=payload.tags,
         status=PostStatus.DRAFT,
         asset_ids=payload.assetIds,
+        account_id=payload.accountId,
         created_at=timestamp,
         updated_at=timestamp,
     )
@@ -177,6 +180,8 @@ def update_post(post_id: str, payload: PostUpdateRequest) -> PostSummaryResponse
         post.tags = changes["tags"]
     if "assetIds" in changes:
         post.asset_ids = changes["assetIds"]
+    if "accountId" in changes:
+        post.account_id = changes["accountId"]
     post.updated_at = now_iso()
     repository.save()
     return _serialize_post(post)

@@ -412,26 +412,24 @@
 ## 本轮同步区
 
 ## 已完成
-- 第六轮已完成 worker 自动发布回写外壳：`worker/app/tasks/publish.py` 在任务完成后自动调用 `POST /api/posts/{post_id}/publish-result`，不再只依赖手动触发。
-- 第六轮已完成 worker 自动指标追加外壳：`worker/app/tasks/metrics_collection.py` 在任务完成后自动调用 `POST /api/posts/{post_id}/metrics-snapshots`，保持 append 语义。
-- 已完成失败语义收口：新增稳定失败分类 `retryable`、`non_retryable`、`rate_limited`，并在 `publish-result` 回写与 `publishRecords` 返回中提供 `failureType`。
-- 已保持前端既有字段稳定：`publishStatus`、`platformPostId`、`publishedAt`、`errorMessage`、`publishRecords` 结构不改名，仅追加最小新字段。
-- 已更新 `.monkeycode/docs/API_CONTRACT.md`，补充 worker 自动回写约束与 `failureType` 契约说明。
-- 已补第六轮最小测试：
-  - `worker/tests/test_task_writeback.py::test_publish_task_triggers_auto_writeback`
-  - `worker/tests/test_task_writeback.py::test_metrics_task_triggers_auto_append`
-  - `backend/tests/test_api_minimal.py` 增加失败分类断言（`retryable`、`rate_limited`）
-- 已完成 backend 测试环境最小补齐：`backend/pyproject.toml` 新增测试依赖组 `test`，并补充 `httpx>=0.27.0`。
-- 已在 `backend/` 安装项目和测试依赖后重跑 `python3 -m unittest tests.test_api_minimal`，当前 8 个用例全部通过。
+- 已完成消息任务最小模型：新增 `MessageTask`，覆盖 `sourceMessage`、`topic`、`stage`、`postId`、`accountId`、`requestedAt`、`scheduledAt`、`hasCopy`、`hasImages`、`requiresHumanReview`。
+- 已完成多账号最小模型：新增 `Account`，覆盖 `id`、`name`、`handle`、`status(online|busy|offline)`、`summary`、`lastActiveAt`。
+- 已新增最小接口：
+  - `GET /api/tasks`（消息任务中心）
+  - `GET /api/accounts`（多账号运营页）
+- 已补归属关系：`Post` 增加 `accountId`、`messageTaskId`，可在帖子详情和列表看出账号归属及关联任务；任务也返回 `accountId` 与 `postId`。
+- 已保持现有链路不破坏：`posts`、`dashboard`、`publish-result`、`metrics-snapshots` 的既有字段和行为保持兼容。
+- 已更新 `.monkeycode/docs/API_CONTRACT.md`，补充任务与账号接口、任务阶段和账号状态字段说明。
+- 已补最小测试：`backend/tests/test_api_minimal.py::test_tasks_accounts_and_post_ownership`。
 
 ## 当前问题
-- 当前 worker 自动回写为外壳实现，依赖 `BACKEND_BASE_URL` 可达；尚未接入真实小红书平台异步回执。
-- API 最小测试当前可执行；后续新环境需按 `pip install --break-system-packages -e ".[test]"` 先补齐依赖。
+- 当前 `GET /api/tasks` 与 `GET /api/accounts` 为最小可用读接口，创建/更新任务与账号的写接口尚未开放。
+- 任务阶段流转目前仍由后端种子和现有发布链路间接驱动，尚未引入真实消息输入与多账号调度逻辑（按本轮边界保留）。
 
 ## 需要协作
-- 前端需在第六轮远程预览点击回归中验证 `failureType` 的三类展示映射（可重试、不可重试、平台限流）。
-- 前端需验证 worker 自动触发后 `publishRecords` 与 `metricsHistory` 的刷新时序是否满足页面体验。
+- 前端需在 `/tasks` 页面确认任务阶段与布尔状态字段（`hasCopy`、`hasImages`、`requiresHumanReview`）映射是否满足展示需求。
+- 前端需在 `/accounts` 与内容确认台验证账号归属显示（`accountId`）是否满足当前交互。
 
 ## 下一步
-- 在不接真实平台前提下，评估是否需要补一个轻量轮询或事件通知机制，减少前端等待回写的不确定性。
-- 待环境补齐 `fastapi` 后补跑 API 最小测试，确认失败分类字段在真实接口回包中稳定。
+- 如前端需要筛选能力，可在不改现有字段前提下补 `GET /api/tasks` / `GET /api/accounts` 的轻量查询参数。
+- 保持当前边界，不扩真实聊天接入、真实多账号调度和权限系统，待产品结构稳定后再进入下一阶段设计。

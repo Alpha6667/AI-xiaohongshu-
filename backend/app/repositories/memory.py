@@ -7,9 +7,20 @@ from uuid import uuid4
 
 from dataclasses import asdict
 
+from app.models.account import Account
 from app.models.asset import Asset
-from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
+from app.models.enums import (
+    AccountStatus,
+    GenerationTaskType,
+    MessageTaskStage,
+    PostStatus,
+    PublishFailureType,
+    PublishStatus,
+    ReviewAction,
+    TaskStatus,
+)
 from app.models.generation_task import GenerationTask
+from app.models.message_task import MessageTask
 from app.models.metrics_snapshot import MetricsSnapshot
 from app.models.post import Post
 from app.models.publish_log import PublishLog
@@ -32,6 +43,8 @@ class InMemoryRepository:
         self.generation_tasks: dict[str, GenerationTask] = {}
         self.publish_logs: dict[str, PublishLog] = {}
         self.metrics_snapshots: dict[str, list[MetricsSnapshot]] = {}
+        self.accounts: dict[str, Account] = {}
+        self.message_tasks: dict[str, MessageTask] = {}
         self.storage_path = storage_path or (Path(__file__).resolve().parents[2] / "data" / "repository.json")
         self._load_or_seed()
 
@@ -55,6 +68,8 @@ class InMemoryRepository:
                 status=PostStatus(value["status"]),
                 asset_ids=list(value.get("asset_ids", [])),
                 platform_post_id=value.get("platform_post_id"),
+                account_id=value.get("account_id"),
+                message_task_id=value.get("message_task_id"),
                 created_at=value.get("created_at", ""),
                 updated_at=value.get("updated_at", ""),
                 published_at=value.get("published_at"),
@@ -136,6 +151,40 @@ class InMemoryRepository:
             for post_id, snapshots in (payload.get("metrics_snapshots", {}) or {}).items()
         }
 
+        self.accounts = {
+            key: Account(
+                id=value["id"],
+                name=value["name"],
+                handle=value["handle"],
+                status=AccountStatus(value["status"]),
+                summary=value["summary"],
+                last_active_at=value.get("last_active_at"),
+                created_at=value["created_at"],
+                updated_at=value["updated_at"],
+            )
+            for key, value in (payload.get("accounts", {}) or {}).items()
+        }
+
+        self.message_tasks = {
+            key: MessageTask(
+                id=value["id"],
+                source_message=value["source_message"],
+                topic=value["topic"],
+                stage=MessageTaskStage(value["stage"]),
+                post_id=value.get("post_id"),
+                account_id=value.get("account_id"),
+                requested_at=value["requested_at"],
+                scheduled_at=value.get("scheduled_at"),
+                has_copy=value["has_copy"],
+                has_images=value["has_images"],
+                requires_human_review=value["requires_human_review"],
+                created_at=value["created_at"],
+                updated_at=value["updated_at"],
+            )
+            for key, value in (payload.get("message_tasks", {}) or {}).items()
+        }
+        self._ensure_minimum_support_data()
+
     def save(self) -> None:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
@@ -148,6 +197,8 @@ class InMemoryRepository:
                 key: [asdict(snapshot) for snapshot in snapshots]
                 for key, snapshots in self.metrics_snapshots.items()
             },
+            "accounts": {key: asdict(value) for key, value in self.accounts.items()},
+            "message_tasks": {key: asdict(value) for key, value in self.message_tasks.items()},
         }
         self.storage_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
@@ -161,8 +212,72 @@ class InMemoryRepository:
         self.generation_tasks.clear()
         self.publish_logs.clear()
         self.metrics_snapshots.clear()
+        self.accounts.clear()
+        self.message_tasks.clear()
         self._seed()
         self.save()
+
+    def _ensure_minimum_support_data(self) -> None:
+        if not self.accounts:
+            created_at = now_iso()
+            self.accounts["account_seed_brand"] = Account(
+                id="account_seed_brand",
+                name="主品牌号",
+                handle="@brand_main",
+                status=AccountStatus.ONLINE,
+                summary="主营内容与品牌日常发布",
+                last_active_at=created_at,
+                created_at=created_at,
+                updated_at=created_at,
+            )
+            self.accounts["account_seed_store"] = Account(
+                id="account_seed_store",
+                name="门店号",
+                handle="@brand_store",
+                status=AccountStatus.BUSY,
+                summary="门店活动与到店转化内容",
+                last_active_at=created_at,
+                created_at=created_at,
+                updated_at=created_at,
+            )
+
+        default_account_id = next(iter(self.accounts.keys())) if self.accounts else None
+        if default_account_id is not None:
+            for post in self.posts.values():
+                if post.account_id is None:
+                    post.account_id = default_account_id
+
+        if self.message_tasks:
+            return
+
+        for post in self.posts.values():
+            stage = {
+                PostStatus.DRAFT: MessageTaskStage.PENDING_GENERATION,
+                PostStatus.IN_REVIEW: MessageTaskStage.WAITING_REVIEW,
+                PostStatus.APPROVED: MessageTaskStage.WAITING_PUBLISH,
+                PostStatus.PUBLISHING: MessageTaskStage.PUBLISHING,
+                PostStatus.PUBLISHED: MessageTaskStage.PUBLISHED,
+                PostStatus.PUBLISH_FAILED: MessageTaskStage.FAILED,
+            }[post.status]
+
+            task_id = f"taskmsg_{post.id}"
+            message_task = MessageTask(
+                id=task_id,
+                source_message=f"请把这个主题整理成小红书帖子：{post.topic}",
+                topic=post.topic,
+                stage=stage,
+                post_id=post.id,
+                account_id=post.account_id,
+                requested_at=post.created_at or now_iso(),
+                scheduled_at=None,
+                has_copy=bool(post.body.strip()),
+                has_images=bool(post.asset_ids),
+                requires_human_review=stage in {MessageTaskStage.WAITING_REVIEW, MessageTaskStage.WAITING_PUBLISH},
+                created_at=post.created_at or now_iso(),
+                updated_at=post.updated_at or now_iso(),
+            )
+            self.message_tasks[task_id] = message_task
+            post.message_task_id = task_id
 
     def _seed(self) -> None:
         created_at = now_iso()
@@ -185,6 +300,7 @@ class InMemoryRepository:
             tags=["敏感肌", "春季护肤", "内容策划"],
             status=PostStatus.DRAFT,
             asset_ids=[asset.id],
+            account_id="account_seed_brand",
             created_at=created_at,
             updated_at=created_at,
         )
@@ -195,6 +311,7 @@ class InMemoryRepository:
             body="从灯光、收纳和桌面秩序切入，强调轻改造。",
             tags=["桌搭", "办公区", "氛围感"],
             status=PostStatus.IN_REVIEW,
+            account_id="account_seed_store",
             created_at=created_at,
             updated_at=created_at,
         )
@@ -207,6 +324,7 @@ class InMemoryRepository:
             status=PostStatus.PUBLISHED,
             asset_ids=[asset.id],
             platform_post_id="xh_123456",
+            account_id="account_seed_brand",
             created_at=created_at,
             updated_at=created_at,
             published_at=created_at,
@@ -269,6 +387,7 @@ class InMemoryRepository:
         )
         self.generation_tasks[copy_task.id] = copy_task
         draft_post.generation_task_ids.append(copy_task.id)
+        self._ensure_minimum_support_data()
 
 
 repository = InMemoryRepository()

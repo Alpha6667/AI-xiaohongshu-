@@ -13,6 +13,8 @@ class Post:
     status: PostStatus
     asset_ids: list[str] = field(default_factory=list)
     platform_post_id: str | None = None
+    account_id: str | None = None
+    message_task_id: str | None = None
     created_at: str = ""
     updated_at: str = ""
     published_at: str | None = None

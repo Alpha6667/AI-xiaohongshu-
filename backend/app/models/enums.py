@@ -38,3 +38,18 @@ class PublishFailureType(StrEnum):
     RETRYABLE = "retryable"
     NON_RETRYABLE = "non_retryable"
     RATE_LIMITED = "rate_limited"
+
+
+class MessageTaskStage(StrEnum):
+    PENDING_GENERATION = "pending_generation"
+    WAITING_REVIEW = "waiting_review"
+    WAITING_PUBLISH = "waiting_publish"
+    PUBLISHING = "publishing"
+    PUBLISHED = "published"
+    FAILED = "failed"
+
+
+class AccountStatus(StrEnum):
+    ONLINE = "online"
+    BUSY = "busy"
+    OFFLINE = "offline"
