@@ -32,6 +32,7 @@ export interface MessageTaskRecord {
   sourceMessage?: string | null;
   requestedAt: string;
   plannedAt?: string | null;
+  scheduledAt?: string | null;
   topic?: string | null;
   title?: string | null;
   stage?: string | null;
@@ -39,6 +40,7 @@ export interface MessageTaskRecord {
   hasCopy?: boolean | null;
   hasImages?: boolean | null;
   requiresReview?: boolean | null;
+  requiresHumanReview?: boolean | null;
   nextAction?: string | null;
 }
 

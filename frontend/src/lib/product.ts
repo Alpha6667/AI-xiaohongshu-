@@ -433,7 +433,7 @@ export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListI
       accountName: account?.name ?? "未分配账号",
       sourceMessage: record.sourceMessage ?? `当前后端未返回原始消息，已从任务 ${record.id} 进入后台。`,
       requestedAt: record.requestedAt,
-      plannedAt: record.plannedAt ?? post?.updatedAt ?? record.requestedAt,
+      plannedAt: record.plannedAt ?? record.scheduledAt ?? post?.updatedAt ?? record.requestedAt,
       topic: record.topic ?? post?.topic ?? "未命名任务",
       title: record.title ?? post?.title ?? "等待系统生成标题",
       stage: (stage === "ready_to_confirm" || stage === "waiting_publish" || stage === "publishing" || stage === "published" || stage === "failed") ? stage : "waiting_generation",
@@ -441,7 +441,7 @@ export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListI
       stageTone: getMessageTaskTone(stage),
       hasCopy: record.hasCopy ?? Boolean(post?.title.trim() && post?.body.trim()),
       hasImages: record.hasImages ?? Boolean(post?.assetIds.length),
-      requiresReview: record.requiresReview ?? (stage === "ready_to_confirm" || stage === "failed"),
+      requiresReview: record.requiresReview ?? record.requiresHumanReview ?? (stage === "ready_to_confirm" || stage === "failed"),
       nextAction: record.nextAction ?? (stage === "ready_to_confirm" ? "已经有候选内容，需要你确认文案、图片和发布账号。" : stage === "waiting_publish" ? "内容已确认完成，下一步可以直接交给 OpenClaw 代发。" : stage === "publishing" ? "OpenClaw 正在执行，不需要重复处理。" : stage === "published" ? "去帖子与数据页看这条内容的表现。" : stage === "failed" ? "需要判断是重试、换账号，还是回内容确认台改稿。" : "等待系统把候选文案和图片补齐，再进入内容确认台。"),
     } satisfies MessageTask;
   });
