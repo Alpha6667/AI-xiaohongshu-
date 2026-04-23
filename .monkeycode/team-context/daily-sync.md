@@ -48,3 +48,12 @@
 - 后端第七轮正式任务文档已写入 `.monkeycode/team-context/backend.md` 并推送，目标是补消息任务最小模型、多账号归属最小模型和最小接口返回
 - 当前产品上用户最明确要的是：先通过 OpenClaw 发消息下达发帖需求，再回后台做内容确认、选择账号、查看发布结果和帖子数据
 - 当前协作方式继续保持：我负责整理任务、维护文档、推进前后端分工，前后端按 Git 仓库文档执行
+
+## 2026-04-23
+
+- 已确认后端提交 `13a67be` 完成 QQ 入站消息接入：`POST /api/integrations/qq/messages` 已落地
+- 当前后端已支持共享密钥校验、按 `source + eventId` 幂等去重、原始消息落库、创建真实 `message task`
+- `GET /api/tasks` 已可返回来自 QQ 入站的真实任务，前端 `/tasks` 具备读取条件
+- QQ 接入第一阶段边界保持不变：不触发小红书发布、不做多账号自动调度、不扩权限系统
+- 已补最小联调文档，下一步应由 OpenClaw 按约定 payload 调用后端，并做一次真实 QQ 到 `/tasks` 的验收
+- 当前本地环境直接执行 `python3 -m unittest tests.test_api_minimal` 失败，原因是 backend 依赖未安装，错误表现为 `ModuleNotFoundError: No module named 'fastapi'`

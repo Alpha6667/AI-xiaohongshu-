@@ -1,5 +1,12 @@
 # Backend Sync
 
+## 第八轮 QQ 联调收尾说明
+
+- QQ 入站最小实现已在提交 `13a67be` 落地，当前需要的不是继续扩功能，而是完成 OpenClaw 到后端的真实联调验收。
+- OpenClaw 侧请按 `.monkeycode/docs/QQ_INGEST_HANDOFF.md` 中的 payload 和验收步骤对接。
+- 当前后端边界仍保持为：只接收入站消息、做去重、落原始消息、建真实任务，不触发小红书发布，也不自动分配账号。
+- 当前本地补跑 `python3 -m unittest tests.test_api_minimal` 被环境阻塞，缺少 `fastapi` 依赖；继续验证前需先完成 backend 依赖安装。
+
 ## 第八轮 QQ 消息入任务链路同步
 
 - 本轮仅聚焦“QQ 消息 -> 后端真实 message task”，不涉及小红书发布、多账号调度、权限系统。

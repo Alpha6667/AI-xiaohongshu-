@@ -245,3 +245,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 当前轮次只做 QQ 消息接入到后端并生成真实 message task，不碰小红书发布和多账号调度。
   - 需要提供稳定消息接入口，包含来源校验、幂等去重、原始消息落库和任务创建。
   - 验收标准是 QQ 发一句话后，前端 `/tasks` 能看到真实任务。
+
+[Backend 最小测试依赖前置条件]
+- Date: 2026-04-23
+- Context: Agent 在补跑 QQ 接入最小测试时发现
+- Category: 测试方法
+- Instructions:
+  - 直接运行 `backend/tests/test_api_minimal.py` 前，需要先安装 backend 项目依赖，否则会在导入 `fastapi.testclient` 时失败。
+  - 当前环境若未安装 backend 依赖，错误会表现为 `ModuleNotFoundError: No module named 'fastapi'`。
+  - QQ 接入相关自动化验证前，应先完成 backend 依赖安装，再执行 `python3 -m unittest tests.test_api_minimal`。
