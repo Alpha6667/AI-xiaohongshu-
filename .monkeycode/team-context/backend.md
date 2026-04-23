@@ -421,10 +421,14 @@
 - 已保持现有链路不破坏：`posts`、`dashboard`、`publish-result`、`metrics-snapshots` 的既有字段和行为保持兼容。
 - 已更新 `.monkeycode/docs/API_CONTRACT.md`，补充任务与账号接口、任务阶段和账号状态字段说明。
 - 已补最小测试：`backend/tests/test_api_minimal.py::test_tasks_accounts_and_post_ownership`。
+- 本轮补口已完成：`/api/tasks` 新增稳定字段 `stageLabel`、`nextAction`、`title`、`accountName`，并统一计划时间字段为 `plannedAt`。
+- 本轮补口已完成：`/api/accounts` 新增稳定聚合字段 `todayTaskCount`、`waitingCount`、`publishedCount`、`totalEngagement`、`bestTopic`。
+- 已收口字段命名：任务接口保留 `requiresHumanReview` 作为单一人工确认字段；计划时间字段统一为 `plannedAt`（移除 `scheduledAt` 输出）。
 
 ## 当前问题
 - 当前 `GET /api/tasks` 与 `GET /api/accounts` 为最小可用读接口，创建/更新任务与账号的写接口尚未开放。
 - 任务阶段流转目前仍由后端种子和现有发布链路间接驱动，尚未引入真实消息输入与多账号调度逻辑（按本轮边界保留）。
+- 当前账号聚合字段仍基于本地快照和最小规则计算，后续如引入真实统计口径需单独校准。
 
 ## 需要协作
 - 前端需在 `/tasks` 页面确认任务阶段与布尔状态字段（`hasCopy`、`hasImages`、`requiresHumanReview`）映射是否满足展示需求。
@@ -433,3 +437,4 @@
 ## 下一步
 - 如前端需要筛选能力，可在不改现有字段前提下补 `GET /api/tasks` / `GET /api/accounts` 的轻量查询参数。
 - 保持当前边界，不扩真实聊天接入、真实多账号调度和权限系统，待产品结构稳定后再进入下一阶段设计。
+- 等前端移除回退推导后，按实际联调反馈做小范围字段微调，不扩大模型范围。

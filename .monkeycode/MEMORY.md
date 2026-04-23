@@ -190,6 +190,14 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 优先提供最小接口（如 `GET /api/tasks`、`GET /api/accounts`）和最小测试，不扩真实平台接入、调度、权限系统。
   - 不破坏现有 `posts`、`dashboard`、`publish-result`、`metrics-snapshots` 链路和字段契约。
 
+[任务与账号字段补口收口]
+- Date: 2026-04-22
+- Context: 用户要求下一轮以小补口为主，去掉前端回退推导逻辑
+- Instructions:
+  - `/api/tasks` 需稳定补齐 `stageLabel`、`nextAction`、`title`、`accountName` 与统一时间字段，并统一人工确认字段命名。
+  - `/api/accounts` 需稳定返回 `todayTaskCount`、`waitingCount`、`publishedCount`、`totalEngagement`、`bestTopic`。
+  - 保持边界：不扩真实聊天接入、多账号调度、权限系统，不破坏既有核心链路。
+
 [今日进度与当前目标记录]
 - Date: 2026-04-22
 - Context: 用户要求记录今天的进度和当前最想要的产品方向

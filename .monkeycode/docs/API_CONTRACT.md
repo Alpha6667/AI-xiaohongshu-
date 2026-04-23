@@ -101,12 +101,16 @@
 - 返回字段：
   - `id`
   - `sourceMessage`
+  - `title`
   - `topic`
   - `stage`（`pending_generation|waiting_review|waiting_publish|publishing|published|failed`）
+  - `stageLabel`
+  - `nextAction`
   - `postId`（nullable）
   - `accountId`（nullable）
+  - `accountName`（nullable）
   - `requestedAt`
-  - `scheduledAt`（nullable）
+  - `plannedAt`（统一计划时间字段，始终返回）
   - `hasCopy`
   - `hasImages`
   - `requiresHumanReview`
@@ -121,6 +125,11 @@
   - `status`（`online|busy|offline`）
   - `summary`
   - `lastActiveAt`（nullable）
+  - `todayTaskCount`
+  - `waitingCount`
+  - `publishedCount`
+  - `totalEngagement`
+  - `bestTopic`（nullable）
 
 ### `GET /api/dashboard/summary`
 

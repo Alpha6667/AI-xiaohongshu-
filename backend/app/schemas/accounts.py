@@ -10,3 +10,8 @@ class AccountResponse(BaseModel):
     status: AccountStatus
     summary: str
     lastActiveAt: str | None
+    todayTaskCount: int
+    waitingCount: int
+    publishedCount: int
+    totalEngagement: int
+    bestTopic: str | None

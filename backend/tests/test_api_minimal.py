@@ -372,6 +372,11 @@ class BackendApiMinimalTests(unittest.TestCase):
         accounts = accounts_resp.json()
         self.assertGreaterEqual(len(accounts), 1)
         self.assertIn(accounts[0]["status"], {"online", "busy", "offline"})
+        self.assertIn("todayTaskCount", accounts[0])
+        self.assertIn("waitingCount", accounts[0])
+        self.assertIn("publishedCount", accounts[0])
+        self.assertIn("totalEngagement", accounts[0])
+        self.assertIn("bestTopic", accounts[0])
 
         tasks_resp = self.client.get("/api/tasks")
         self.assertEqual(tasks_resp.status_code, 200)
@@ -381,6 +386,13 @@ class BackendApiMinimalTests(unittest.TestCase):
             tasks[0]["stage"],
             {"pending_generation", "waiting_review", "waiting_publish", "publishing", "published", "failed"},
         )
+        self.assertIn("stageLabel", tasks[0])
+        self.assertIn("nextAction", tasks[0])
+        self.assertIn("title", tasks[0])
+        self.assertIn("accountName", tasks[0])
+        self.assertIn("plannedAt", tasks[0])
+        self.assertIn("requiresHumanReview", tasks[0])
+        self.assertNotIn("scheduledAt", tasks[0])
 
         posts_resp = self.client.get("/api/posts")
         self.assertEqual(posts_resp.status_code, 200)
