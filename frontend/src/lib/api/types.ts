@@ -11,6 +11,37 @@ export interface DashboardSummary {
   publishedCount: number;
 }
 
+export interface AccountRecord {
+  id: string;
+  name: string;
+  handle: string;
+  status: string;
+  summary?: string | null;
+  lastActiveAt?: string | null;
+  todayTaskCount?: number | null;
+  waitingCount?: number | null;
+  publishedCount?: number | null;
+  totalEngagement?: number | null;
+  bestTopic?: string | null;
+}
+
+export interface MessageTaskRecord {
+  id: string;
+  postId?: string | null;
+  accountId?: string | null;
+  sourceMessage?: string | null;
+  requestedAt: string;
+  plannedAt?: string | null;
+  topic?: string | null;
+  title?: string | null;
+  stage?: string | null;
+  stageLabel?: string | null;
+  hasCopy?: boolean | null;
+  hasImages?: boolean | null;
+  requiresReview?: boolean | null;
+  nextAction?: string | null;
+}
+
 export interface AssetItem {
   id: string;
   name: string;
@@ -119,6 +150,8 @@ export interface PostListItem {
   publishedAt?: string;
   assetIds: string[];
   latestTaskIds: string[];
+  accountId?: string | null;
+  messageTaskId?: string | null;
   platformPostId?: string | null;
   latestMetrics: PostMetrics;
   createdAt: string;

@@ -1,6 +1,14 @@
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { buildAccountOverview, getAccountForPost, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, buildAccountOverview, getAccountForPost, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
 
 function getPublishSteps(status: string, hasPublishRecord: boolean) {
   return [
@@ -12,8 +20,8 @@ function getPublishSteps(status: string, hasPublishRecord: boolean) {
 }
 
 export default async function DashboardPage() {
-  const [summary, posts] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list()]);
-  const accounts = buildAccountOverview(posts);
+  const [summary, posts, accountRecords] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list(), getAccountsOrNull()]);
+  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
   const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "published" || post.status === "publish_failed")).slice(0, 6);
   const details = await Promise.all(centerPosts.map((post) => apiClient.posts.getById(post.id)));
 

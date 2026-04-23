@@ -1,4 +1,4 @@
-import type { AssetSummary, PostDetail, PostListItem, PostStatus, PublishRecord } from "./api/types";
+import type { AccountRecord, AssetSummary, MessageTaskRecord, PostDetail, PostListItem, PostStatus, PublishRecord } from "./api/types";
 
 type AccountStatus = "online" | "offline" | "busy";
 type MessageTaskStage = "waiting_generation" | "ready_to_confirm" | "waiting_publish" | "publishing" | "published" | "failed";
@@ -136,6 +136,22 @@ function getAssignedAccountSeed(post: Pick<PostListItem, "id" | "topic">) {
   return accountSeeds[raw % accountSeeds.length];
 }
 
+function getMessageTaskTone(stage: string | null | undefined) {
+  if (stage === "ready_to_confirm" || stage === "in_review") {
+    return "warm" as const;
+  }
+
+  if (stage === "waiting_publish" || stage === "approved" || stage === "published") {
+    return "positive" as const;
+  }
+
+  if (stage === "failed" || stage === "publish_failed") {
+    return "critical" as const;
+  }
+
+  return "neutral" as const;
+}
+
 export function getWorkspaceCandidates(posts: PostListItem[]) {
   return sortByUpdatedDesc(posts.filter((post) => post.status !== "published"));
 }
@@ -268,7 +284,37 @@ export function buildAccountOverview(posts: PostListItem[]): AccountOverview[] {
   });
 }
 
-export function getAccountForPost(post: Pick<PostListItem, "id" | "topic">, accounts?: AccountOverview[]) {
+export function adaptAccounts(records: AccountRecord[], posts: PostListItem[]): AccountOverview[] {
+  return records.map((record) => {
+    const accountPosts = posts.filter((post) => post.accountId === record.id);
+    const publishedCount = record.publishedCount ?? accountPosts.filter((post) => post.status === "published").length;
+    const waitingCount = record.waitingCount ?? accountPosts.filter((post) => post.status === "draft" || post.status === "in_review" || post.status === "approved").length;
+    const totalEngagement = record.totalEngagement ?? accountPosts.reduce((sum, post) => sum + post.latestMetrics.likes + post.latestMetrics.favorites + post.latestMetrics.comments, 0);
+
+    return {
+      id: record.id,
+      name: record.name,
+      handle: record.handle,
+      status: (record.status === "online" || record.status === "offline" || record.status === "busy") ? record.status : "offline",
+      summary: record.summary ?? "当前后端未返回账号摘要。",
+      lastActiveAt: record.lastActiveAt ?? new Date(0).toISOString(),
+      todayTaskCount: record.todayTaskCount ?? accountPosts.length,
+      waitingCount,
+      publishedCount,
+      totalEngagement,
+      bestTopic: record.bestTopic ?? accountPosts[0]?.topic ?? "今天还没有已发布样本",
+    };
+  });
+}
+
+export function getAccountForPost(post: Pick<PostListItem, "id" | "topic"> & { accountId?: string | null }, accounts?: AccountOverview[]) {
+  if (post.accountId) {
+    const matched = accounts?.find((item) => item.id === post.accountId);
+    if (matched) {
+      return matched;
+    }
+  }
+
   const seed = getAssignedAccountSeed(post);
   return accounts?.find((item) => item.id === seed.id) ?? {
     ...seed,
@@ -366,6 +412,50 @@ export function buildMessageTasks(posts: PostListItem[], accounts?: AccountOverv
       nextAction: stage.nextAction,
     } satisfies MessageTask;
   });
+}
+
+export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListItem[], accounts?: AccountOverview[]) {
+  return records.map((record) => {
+    const post = posts.find((item) => item.id === record.postId) ?? null;
+    const account = record.accountId
+      ? accounts?.find((item) => item.id === record.accountId) ?? null
+      : post
+        ? getAccountForPost(post, accounts)
+        : null;
+    const stage = record.stage ?? post?.status ?? "waiting_generation";
+    const stageLabel = record.stageLabel
+      ?? (stage === "ready_to_confirm" ? "待人工确认" : stage === "waiting_publish" ? "待交给 OpenClaw" : stage === "publishing" ? "发送与审核中" : stage === "published" ? "已发布可复盘" : stage === "failed" ? "发送失败待处理" : "等待生成完成");
+
+    return {
+      id: record.id,
+      postId: record.postId ?? post?.id ?? "",
+      accountId: record.accountId ?? account?.id ?? "",
+      accountName: account?.name ?? "未分配账号",
+      sourceMessage: record.sourceMessage ?? `当前后端未返回原始消息，已从任务 ${record.id} 进入后台。`,
+      requestedAt: record.requestedAt,
+      plannedAt: record.plannedAt ?? post?.updatedAt ?? record.requestedAt,
+      topic: record.topic ?? post?.topic ?? "未命名任务",
+      title: record.title ?? post?.title ?? "等待系统生成标题",
+      stage: (stage === "ready_to_confirm" || stage === "waiting_publish" || stage === "publishing" || stage === "published" || stage === "failed") ? stage : "waiting_generation",
+      stageLabel,
+      stageTone: getMessageTaskTone(stage),
+      hasCopy: record.hasCopy ?? Boolean(post?.title.trim() && post?.body.trim()),
+      hasImages: record.hasImages ?? Boolean(post?.assetIds.length),
+      requiresReview: record.requiresReview ?? (stage === "ready_to_confirm" || stage === "failed"),
+      nextAction: record.nextAction ?? (stage === "ready_to_confirm" ? "已经有候选内容，需要你确认文案、图片和发布账号。" : stage === "waiting_publish" ? "内容已确认完成，下一步可以直接交给 OpenClaw 代发。" : stage === "publishing" ? "OpenClaw 正在执行，不需要重复处理。" : stage === "published" ? "去帖子与数据页看这条内容的表现。" : stage === "failed" ? "需要判断是重试、换账号，还是回内容确认台改稿。" : "等待系统把候选文案和图片补齐，再进入内容确认台。"),
+    } satisfies MessageTask;
+  });
+}
+
+export function getMessageTaskForPost(post: Pick<PostListItem, "id"> & { messageTaskId?: string | null }, tasks: MessageTask[]) {
+  if (post.messageTaskId) {
+    const matched = tasks.find((item) => item.id === post.messageTaskId);
+    if (matched) {
+      return matched;
+    }
+  }
+
+  return tasks.find((item) => item.postId === post.id) ?? null;
 }
 
 export function getTaskOverview(tasks: MessageTask[]) {

@@ -4,7 +4,23 @@ import { notFound } from "next/navigation";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-import { buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getMessageTaskForPost, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
+
+async function getTasksOrNull() {
+  try {
+    return await apiClient.tasks.list();
+  } catch {
+    return null;
+  }
+}
+
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
 
 function getPublishSummary(post: PostDetail) {
   const latestRecord = post.publishRecords.at(-1);
@@ -83,7 +99,7 @@ function getMetricsState(post: PostDetail) {
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const postList = await apiClient.posts.list();
+  const [postList, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
   let post: PostDetail;
 
   try {
@@ -102,9 +118,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const metricsState = getMetricsState(post);
   const latestPublishRecord = post.publishRecords.at(-1);
   const publishNarrative = getPublishNarrative(post);
-  const accounts = buildAccountOverview(postList);
+  const accounts = accountRecords ? adaptAccounts(accountRecords, postList) : buildAccountOverview(postList);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts) : buildMessageTasks(postList, accounts);
   const account = getAccountForPost(post, accounts);
-  const messageTask = buildMessageTasks(postList, accounts).find((task) => task.postId === post.id) ?? null;
+  const messageTask = getMessageTaskForPost(post, tasks);
 
   return (
     <div className="page-stack">
@@ -217,7 +234,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">原始消息任务</span>
-                  <strong>{messageTask?.stageLabel ?? "已进入帖子详情视图"}</strong>
+                  <strong>{post.messageTaskId ?? messageTask?.id ?? "已进入帖子详情视图"}</strong>
                   <p>{messageTask?.sourceMessage ?? "这条内容已经脱离消息中心的待办队列，正在查看完整记录。"}</p>
                 </article>
               </div>

@@ -2,11 +2,19 @@ import Link from "next/link";
 
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { buildAccountOverview, getAccountForPost, getPerformanceSuggestion, sortByPublishedDesc } from "../../lib/product";
+import { adaptAccounts, buildAccountOverview, getAccountForPost, getPerformanceSuggestion, sortByPublishedDesc } from "../../lib/product";
+
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
 
 export default async function PostsPage() {
-  const [posts, summary] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary()]);
-  const accounts = buildAccountOverview(posts);
+  const [posts, summary, accountRecords] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary(), getAccountsOrNull()]);
+  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
   const publishedPosts = sortByPublishedDesc(posts.filter((post) => post.status === "published"));
 
   return (
@@ -53,6 +61,7 @@ export default async function PostsPage() {
                       <div className="tag-row">
                         <StatusPill label="已审核通过" tone="positive" />
                         <StatusPill label={account.name} />
+                        {post.messageTaskId ? <StatusPill label={`任务 ${post.messageTaskId}`} /> : null}
                         {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
                       </div>
                       <span className="muted-inline">{post.topic}</span>

@@ -2,18 +2,41 @@ import Link from "next/link";
 
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { buildAccountOverview, buildMessageTasks, getTaskOverview } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getTaskOverview } from "../../lib/product";
+
+async function getTasksOrNull() {
+  try {
+    return await apiClient.tasks.list();
+  } catch {
+    return null;
+  }
+}
+
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
 
 export default async function TasksPage() {
-  const posts = await apiClient.posts.list();
-  const accounts = buildAccountOverview(posts);
-  const tasks = buildMessageTasks(posts, accounts);
+  const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
+  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
   const overview = getTaskOverview(tasks);
 
   return (
     <div className="page-stack">
       <SectionCard>
         <SectionHeading eyebrow="消息任务中心" title="把用户发给 OpenClaw 的消息，清楚转成后台任务" description="这一页重点展示消息入口、系统生成任务、内容准备度和下一步确认动作之间的关系。" />
+
+        {taskRecords ? null : (
+          <article className="state-card state-card-warm">
+            <strong>当前仍在使用展示层回退任务数据</strong>
+            <p>本地后端暂未返回 `GET /api/tasks`，页面已保留真实接口入口，当前先用帖子数据推导任务视图。</p>
+          </article>
+        )}
 
         <div className="dashboard-hero publish-center-hero">
           <article className="dashboard-highlight">

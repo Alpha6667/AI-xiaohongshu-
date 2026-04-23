@@ -2,17 +2,40 @@ import Link from "next/link";
 
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { buildAccountOverview, buildMessageTasks, getAccountStatusLabel, getAccountStatusTone } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountStatusLabel, getAccountStatusTone } from "../../lib/product";
+
+async function getTasksOrNull() {
+  try {
+    return await apiClient.tasks.list();
+  } catch {
+    return null;
+  }
+}
+
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
 
 export default async function AccountsPage() {
-  const posts = await apiClient.posts.list();
-  const accounts = buildAccountOverview(posts);
-  const tasks = buildMessageTasks(posts, accounts);
+  const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
+  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
 
   return (
     <div className="page-stack">
       <SectionCard>
         <SectionHeading eyebrow="多账号运营" title="不要把账号能力藏在设置里，这里直接看谁在线、谁待处理、谁表现更好" description="这一页先把多账号运营结构搭对，后续再补更细的排班和权限。" />
+
+        {accountRecords ? null : (
+          <article className="state-card state-card-warm">
+            <strong>当前仍在使用展示层回退账号数据</strong>
+            <p>本地后端暂未返回 `GET /api/accounts`，页面已保留真实接口入口，当前先用帖子数据推导账号运营视图。</p>
+          </article>
+        )}
 
         <div className="dashboard-hero publish-center-hero">
           <article className="dashboard-highlight">

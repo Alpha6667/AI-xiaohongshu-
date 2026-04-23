@@ -125,19 +125,20 @@
 
 ## 当前问题
 
-- 当前“消息任务”和“多账号”仍是前端视图层建模，不是后端真实任务表或账号表。
-- 账号归属目前通过前端 seed 和帖子信息稳定分配，只用于页面结构表达，不代表真实账号调度结果。
-- 消息来源文案、账号状态和任务阶段说明仍基于现有帖子状态映射，后续若后端补真实字段需要再收口一次。
+- 前端已优先尝试接 `GET /api/tasks` 与 `GET /api/accounts`，但当前本地后端仍返回 404，页面暂时回退到展示层推导数据。
+- 当前 `GET /api/posts` 与 `GET /api/posts/{id}` 的真实返回里还没有 `accountId`、`messageTaskId`，因此帖子归属和任务关联在接口未补齐前仍需部分回退到展示层匹配。
+- 消息来源文案、账号摘要、最近活跃时间和任务阶段说明在接口未完全返回前，仍有一部分来自前端回退逻辑。
 
 ## 需要协作
 
-- 若后端后续提供真实消息任务实体、账号实体或账号在线状态接口，前端需要把当前 `product.ts` 的临时映射替换为真实数据。
-- 若后端补充“任务来源消息”“目标账号”“发布执行节点”等字段，前端可进一步去掉当前的推导式展示文案。
+- 需要后端真正开放 `GET /api/tasks`，至少返回：`id`、`postId`、`accountId`、`sourceMessage`、`requestedAt`、`plannedAt`、`topic`、`title`、`stage` 或 `stageLabel`、`hasCopy`、`hasImages`、`requiresReview`、`nextAction`。
+- 需要后端真正开放 `GET /api/accounts`，至少返回：`id`、`name`、`handle`、`status`、`summary`、`lastActiveAt`，以及最好直接返回 `todayTaskCount`、`waitingCount`、`publishedCount`、`totalEngagement`、`bestTopic`。
+- 需要后端在 `GET /api/posts` 与 `GET /api/posts/{id}` 中补 `accountId`、`messageTaskId`，这样帖子列表、详情页和内容确认台才能稳定显示真实归属关系。
 
 ## 下一步
 
-- 若继续推进这一方向，下一步优先把消息任务与账号维度从前端临时视图模型切到真实接口。
-- 在接口稳定前，前端暂以当前结构继续承接演示和页面验证，不再扩大新的业务边界。
+- 当前前端已经完成真实接口接入点和回退逻辑；后端接口补齐后，下一步主要是删除回退逻辑并清理前端推导文案。
+- 在接口稳定前，前端暂以“优先吃真实接口，接口缺失时平滑回退”的方式继续承接演示和联调验证。
 
 ## 第七轮页面重做同步
 

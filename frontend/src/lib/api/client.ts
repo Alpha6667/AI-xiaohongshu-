@@ -1,9 +1,11 @@
 import type {
+  AccountRecord,
   AssetSummary,
   AssetUploadPayload,
   AssetUploadResponse,
   DashboardSummary,
   GenerationTaskPayload,
+  MessageTaskRecord,
   PostDetail,
   PostListItem,
   PublishResponse,
@@ -64,6 +66,18 @@ export const apiClient = {
     summaryEndpoint: endpoint("/dashboard/summary"),
     getSummary() {
       return apiFetch<DashboardSummary>(endpoint("/dashboard/summary"));
+    },
+  },
+  tasks: {
+    listEndpoint: endpoint("/tasks"),
+    list() {
+      return apiFetch<MessageTaskRecord[]>(endpoint("/tasks"));
+    },
+  },
+  accounts: {
+    listEndpoint: endpoint("/accounts"),
+    list() {
+      return apiFetch<AccountRecord[]>(endpoint("/accounts"));
     },
   },
   posts: {

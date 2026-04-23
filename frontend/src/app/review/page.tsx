@@ -1,7 +1,23 @@
 import { ComposerWorkbench } from "../../components/composer-workbench";
 import { SectionCard, SectionHeading } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { buildAccountOverview, buildMessageTasks, getWorkspaceCandidates } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getMessageTaskForPost, getWorkspaceCandidates } from "../../lib/product";
+
+async function getTasksOrNull() {
+  try {
+    return await apiClient.tasks.list();
+  } catch {
+    return null;
+  }
+}
+
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
 
 function getSelectedPostId(searchParams: { postId?: string | string[] } | undefined) {
   if (!searchParams?.postId) {
@@ -13,13 +29,13 @@ function getSelectedPostId(searchParams: { postId?: string | string[] } | undefi
 
 export default async function ReviewPage({ searchParams }: { searchParams?: Promise<{ postId?: string | string[] }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const [posts, assets] = await Promise.all([apiClient.posts.list(), apiClient.assets.list()]);
-  const accounts = buildAccountOverview(posts);
-  const tasks = buildMessageTasks(posts, accounts);
+  const [posts, assets, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), apiClient.assets.list(), getAccountsOrNull(), getTasksOrNull()]);
+  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
   const candidates = getWorkspaceCandidates(posts);
   const selectedPostId = getSelectedPostId(resolvedSearchParams) ?? candidates[0]?.id ?? null;
   const selectedPost = selectedPostId ? await apiClient.posts.getById(selectedPostId) : null;
-  const selectedTask = tasks.find((task) => task.postId === selectedPostId) ?? null;
+  const selectedTask = selectedPost ? getMessageTaskForPost(selectedPost, tasks) : null;
 
   return (
     <div className="page-stack">
