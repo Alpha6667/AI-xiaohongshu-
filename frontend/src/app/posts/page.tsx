@@ -14,7 +14,7 @@ async function getAccountsOrNull() {
 
 export default async function PostsPage() {
   const [posts, summary, accountRecords] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary(), getAccountsOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
   const publishedPosts = sortByPublishedDesc(posts.filter((post) => post.status === "published"));
 
   return (

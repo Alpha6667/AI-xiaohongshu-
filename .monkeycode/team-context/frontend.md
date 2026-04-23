@@ -125,20 +125,19 @@
 
 ## 当前问题
 
-- 前端已优先尝试接 `GET /api/tasks` 与 `GET /api/accounts`，但当前本地后端仍返回 404，页面暂时回退到展示层推导数据。
-- 当前 `GET /api/posts` 与 `GET /api/posts/{id}` 的真实返回里还没有 `accountId`、`messageTaskId`，因此帖子归属和任务关联在接口未补齐前仍需部分回退到展示层匹配。
-- 消息来源文案、账号摘要、最近活跃时间和任务阶段说明在接口未完全返回前，仍有一部分来自前端回退逻辑。
+- 后端已补齐 `GET /api/tasks` 与 `GET /api/accounts` 的主要展示字段，前端这轮开始把 `title`、`stageLabel`、`nextAction`、`accountName`、`plannedAt`、`requiresHumanReview` 以及账号聚合字段作为主路径消费。
+- 当前仍保留的兼容主要是接口请求异常时整页回退到展示层推导，以及帖子侧 `accountId`、`messageTaskId` 缺失时的归属兜底。
+- 后端真实 `stage` 使用 `pending_generation`、`waiting_review` 等枚举，前端仍需要一层轻量归一化，映射到现有页面内部的展示阶段。
 
 ## 需要协作
 
-- 需要后端真正开放 `GET /api/tasks`，至少返回：`id`、`postId`、`accountId`、`sourceMessage`、`requestedAt`、`plannedAt`、`topic`、`title`、`stage` 或 `stageLabel`、`hasCopy`、`hasImages`、`requiresReview`、`nextAction`。
-- 需要后端真正开放 `GET /api/accounts`，至少返回：`id`、`name`、`handle`、`status`、`summary`、`lastActiveAt`，以及最好直接返回 `todayTaskCount`、`waitingCount`、`publishedCount`、`totalEngagement`、`bestTopic`。
-- 需要后端在 `GET /api/posts` 与 `GET /api/posts/{id}` 中补 `accountId`、`messageTaskId`，这样帖子列表、详情页和内容确认台才能稳定显示真实归属关系。
+- 仍建议后端继续保持 `GET /api/tasks` 和 `GET /api/accounts` 的字段稳定，避免前端再次回到聚合推导路径。
+- 仍需要后端在 `GET /api/posts` 与 `GET /api/posts/{id}` 中持续稳定返回 `accountId`、`messageTaskId`，这样帖子列表、详情页和内容确认台才能完全去掉归属兜底。
 
 ## 下一步
 
-- 当前前端已经完成真实接口接入点和回退逻辑；后端接口补齐后，下一步主要是删除回退逻辑并清理前端推导文案。
-- 在接口稳定前，前端暂以“优先吃真实接口，接口缺失时平滑回退”的方式继续承接演示和联调验证。
+- 当前前端正在继续收紧旧 fallback；下一步如果帖子接口归属字段完全稳定，可进一步删除 `getAccountForPost`、`getMessageTaskForPost` 中的部分兜底路径。
+- 在接口稳定前，前端暂保留“请求失败时整页回退”的最小兼容，以避免联调环境波动直接打断演示链路。
 
 ## 第七轮页面重做同步
 

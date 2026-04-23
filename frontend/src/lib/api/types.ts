@@ -29,17 +29,16 @@ export interface MessageTaskRecord {
   id: string;
   postId?: string | null;
   accountId?: string | null;
+  accountName?: string | null;
   sourceMessage?: string | null;
   requestedAt: string;
   plannedAt?: string | null;
-  scheduledAt?: string | null;
   topic?: string | null;
   title?: string | null;
   stage?: string | null;
   stageLabel?: string | null;
   hasCopy?: boolean | null;
   hasImages?: boolean | null;
-  requiresReview?: boolean | null;
   requiresHumanReview?: boolean | null;
   nextAction?: string | null;
 }

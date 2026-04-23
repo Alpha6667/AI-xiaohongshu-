@@ -22,7 +22,7 @@ async function getAccountsOrNull() {
 
 export default async function TasksPage() {
   const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
   const overview = getTaskOverview(tasks);
 
@@ -34,7 +34,7 @@ export default async function TasksPage() {
         {taskRecords ? null : (
           <article className="state-card state-card-warm">
             <strong>当前仍在使用展示层回退任务数据</strong>
-            <p>本地后端暂未返回 `GET /api/tasks`，页面已保留真实接口入口，当前先用帖子数据推导任务视图。</p>
+            <p>`GET /api/tasks` 请求异常时，页面会临时回退到帖子推导任务视图，避免主链路中断。</p>
           </article>
         )}
 

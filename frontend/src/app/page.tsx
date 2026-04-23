@@ -22,7 +22,7 @@ async function getAccountsOrNull() {
 
 export default async function HomePage() {
   const [posts, summary, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary(), getAccountsOrNull(), getTasksOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
   const overview = getTaskOverview(tasks);
   const latestPublishPost = [...posts].filter((post) => post.status === "publishing" || post.status === "published" || post.status === "publish_failed").sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0] ?? null;

@@ -118,7 +118,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const metricsState = getMetricsState(post);
   const latestPublishRecord = post.publishRecords.at(-1);
   const publishNarrative = getPublishNarrative(post);
-  const accounts = accountRecords ? adaptAccounts(accountRecords, postList) : buildAccountOverview(postList);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(postList);
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts) : buildMessageTasks(postList, accounts);
   const account = getAccountForPost(post, accounts);
   const messageTask = getMessageTaskForPost(post, tasks);

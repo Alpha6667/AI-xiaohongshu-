@@ -21,7 +21,7 @@ function getPublishSteps(status: string, hasPublishRecord: boolean) {
 
 export default async function DashboardPage() {
   const [summary, posts, accountRecords] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list(), getAccountsOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords, posts) : buildAccountOverview(posts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
   const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "published" || post.status === "publish_failed")).slice(0, 6);
   const details = await Promise.all(centerPosts.map((post) => apiClient.posts.getById(post.id)));
 
