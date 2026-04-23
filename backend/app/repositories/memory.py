@@ -20,6 +20,7 @@ from app.models.enums import (
     TaskStatus,
 )
 from app.models.generation_task import GenerationTask
+from app.models.inbound_message import InboundMessage
 from app.models.message_task import MessageTask
 from app.models.metrics_snapshot import MetricsSnapshot
 from app.models.post import Post
@@ -45,6 +46,7 @@ class InMemoryRepository:
         self.metrics_snapshots: dict[str, list[MetricsSnapshot]] = {}
         self.accounts: dict[str, Account] = {}
         self.message_tasks: dict[str, MessageTask] = {}
+        self.inbound_messages: dict[str, InboundMessage] = {}
         self.storage_path = storage_path or (Path(__file__).resolve().parents[2] / "data" / "repository.json")
         self._load_or_seed()
 
@@ -183,6 +185,22 @@ class InMemoryRepository:
             )
             for key, value in (payload.get("message_tasks", {}) or {}).items()
         }
+        self.inbound_messages = {
+            key: InboundMessage(
+                id=value["id"],
+                event_id=value["event_id"],
+                source=value["source"],
+                sender_id=value["sender_id"],
+                sender_name=value["sender_name"],
+                conversation_id=value["conversation_id"],
+                content=value["content"],
+                sent_at=value["sent_at"],
+                signature=value["signature"],
+                received_at=value["received_at"],
+                message_task_id=value["message_task_id"],
+            )
+            for key, value in (payload.get("inbound_messages", {}) or {}).items()
+        }
         self._ensure_minimum_support_data()
 
     def save(self) -> None:
@@ -199,6 +217,7 @@ class InMemoryRepository:
             },
             "accounts": {key: asdict(value) for key, value in self.accounts.items()},
             "message_tasks": {key: asdict(value) for key, value in self.message_tasks.items()},
+            "inbound_messages": {key: asdict(value) for key, value in self.inbound_messages.items()},
         }
         self.storage_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
@@ -214,6 +233,7 @@ class InMemoryRepository:
         self.metrics_snapshots.clear()
         self.accounts.clear()
         self.message_tasks.clear()
+        self.inbound_messages.clear()
         self._seed()
         self.save()
 

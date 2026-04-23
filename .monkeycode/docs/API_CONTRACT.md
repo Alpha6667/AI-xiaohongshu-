@@ -19,6 +19,7 @@
 - `POST /api/posts/{post_id}/metrics-snapshots`
 - `GET /api/tasks`
 - `GET /api/accounts`
+- `POST /api/integrations/qq/messages`
 
 ## 第二轮联调固定字段
 
@@ -130,6 +131,29 @@
   - `publishedCount`
   - `totalEngagement`
   - `bestTopic`（nullable）
+
+### `POST /api/integrations/qq/messages`
+
+- 用于接收 OpenClaw 转发的 QQ 原始消息，并落库成真实消息任务。
+- 请求体最小字段：
+  - `source`（固定为 `qq`）
+  - `senderId`
+  - `senderName`
+  - `conversationId`
+  - `content`
+  - `sentAt`
+  - `eventId`（幂等键）
+  - `signature` 或 `sharedKey`（二选一，用于来源校验）
+- 后端处理：
+  - 校验共享密钥（环境变量 `QQ_INGEST_SHARED_SECRET`）
+  - 按 `source + eventId` 幂等去重
+  - 保存原始消息记录
+  - 创建 `pending_generation` 阶段的 `message task`
+- 响应字段：
+  - `accepted`
+  - `duplicated`
+  - `rawMessageId`
+  - `messageTaskId`
 
 ### `GET /api/dashboard/summary`
 

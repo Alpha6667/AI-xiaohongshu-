@@ -407,6 +407,40 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(linked_post.status_code, 200)
         self.assertEqual(linked_post.json()["accountId"], linked_task["accountId"])
 
+    def test_qq_message_ingestion_creates_real_task_and_deduplicates(self) -> None:
+        payload = {
+            "source": "qq",
+            "senderId": "qq_u_1001",
+            "senderName": "测试用户",
+            "conversationId": "qq_c_2001",
+            "content": "明天发一篇春季护肤节奏建议",
+            "sentAt": "2026-04-23T08:00:00+00:00",
+            "eventId": "qq_event_abc_1",
+            "signature": "dev-qq-shared-secret",
+        }
+        ingest_resp = self.client.post("/api/integrations/qq/messages", json=payload)
+        self.assertEqual(ingest_resp.status_code, 201)
+        ingest_payload = ingest_resp.json()
+        self.assertTrue(ingest_payload["accepted"])
+        self.assertFalse(ingest_payload["duplicated"])
+
+        duplicate_resp = self.client.post("/api/integrations/qq/messages", json=payload)
+        self.assertEqual(duplicate_resp.status_code, 201)
+        duplicate_payload = duplicate_resp.json()
+        self.assertTrue(duplicate_payload["accepted"])
+        self.assertTrue(duplicate_payload["duplicated"])
+        self.assertEqual(duplicate_payload["messageTaskId"], ingest_payload["messageTaskId"])
+
+        tasks_resp = self.client.get("/api/tasks")
+        self.assertEqual(tasks_resp.status_code, 200)
+        tasks = tasks_resp.json()
+        self.assertGreaterEqual(len(tasks), 1)
+        self.assertEqual(tasks[0]["id"], ingest_payload["messageTaskId"])
+        self.assertEqual(tasks[0]["sourceMessage"], payload["content"])
+        self.assertEqual(tasks[0]["stage"], "pending_generation")
+
+        self.assertTrue(any(item.event_id == payload["eventId"] for item in repository.inbound_messages.values()))
+
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")
         self.assertEqual(summary_resp.status_code, 200)

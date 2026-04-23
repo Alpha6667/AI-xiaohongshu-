@@ -1,5 +1,14 @@
 # Backend Sync
 
+## 第八轮 QQ 消息入任务链路同步
+
+- 本轮仅聚焦“QQ 消息 -> 后端真实 message task”，不涉及小红书发布、多账号调度、权限系统。
+- 新增 `POST /api/integrations/qq/messages`，用于接收 OpenClaw 转发的 QQ 消息。
+- 接口已覆盖最小入参校验（来源字段、基础消息字段、`signature/sharedKey` 二选一）。
+- 服务端已实现来源校验、`eventId` 幂等去重、原始消息落库、真实 `message task` 创建。
+- `/api/tasks` 继续按 `updatedAt` 倒序返回，真实消息任务会优先出现在列表前部。
+- 当前仍保持边界：不做复杂解析、不自动分配账号、不改现有发布链路。
+
 ## 第七轮消息任务与多账号最小支撑同步
 
 - 前端已完成“OpenClaw 对话入口 + 后台确认 + 多账号运营”的页面重构，后端下一轮要补最小支撑能力。

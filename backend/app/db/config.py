@@ -8,6 +8,7 @@ class Settings:
     database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/ai_xiaohongshu")
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     cors_origins: tuple[str, ...] = tuple(filter(None, os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000").split(",")))
+    qq_ingest_shared_secret: str = os.getenv("QQ_INGEST_SHARED_SECRET", "dev-qq-shared-secret")
 
 
 @lru_cache(maxsize=1)
