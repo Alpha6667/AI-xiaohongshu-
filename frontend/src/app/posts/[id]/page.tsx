@@ -119,8 +119,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const latestPublishRecord = post.publishRecords.at(-1);
   const publishNarrative = getPublishNarrative(post);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(postList);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts) : buildMessageTasks(postList, accounts);
-  const account = getAccountForPost(post, accounts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts, !accountRecords) : buildMessageTasks(postList, accounts);
+  const account = getAccountForPost(post, accounts, !accountRecords);
   const messageTask = getMessageTaskForPost(post, tasks);
 
   return (
@@ -230,7 +230,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 <article className="detail-meta-card">
                   <span className="eyebrow">归属账号</span>
                   <strong>{account.name}</strong>
-                  <p>{account.handle}，当前账号状态会在多账号运营页继续跟进。</p>
+                  <p>{account.id ? `${account.handle}，当前账号状态会在多账号运营页继续跟进。` : "这条内容当前还没有绑定到真实账号。"}</p>
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">原始消息任务</span>

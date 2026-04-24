@@ -23,7 +23,7 @@ async function getAccountsOrNull() {
 export default async function AccountsPage() {
   const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
 
   return (
     <div className="page-stack">

@@ -23,7 +23,7 @@ async function getAccountsOrNull() {
 export default async function HomePage() {
   const [posts, summary, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary(), getAccountsOrNull(), getTasksOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
   const overview = getTaskOverview(tasks);
   const latestPublishPost = [...posts].filter((post) => post.status === "publishing" || post.status === "published" || post.status === "publish_failed").sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0] ?? null;
   const latestPublishDetail = latestPublishPost ? await apiClient.posts.getById(latestPublishPost.id) : null;
@@ -144,7 +144,7 @@ export default async function HomePage() {
           <div className="list-column compact-list-column">
             {recentPublished.length > 0 ? (
               recentPublished.map((post) => {
-                const account = getAccountForPost(post, accounts);
+                const account = getAccountForPost(post, accounts, !accountRecords);
 
                 return (
                   <article key={post.id} className="plain-row-card product-row-card">

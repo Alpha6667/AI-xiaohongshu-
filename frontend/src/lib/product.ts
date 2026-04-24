@@ -36,6 +36,20 @@ export interface MessageTask {
   nextAction: string;
 }
 
+const unassignedAccount: AccountOverview = {
+  id: "",
+  name: "未分配账号",
+  handle: "当前还没有真实账号归属",
+  status: "offline",
+  summary: "这条内容目前还没有绑定到任何真实账号。",
+  lastActiveAt: new Date(0).toISOString(),
+  todayTaskCount: 0,
+  waitingCount: 0,
+  publishedCount: 0,
+  totalEngagement: 0,
+  bestTopic: "今天还没有已发布样本",
+};
+
 const accountSeeds = [
   {
     id: "account-lulu",
@@ -318,23 +332,27 @@ export function adaptAccounts(records: AccountRecord[]): AccountOverview[] {
   });
 }
 
-export function getAccountForPost(post: Pick<PostListItem, "id" | "topic"> & { accountId?: string | null }, accounts?: AccountOverview[]) {
+export function getAccountForPost(post: Pick<PostListItem, "id" | "topic"> & { accountId?: string | null }, accounts?: AccountOverview[], allowSeedFallback = false) {
+  if (!accounts || allowSeedFallback) {
+    const seed = getAssignedAccountSeed(post);
+    return {
+      ...seed,
+      todayTaskCount: 0,
+      waitingCount: 0,
+      publishedCount: 0,
+      totalEngagement: 0,
+      bestTopic: "今天还没有已发布样本",
+    };
+  }
+
   if (post.accountId) {
-    const matched = accounts?.find((item) => item.id === post.accountId);
+    const matched = accounts.find((item) => item.id === post.accountId);
     if (matched) {
       return matched;
     }
   }
 
-  const seed = getAssignedAccountSeed(post);
-  return accounts?.find((item) => item.id === seed.id) ?? {
-    ...seed,
-    todayTaskCount: 0,
-    waitingCount: 0,
-    publishedCount: 0,
-    totalEngagement: 0,
-    bestTopic: "今天还没有已发布样本",
-  };
+  return unassignedAccount;
 }
 
 function getMessageTaskStage(post: PostListItem): Pick<MessageTask, "stage" | "stageLabel" | "stageTone" | "requiresReview" | "nextAction"> {
@@ -399,7 +417,7 @@ function getMessageTaskStage(post: PostListItem): Pick<MessageTask, "stage" | "s
 
 export function buildMessageTasks(posts: PostListItem[], accounts?: AccountOverview[]) {
   return sortByUpdatedDesc(posts).map((post, index) => {
-    const account = getAccountForPost(post, accounts);
+    const account = getAccountForPost(post, accounts, true);
     const stage = getMessageTaskStage(post);
     const hasCopy = post.title.trim().length > 0 && post.body.trim().length > 0;
     const hasImages = post.assetIds.length > 0;
@@ -425,13 +443,13 @@ export function buildMessageTasks(posts: PostListItem[], accounts?: AccountOverv
   });
 }
 
-export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListItem[], accounts?: AccountOverview[]) {
+export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListItem[], accounts?: AccountOverview[], allowSeedFallback = false) {
   return records.map((record) => {
     const post = posts.find((item) => item.id === record.postId) ?? null;
     const account = record.accountId
       ? accounts?.find((item) => item.id === record.accountId) ?? null
-      : post
-        ? getAccountForPost(post, accounts)
+      : post?.accountId
+        ? getAccountForPost(post, accounts, allowSeedFallback)
         : null;
     const stage = normalizeMessageTaskStage(record.stage ?? post?.status ?? "waiting_generation");
 
@@ -462,6 +480,8 @@ export function getMessageTaskForPost(post: Pick<PostListItem, "id"> & { message
     if (matched) {
       return matched;
     }
+
+    return null;
   }
 
   return tasks.find((item) => item.postId === post.id) ?? null;

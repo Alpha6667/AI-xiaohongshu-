@@ -31,7 +31,7 @@ export default async function ReviewPage({ searchParams }: { searchParams?: Prom
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const [posts, assets, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), apiClient.assets.list(), getAccountsOrNull(), getTasksOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
   const candidates = getWorkspaceCandidates(posts);
   const selectedPostId = getSelectedPostId(resolvedSearchParams) ?? candidates[0]?.id ?? null;
   const selectedPost = selectedPostId ? await apiClient.posts.getById(selectedPostId) : null;

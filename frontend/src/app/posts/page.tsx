@@ -52,7 +52,7 @@ export default async function PostsPage() {
         <div className="post-list">
           {publishedPosts.length > 0 ? (
             publishedPosts.map((post) => {
-              const account = getAccountForPost(post, accounts);
+              const account = getAccountForPost(post, accounts, !accountRecords);
 
               return (
                 <article key={post.id} className="post-row product-post-row multi-account-post-row">
@@ -78,7 +78,7 @@ export default async function PostsPage() {
                   <div className="post-side product-post-side">
                     <span>发布时间</span>
                     <strong>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("zh-CN") : "待回写"}</strong>
-                    <p className="muted-copy">账号归属：{account.handle}</p>
+                    <p className="muted-copy">账号归属：{account.id ? account.handle : "未分配账号"}</p>
                     <Link href={`/posts/${post.id}`} className="text-link product-link">
                       查看这条帖子的记录
                     </Link>

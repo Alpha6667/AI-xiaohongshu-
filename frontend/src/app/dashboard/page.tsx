@@ -64,7 +64,7 @@ export default async function DashboardPage() {
             const latestRecord = post.publishRecords.at(-1);
             const narrative = getPublishNarrative(post);
             const steps = getPublishSteps(post.status, post.publishRecords.length > 0);
-            const account = getAccountForPost(post, accounts);
+            const account = getAccountForPost(post, accounts, !accountRecords);
 
             return (
               <SectionCard key={post.id} className="product-card publish-card">
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
                     <article className="detail-meta-card">
                       <span className="eyebrow">执行账号</span>
                       <strong>{account.name}</strong>
-                      <p>{account.handle}</p>
+                      <p>{account.id ? account.handle : "这条内容当前还没有绑定到真实账号。"}</p>
                     </article>
                     <article className="detail-meta-card">
                       <span className="eyebrow">OpenClaw 回写</span>
