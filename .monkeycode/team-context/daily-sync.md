@@ -91,3 +91,4 @@
 - 已新增三份执行任务单：`.monkeycode/docs/OPENCLAW_XHS_BACKEND_EXECUTION_TASK.md`、`.monkeycode/docs/OPENCLAW_XHS_FRONTEND_EXECUTION_TASK.md`、`.monkeycode/docs/OPENCLAW_XHS_OPENCLAW_EXECUTION_TASK.md`，用于把两份产品文档继续拆分到后端、前端与 OpenClaw 各自落地
 - 已新增 `.monkeycode/docs/OPENCLAW_XHS_REMAINING_WORK_PLAN.md`，用于把当前剩余工作按优先级排成执行顺序表，明确各方启动顺序与里程碑
 - 已新增 `.monkeycode/docs/XHS_LOGIN_STATE_STRATEGY.md`，用于明确小红书仅支持扫码/验证码登录时，系统如何做账号接入、登录态保存、复用、失效检测与续期
+- 已新增三份登录态执行任务单：`.monkeycode/docs/XHS_LOGIN_STATE_BACKEND_TASK.md`、`.monkeycode/docs/XHS_LOGIN_STATE_FRONTEND_TASK.md`、`.monkeycode/docs/XHS_LOGIN_STATE_OPENCLAW_TASK.md`，用于把登录态策略继续拆分给后端、前端与 OpenClaw 落地
