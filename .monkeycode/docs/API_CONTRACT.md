@@ -52,6 +52,11 @@
   - `taskType`（`generate_copy|generate_images`）
   - `createdAt`
   - `message`
+- 真实承接任务（`post.messageTaskId` 非空）的补充行为：
+  - `generate-copy` 后会把生成文案写入 `post.body`，并把任务阶段推进到 `copy_generated`（若图片已生成则推进到 `waiting_review`）。
+  - `generate-images` 后会把生成素材写入 `assetIds/assets`，并把任务阶段推进到 `images_generated`（若文案已生成则推进到 `waiting_review`）。
+  - 当文案与图片都完成时，任务阶段为 `waiting_review`，并满足 `hasCopy=true`、`hasImages=true`。
+  - 重复触发生成不会重复堆叠脏数据（素材不重复追加、状态不回退到矛盾状态）。
 
 ### `POST /api/posts/{post_id}/publish`
 
@@ -104,7 +109,7 @@
   - `sourceMessage`
   - `title`
   - `topic`
-  - `stage`（`pending_generation|waiting_review|waiting_publish|publishing|published|failed`）
+  - `stage`（`pending_generation|copy_generated|images_generated|waiting_review|waiting_publish|publishing|published|failed`）
   - `stageLabel`
   - `nextAction`
   - `postId`（nullable）

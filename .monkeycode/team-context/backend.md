@@ -1,5 +1,13 @@
 # Backend Sync
 
+## 第十一轮真实生成状态链路收口
+
+- 本轮聚焦真实 `message task` 的生成阶段推进：`pending_generation -> copy_generated -> images_generated -> waiting_review`。
+- `generate-copy` 触发后，后端会把生成文案写入 `post.body`，并同步更新任务状态。
+- `generate-images` 触发后，后端会把生成素材挂到 `assetIds/assets`，并同步更新任务状态。
+- 当文案与图片均完成时，任务状态统一收口到 `waiting_review`。
+- 保证 `task` 状态与 `post` 内容、素材结构一致；重复触发不写脏数据。
+
 ## 当前优先级说明
 
 - 下一阶段执行顺序以 `.monkeycode/docs/NEXT_PHASE_EXECUTION_PLAN.md` 为准。

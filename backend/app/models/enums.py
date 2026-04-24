@@ -42,6 +42,8 @@ class PublishFailureType(StrEnum):
 
 class MessageTaskStage(StrEnum):
     PENDING_GENERATION = "pending_generation"
+    COPY_GENERATED = "copy_generated"
+    IMAGES_GENERATED = "images_generated"
     WAITING_REVIEW = "waiting_review"
     WAITING_PUBLISH = "waiting_publish"
     PUBLISHING = "publishing"

@@ -384,7 +384,16 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertGreaterEqual(len(tasks), 1)
         self.assertIn(
             tasks[0]["stage"],
-            {"pending_generation", "waiting_review", "waiting_publish", "publishing", "published", "failed"},
+            {
+                "pending_generation",
+                "copy_generated",
+                "images_generated",
+                "waiting_review",
+                "waiting_publish",
+                "publishing",
+                "published",
+                "failed",
+            },
         )
         self.assertIn("stageLabel", tasks[0])
         self.assertIn("nextAction", tasks[0])
@@ -483,6 +492,102 @@ class BackendApiMinimalTests(unittest.TestCase):
             if item.message_task_id == first_payload["messageTaskId"]
         ]
         self.assertEqual(len(matched_posts), 1)
+
+    def test_generation_flow_reaches_waiting_review_with_consistent_post_data(self) -> None:
+        ingest_resp = self.client.post(
+            "/api/integrations/qq/messages",
+            json={
+                "source": "qq",
+                "senderId": "qq_u_gen_1",
+                "senderName": "生成用户",
+                "conversationId": "qq_c_gen_1",
+                "content": "请生成一篇关于门店春季活动预热的内容",
+                "sentAt": "2026-04-24T09:00:00+00:00",
+                "eventId": "qq_event_gen_chain_1",
+                "signature": "dev-qq-shared-secret",
+            },
+        )
+        self.assertEqual(ingest_resp.status_code, 201)
+        ingest_payload = ingest_resp.json()
+        post_id = ingest_payload["postId"]
+        task_id = ingest_payload["messageTaskId"]
+
+        copy_resp = self.client.post(
+            f"/api/posts/{post_id}/generate-copy",
+            json={"operator": "qa", "payload": {"tone": "warm"}},
+        )
+        self.assertEqual(copy_resp.status_code, 200)
+        task_after_copy = next(item for item in self.client.get("/api/tasks").json() if item["id"] == task_id)
+        self.assertEqual(task_after_copy["stage"], "copy_generated")
+
+        post_after_copy = self.client.get(f"/api/posts/{post_id}").json()
+        self.assertIn("【自动生成文案】", post_after_copy["body"])
+
+        images_resp = self.client.post(
+            f"/api/posts/{post_id}/generate-images",
+            json={"operator": "qa", "payload": {"style": "clean"}},
+        )
+        self.assertEqual(images_resp.status_code, 200)
+
+        task_after_images = next(item for item in self.client.get("/api/tasks").json() if item["id"] == task_id)
+        self.assertEqual(task_after_images["stage"], "waiting_review")
+        self.assertTrue(task_after_images["hasCopy"])
+        self.assertTrue(task_after_images["hasImages"])
+        self.assertEqual(task_after_images["postId"], post_id)
+
+        post_after_images = self.client.get(f"/api/posts/{post_id}").json()
+        self.assertEqual(post_after_images["messageTaskId"], task_id)
+        self.assertGreaterEqual(len(post_after_images["assetIds"]), 1)
+        self.assertGreaterEqual(len(post_after_images["assets"]), 1)
+
+    def test_generation_repeat_trigger_keeps_data_clean(self) -> None:
+        ingest_resp = self.client.post(
+            "/api/integrations/qq/messages",
+            json={
+                "source": "qq",
+                "senderId": "qq_u_gen_2",
+                "senderName": "重复生成用户",
+                "conversationId": "qq_c_gen_2",
+                "content": "请准备一次新品上架预告",
+                "sentAt": "2026-04-24T10:00:00+00:00",
+                "eventId": "qq_event_gen_chain_2",
+                "signature": "dev-qq-shared-secret",
+            },
+        )
+        self.assertEqual(ingest_resp.status_code, 201)
+        payload = ingest_resp.json()
+        post_id = payload["postId"]
+        task_id = payload["messageTaskId"]
+
+        self.client.post(
+            f"/api/posts/{post_id}/generate-copy",
+            json={"operator": "qa", "payload": {}},
+        )
+        self.client.post(
+            f"/api/posts/{post_id}/generate-images",
+            json={"operator": "qa", "payload": {}},
+        )
+
+        first_detail = self.client.get(f"/api/posts/{post_id}").json()
+        first_asset_count = len(first_detail["assetIds"])
+        first_body = first_detail["body"]
+
+        self.client.post(
+            f"/api/posts/{post_id}/generate-copy",
+            json={"operator": "qa", "payload": {"tone": "formal"}},
+        )
+        self.client.post(
+            f"/api/posts/{post_id}/generate-images",
+            json={"operator": "qa", "payload": {"style": "minimal"}},
+        )
+
+        second_detail = self.client.get(f"/api/posts/{post_id}").json()
+        self.assertEqual(second_detail["body"], first_body)
+        self.assertEqual(len(second_detail["assetIds"]), first_asset_count)
+
+        task_payload = next(item for item in self.client.get("/api/tasks").json() if item["id"] == task_id)
+        self.assertEqual(task_payload["stage"], "waiting_review")
+        self.assertEqual(task_payload["postId"], post_id)
 
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")

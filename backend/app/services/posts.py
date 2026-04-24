@@ -1,6 +1,15 @@
 from fastapi import HTTPException, status
 
-from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
+from app.models.asset import Asset
+from app.models.enums import (
+    GenerationTaskType,
+    MessageTaskStage,
+    PostStatus,
+    PublishFailureType,
+    PublishStatus,
+    ReviewAction,
+    TaskStatus,
+)
 from app.models.generation_task import GenerationTask
 from app.models.metrics_snapshot import MetricsSnapshot
 from app.models.post import Post
@@ -131,6 +140,77 @@ def _serialize_post(post: Post) -> PostSummaryResponse:
     )
 
 
+def _get_message_task_by_post(post: Post):
+    if post.message_task_id is not None:
+        task = repository.message_tasks.get(post.message_task_id)
+        if task is not None:
+            return task
+    for task in repository.message_tasks.values():
+        if task.post_id == post.id:
+            if post.message_task_id != task.id:
+                post.message_task_id = task.id
+            return task
+    return None
+
+
+def _sync_message_task_generation_state(post: Post, *, copy_generated: bool = False, images_generated: bool = False) -> None:
+    task = _get_message_task_by_post(post)
+    if task is None:
+        return
+
+    now = now_iso()
+    task.post_id = post.id
+    post.message_task_id = task.id
+
+    if copy_generated:
+        task.has_copy = True
+    if images_generated:
+        task.has_images = True
+
+    if task.has_copy and task.has_images:
+        task.stage = MessageTaskStage.WAITING_REVIEW
+    elif task.has_copy:
+        task.stage = MessageTaskStage.COPY_GENERATED
+    elif task.has_images:
+        task.stage = MessageTaskStage.IMAGES_GENERATED
+    else:
+        task.stage = MessageTaskStage.PENDING_GENERATION
+
+    task.requires_human_review = task.stage in {
+        MessageTaskStage.WAITING_REVIEW,
+        MessageTaskStage.WAITING_PUBLISH,
+    }
+    task.updated_at = now
+    post.updated_at = now
+
+
+def _apply_generated_copy(post: Post) -> None:
+    if post.body.startswith("【自动生成文案】"):
+        return
+    generated_body = f"【自动生成文案】\n主题：{post.topic}\n\n内容：{post.body.strip() or post.topic}"
+    post.body = generated_body
+
+
+def _apply_generated_images(post: Post) -> None:
+    if any(
+        (asset := repository.assets.get(asset_id)) is not None and asset.name.startswith("自动配图-")
+        for asset_id in post.asset_ids
+    ):
+        return
+
+    created_at = now_iso()
+    asset = Asset(
+        id=new_id("asset"),
+        name=f"自动配图-{post.topic[:12]}",
+        file_name=f"{post.id}-generated-cover.png",
+        content_type="image/png",
+        url=f"https://example.com/assets/{post.id}-generated-cover.png",
+        created_at=created_at,
+    )
+    repository.assets[asset.id] = asset
+    post.asset_ids.append(asset.id)
+
+
 def list_posts() -> list[PostSummaryResponse]:
     posts = sorted(repository.posts.values(), key=lambda item: item.updated_at, reverse=True)
     return [_serialize_post(post) for post in posts]
@@ -238,16 +318,25 @@ def reject_post(post_id: str, request: ReviewRequest) -> PostDetailResponse:
 
 def create_generation_task(post_id: str, task_type: GenerationTaskType, request: GenerateTaskRequest) -> TaskRecordResponse:
     post = _get_post_or_404(post_id)
+    created_at = now_iso()
     task = GenerationTask(
         id=new_id("task"),
         post_id=post.id,
         task_type=task_type,
         status=TaskStatus.PENDING,
         payload={"operator": request.operator, **request.payload},
-        created_at=now_iso(),
+        created_at=created_at,
     )
     repository.generation_tasks[task.id] = task
     post.generation_task_ids.append(task.id)
+
+    if task_type == GenerationTaskType.COPY:
+        _apply_generated_copy(post)
+        _sync_message_task_generation_state(post, copy_generated=True)
+    if task_type == GenerationTaskType.IMAGE:
+        _apply_generated_images(post)
+        _sync_message_task_generation_state(post, images_generated=True)
+
     post.updated_at = task.created_at
     repository.save()
     return TaskRecordResponse(

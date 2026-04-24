@@ -342,3 +342,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 真实 post 创建或关联时必须稳定写入 `accountId`，且与任务归属一致。
   - 同一任务链路中需保持 `task.accountId`、`task.accountName`、`post.accountId`、`messageTask.postId`、`post.messageTaskId` 可互相对应。
   - 同一 `eventId` 重放不得写乱账号归属。
+
+[真实生成状态流转收口]
+- Date: 2026-04-24
+- Context: 用户要求补齐真实 QQ/OpenClaw 入站任务从待生成到待确认的最小状态链路
+- Instructions:
+  - 任务阶段至少覆盖 `pending_generation`、`copy_generated`、`images_generated`、`waiting_review`。
+  - 文案生成后需真实写入 `post` 可消费字段，图片生成后需真实挂到素材结构。
+  - 文案和图片都完成后任务进入 `waiting_review`，并保持任务状态与 `post` 内容/素材一致。
+  - 重复触发生成不得写脏数据或产生矛盾状态。

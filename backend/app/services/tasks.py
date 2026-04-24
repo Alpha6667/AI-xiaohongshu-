@@ -5,6 +5,8 @@ from app.schemas.tasks import MessageTaskResponse
 
 STAGE_LABELS: dict[MessageTaskStage, str] = {
     MessageTaskStage.PENDING_GENERATION: "待生成",
+    MessageTaskStage.COPY_GENERATED: "文案已生成",
+    MessageTaskStage.IMAGES_GENERATED: "图片已生成",
     MessageTaskStage.WAITING_REVIEW: "待确认",
     MessageTaskStage.WAITING_PUBLISH: "待发布",
     MessageTaskStage.PUBLISHING: "发布中",
@@ -14,6 +16,8 @@ STAGE_LABELS: dict[MessageTaskStage, str] = {
 
 NEXT_ACTIONS: dict[MessageTaskStage, str] = {
     MessageTaskStage.PENDING_GENERATION: "generate_content",
+    MessageTaskStage.COPY_GENERATED: "generate_images",
+    MessageTaskStage.IMAGES_GENERATED: "generate_copy",
     MessageTaskStage.WAITING_REVIEW: "review_content",
     MessageTaskStage.WAITING_PUBLISH: "confirm_publish",
     MessageTaskStage.PUBLISHING: "wait_publish_result",
