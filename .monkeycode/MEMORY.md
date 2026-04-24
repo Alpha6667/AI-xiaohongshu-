@@ -315,3 +315,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 已验证两条真实 QQ 任务都能承接到 `/review?postId=...`，并可执行保存确认版、提交人工确认、审核通过和审核退回动作。
   - 任务 A `post_f01d2157a6` 最终状态为 `approved`，任务 B `post_d61a46fec4` 最终状态为 `draft`。
   - 两条任务的 `reviewRecords` 都正确追加了两条记录，说明当前 `/review` 页面动作链路与后端状态回写正常。
+
+[Dashboard 页面验收已通过]
+- Date: 2026-04-24
+- Context: Agent 在完成 `/dashboard` 页面源码级验收后记录
+- Category: 测试方法
+- Instructions:
+  - 已验证 `/dashboard` 页面命中 `发布中心`、`OpenClaw`、`待发送`、`发送中`、`已发布`、`发送失败` 等真实状态关键词。
+  - 任务 A `post_f01d2157a6` 当前在真实数据中为 `approved`，任务 B `post_d61a46fec4` 为 `draft`，与页面当前阶段展示一致。
+  - 当前未命中失败分类关键词，是因为验收样本里没有失败发布记录，不应误判为页面问题。
