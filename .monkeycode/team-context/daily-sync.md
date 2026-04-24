@@ -87,3 +87,4 @@
 - 已新增 `.monkeycode/docs/OPENCLAW_PUBLISH_WEBHOOK_DESIGN.md`，用于把“backend -> OpenClaw 真实发布执行 webhook”接口设计直接分发给前后端协作落地
 - 已新增 `.monkeycode/docs/OPENCLAW_BACKEND_TASK.md`，用于把 OpenClaw 侧最小发布执行能力建设任务直接分发给 OpenClaw 侧实现者
 - 已新增 `.monkeycode/docs/PRODUCT_FLOW_OPENCLAW_TO_XHS.md`，用于统一 OpenClaw、网页端和小红书发布链路的产品主流程理解
+- 已新增 `.monkeycode/docs/XHS_DATA_SYNC_PRODUCT_FLOW.md`，用于统一“登录后台后自动拉取小红书作品与互动数据”的产品流程理解
