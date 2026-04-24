@@ -8,6 +8,7 @@
 - `ACCOUNT_OWNERSHIP_BACKEND_TASK.md`：账号归属真实化后端任务单
 - `ACCOUNT_OWNERSHIP_FRONTEND_TASK.md`：账号归属真实化前端任务单
 - `GENERATION_CHAIN_BACKEND_TASK.md`：真实生成链路后端任务单
+- `GENERATION_CHAIN_FRONTEND_TASK.md`：真实生成链路前端任务单
 
 ## 协作说明
 
