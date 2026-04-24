@@ -306,3 +306,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 当前服务器部署版本已确认是 `9f457f4`，且线上 `POST /api/integrations/qq/messages` 会直接返回非空 `postId`。
   - 真实 QQ 入站任务已不再需要手动创建 `post`，可以自动承接到 `/review?postId=...`。
   - 后续推进不应再把“task 是否自动转成 post”视为待解决问题，而应继续验收 `/review` 页面动作链路。
+
+[Review 页面动作验收已通过]
+- Date: 2026-04-24
+- Context: Agent 在完成 `/review` 页面真实动作验收后记录
+- Category: 测试方法
+- Instructions:
+  - 已验证两条真实 QQ 任务都能承接到 `/review?postId=...`，并可执行保存确认版、提交人工确认、审核通过和审核退回动作。
+  - 任务 A `post_f01d2157a6` 最终状态为 `approved`，任务 B `post_d61a46fec4` 最终状态为 `draft`。
+  - 两条任务的 `reviewRecords` 都正确追加了两条记录，说明当前 `/review` 页面动作链路与后端状态回写正常。

@@ -66,6 +66,8 @@
 - 2026-04-24 已完成腾讯云真实验收：OpenClaw 转发的 QQ 消息已成功创建真实任务，样例任务 `sourceMessage="QQ 发唯一测试消息"`，`stage="pending_generation"`。
 - 2026-04-24 已完成去重复验：同一 `eventId` 重放两次仅保留一条任务，第一次 `duplicated=false`，第二次 `duplicated=true`，对应 `messageTaskId=taskmsg_15128e20e1`。
 - 2026-04-24 已确认 `POST /api/integrations/qq/messages` 在线上直接返回非空 `postId`，样例 `postId=post_e430203528`，说明真实 `task -> post` 自动承接已打通。
+- 2026-04-24 已完成 `/review` 页面动作验收：任务 A `post_f01d2157a6` 已完成 `submit -> approve` 并进入 `approved`，任务 B `post_d61a46fec4` 已完成 `submit -> reject` 并回到 `draft`。
+- 两条真实任务的 `reviewRecords` 均正确追加了两条记录，说明 `/review` 动作已能稳定驱动后端状态变化。
 - 现阶段后端不需要再为 QQ 入站扩新功能，优先级已转为去重复验、前端页面验收和下一阶段生成链路承接。
 
 ## 第九轮 message task 承接到 review 同步

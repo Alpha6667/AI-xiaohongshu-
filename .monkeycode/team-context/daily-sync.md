@@ -69,3 +69,7 @@
 - 页面源码中 `QQ 去重复验 20260424` 仅出现 1 次，说明前端展示层同样未出现重复任务
 - 已确认服务器部署版本为 `9f457f4`，线上 `POST /api/integrations/qq/messages` 已直接返回非空 `postId=post_e430203528`
 - 当前可以确认真实链路已从 `QQ -> OpenClaw -> backend -> /api/tasks` 升级为 `QQ -> OpenClaw -> backend -> post -> /review?postId=...`
+- 已完成 `/review` 页面动作验收：两条真实 QQ 任务都成功承接到内容确认台并完成动作验证
+- 任务 A `post_f01d2157a6` 已完成 `保存 -> 提交 -> 通过`，最终状态为 `approved`
+- 任务 B `post_d61a46fec4` 已完成 `保存 -> 提交 -> 退回`，最终状态为 `draft`
+- 两条任务的 `reviewRecords` 都正确追加了两条操作记录，说明 `/review` 页面动作链路和后端状态回写已闭环
