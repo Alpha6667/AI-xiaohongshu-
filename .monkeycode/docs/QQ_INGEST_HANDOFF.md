@@ -97,7 +97,8 @@
 - 已确认 `/api/tasks` 中仅保留一条 `sourceMessage="QQ 去重复验 20260424"` 的任务记录。
 - 已完成前端 `/tasks` 页面源码级验收：页面 HTML 已命中真实任务 `QQ 发唯一测试消息`、`QQ 去重复验 20260424` 以及状态文案 `待生成`。
 - 已确认页面源码未命中“当前仍在使用展示层回退任务数据”，说明当前前端展示的是后端真实任务数据而非展示层回退结果。
-- 当前可以认定 `QQ -> OpenClaw -> backend -> /api/tasks` 第一阶段闭环已经打通。
+- 已确认线上 `POST /api/integrations/qq/messages` 直接返回非空 `postId`，说明真实 QQ 任务已经可以自动承接出 `/review` 所需的 `post`。
+- 当前可以认定真实链路已升级为 `QQ -> OpenClaw -> backend -> post -> /review?postId=...`。
 
 ## 当前阻塞
 

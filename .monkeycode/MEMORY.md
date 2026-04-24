@@ -297,3 +297,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 必须保持 `messageTask.postId` 与 `post.messageTaskId` 双向关联一致。
   - 保持边界：不扩小红书真实发布、多账号自动分配、权限系统。
   - 需要补最小测试覆盖承接成功与幂等不重复建 post。
+
+[Review 自动承接已打通]
+- Date: 2026-04-24
+- Context: Agent 在核对腾讯云部署版本和线上入站响应后记录
+- Category: 测试方法
+- Instructions:
+  - 当前服务器部署版本已确认是 `9f457f4`，且线上 `POST /api/integrations/qq/messages` 会直接返回非空 `postId`。
+  - 真实 QQ 入站任务已不再需要手动创建 `post`，可以自动承接到 `/review?postId=...`。
+  - 后续推进不应再把“task 是否自动转成 post”视为待解决问题，而应继续验收 `/review` 页面动作链路。

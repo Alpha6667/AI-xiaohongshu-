@@ -3,8 +3,9 @@
 ## 下一阶段任务：Message Task 承接到 Review
 
 - 当前 `QQ -> OpenClaw -> backend -> /tasks` 已真实打通，前端 `/tasks` 也已确认展示的是后端真实任务数据。
-- 下一阶段的核心缺口不在 `/tasks`，而在“真实 message task 如何进入内容确认台 `/review`”。
-- 现状是：QQ 入站后已能创建 `message task`，但这些任务还没有稳定的 `postId` 关联，因此前端 `/review` 还不能直接承接最新真实 QQ 任务。
+- 2026-04-24 已确认服务器实际部署在提交 `9f457f4`，`POST /api/integrations/qq/messages` 已可直接返回非空 `postId`。
+- 当前已完成自动承接：真实 QQ 入站后可自动创建或关联 `post`，不再需要手动补 post 才能进入 `/review`。
+- 当前真实链路已升级为 `QQ -> OpenClaw -> backend -> post -> /review?postId=...`。
 
 ### 本轮目标
 
@@ -51,6 +52,11 @@
 - 前端 `/review?postId=...` 能打开该任务对应的确认页。
 - 页面中的消息来源、任务阶段和确认对象彼此一致，不再停留在仅靠种子 `post` 验证的状态。
 
+### 当前状态
+
+- 该任务已由后端完成并部署验证，无需再作为待实现缺口继续跟进。
+- 后续重点应从“补 `task -> post`”切换为“验收 `/review` 页面动作链路”和“推进内容生成承接”。
+
 ## 第八轮 QQ 联调收尾说明
 
 - QQ 入站最小实现已在提交 `13a67be` 落地，当前需要的不是继续扩功能，而是完成 OpenClaw 到后端的真实联调验收。
@@ -59,6 +65,7 @@
 - 当前本地补跑 `python3 -m unittest tests.test_api_minimal` 被环境阻塞，缺少 `fastapi` 依赖；继续验证前需先完成 backend 依赖安装。
 - 2026-04-24 已完成腾讯云真实验收：OpenClaw 转发的 QQ 消息已成功创建真实任务，样例任务 `sourceMessage="QQ 发唯一测试消息"`，`stage="pending_generation"`。
 - 2026-04-24 已完成去重复验：同一 `eventId` 重放两次仅保留一条任务，第一次 `duplicated=false`，第二次 `duplicated=true`，对应 `messageTaskId=taskmsg_15128e20e1`。
+- 2026-04-24 已确认 `POST /api/integrations/qq/messages` 在线上直接返回非空 `postId`，样例 `postId=post_e430203528`，说明真实 `task -> post` 自动承接已打通。
 - 现阶段后端不需要再为 QQ 入站扩新功能，优先级已转为去重复验、前端页面验收和下一阶段生成链路承接。
 
 ## 第九轮 message task 承接到 review 同步
