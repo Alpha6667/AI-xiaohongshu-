@@ -15,6 +15,7 @@
 - `POST /api/posts/{post_id}/approve`
 - `POST /api/posts/{post_id}/reject`
 - `POST /api/posts/{post_id}/publish`
+- `POST /api/posts/{post_id}/openclaw/execute-publish`
 - `POST /api/posts/{post_id}/publish-result`
 - `POST /api/posts/{post_id}/metrics-snapshots`
 - `GET /api/tasks`
@@ -75,6 +76,30 @@
   - `errorMessage`（nullable）
   - `failureType`（nullable，`retryable|non_retryable|rate_limited`）
 
+### `POST /api/posts/{post_id}/openclaw/execute-publish`
+
+- 用于把“内容已确认（approved）”交给 OpenClaw 执行发布。
+- 请求体：
+  - `operator`（string，默认 `openclaw`）
+  - `simulateResult`（`none|succeeded|failed`，默认 `none`，用于 fake/mock publisher）
+  - `detail`（string，可选）
+  - `platformPostId`（string，可选）
+  - `errorMessage`（string，可选）
+  - `failureType`（`retryable|non_retryable|rate_limited`，失败时可选）
+- 状态流转：
+  - `approved -> publishing`（提交到 OpenClaw 执行队列）
+  - `publishing -> published`（执行成功回写）
+  - `publishing -> publish_failed`（执行失败回写）
+- 响应体：沿用 `publish` 响应结构，包含发布记录字段：
+  - `publishLogId`
+  - `publishStatus`（`queued|succeeded|failed`）
+  - `detail`
+  - `platformPostId`
+  - `errorMessage`
+  - `failureType`
+- 重复触发约束：
+  - 对已 `published` 或 `publish_failed` 的帖子再次执行会返回冲突，避免脏状态。
+
 ### `POST /api/posts/{post_id}/publish-result`
 
 - 用于 worker 或后端任务回写发布结果。
@@ -87,6 +112,15 @@
   - `errorMessage`（string，可选，发布失败时写回）
   - `failureType`（`retryable|non_retryable|rate_limited`，发布失败时建议携带）
 - 响应体：沿用 `publish` 响应结构，返回回写后的状态与信息。
+
+### 发布适配层约定
+
+- 后端通过统一发布适配层处理发布能力，当前最小能力包含：
+  - `preparePublish`
+  - `submitPublish`
+  - `writebackPublishResult`
+  - `fetchMetrics`
+- 当前接入为 fake/mock publisher，可在不接真实小红书平台的前提下跑通平台内部发布闭环。
 
 ### `POST /api/posts/{post_id}/metrics-snapshots`
 

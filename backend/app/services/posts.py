@@ -21,6 +21,7 @@ from app.schemas.posts import (
     GenerateTaskRequest,
     MetricsSnapshotAppendRequest,
     MetricsSnapshotResponse,
+    OpenClawPublishExecuteRequest,
     PostCreateRequest,
     PostDetailResponse,
     PostMetricsResponse,
@@ -33,6 +34,7 @@ from app.schemas.posts import (
     ReviewRequest,
     TaskRecordResponse,
 )
+from app.services.publisher import PreparedPublish, publisher_adapter
 
 
 def _get_post_or_404(post_id: str) -> Post:
@@ -351,28 +353,24 @@ def create_generation_task(post_id: str, task_type: GenerationTaskType, request:
 
 def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
     post = _get_post_or_404(post_id)
-    if post.status != PostStatus.APPROVED:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved posts can enter publishing")
-    if any(
-        repository.publish_logs[log_id].status in {PublishStatus.QUEUED, PublishStatus.SUCCEEDED}
-        for log_id in post.publish_log_ids
-        if log_id in repository.publish_logs
-    ):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Publish already queued or completed")
-
-    created_at = now_iso()
-    log = PublishLog(
-        id=new_id("publish"),
-        post_id=post.id,
-        status=PublishStatus.QUEUED,
-        detail=f"Publish requested by {request.operator}",
-        created_at=created_at,
-    )
-    repository.publish_logs[log.id] = log
-    post.publish_log_ids.append(log.id)
-    post.status = PostStatus.PUBLISHING
-    post.updated_at = created_at
+    prepared = publisher_adapter.prepare_publish(post, request.operator)
+    prepared = publisher_adapter.submit_publish(prepared, request.operator)
     repository.save()
+    return PublishResponse(
+        publishLogId=prepared.publish_log.id,
+        postId=prepared.post.id,
+        status=prepared.post.status,
+        publishStatus=prepared.publish_log.status,
+        detail=prepared.publish_log.detail,
+        createdAt=prepared.publish_log.created_at,
+        message="Publish request accepted and queued",
+        platformPostId=prepared.publish_log.platform_post_id,
+        errorMessage=prepared.publish_log.error_message,
+        failureType=prepared.publish_log.failure_type,
+    )
+
+
+def _serialize_publish_response(post: Post, log: PublishLog, message: str) -> PublishResponse:
     return PublishResponse(
         publishLogId=log.id,
         postId=post.id,
@@ -380,11 +378,38 @@ def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
         publishStatus=log.status,
         detail=log.detail,
         createdAt=log.created_at,
-        message="Publish request accepted and queued",
+        message=message,
         platformPostId=log.platform_post_id,
         errorMessage=log.error_message,
         failureType=log.failure_type,
     )
+
+
+def _prepare_or_reuse_publish(post: Post, operator: str) -> PreparedPublish:
+    if post.status == PostStatus.APPROVED:
+        return publisher_adapter.submit_publish(publisher_adapter.prepare_publish(post, operator), operator)
+    if post.status == PostStatus.PUBLISHING:
+        return PreparedPublish(post=post, publish_log=_get_latest_publish_log(post))
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Post is not ready for OpenClaw publish execution")
+
+
+def execute_openclaw_publish(post_id: str, payload: OpenClawPublishExecuteRequest) -> PublishResponse:
+    post = _get_post_or_404(post_id)
+    prepared = _prepare_or_reuse_publish(post, payload.operator)
+
+    if payload.simulateResult == "none":
+        repository.save()
+        return _serialize_publish_response(prepared.post, prepared.publish_log, "OpenClaw publish submitted")
+
+    writeback_payload = PublishResultWritebackRequest(
+        publishStatus=PublishStatus(payload.simulateResult),
+        operator=payload.operator,
+        detail=payload.detail,
+        platformPostId=payload.platformPostId,
+        errorMessage=payload.errorMessage,
+        failureType=payload.failureType,
+    )
+    return writeback_publish_result(post_id, writeback_payload)
 
 
 def _get_latest_publish_log(post: Post) -> PublishLog:
@@ -466,3 +491,4 @@ def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest)
         comments=snapshot.comments,
         followConversions=snapshot.follow_conversions,
     )
+    OpenClawPublishExecuteRequest,

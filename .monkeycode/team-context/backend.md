@@ -1,5 +1,13 @@
 # Backend Sync
 
+## 第十二轮发布适配层与 OpenClaw 发布闭环
+
+- 本轮新增发布适配层，先以 fake/mock publisher 打通平台内部闭环，不把业务层写死在小红书页面细节。
+- 发布能力抽象为：`preparePublish`、`submitPublish`、`writebackPublishResult`、`fetchMetrics`。
+- 新增 OpenClaw 执行入口后，可从 `approved` 推进到 `publishing`，并回写到 `published` 或 `publish_failed`。
+- 失败语义保持稳定分类：`retryable`、`non_retryable`、`rate_limited`。
+- 发布记录可在帖子详情与发布中心消费，且与帖子状态保持一致。
+
 ## 第十一轮真实生成状态链路收口
 
 - 本轮聚焦真实 `message task` 的生成阶段推进：`pending_generation -> copy_generated -> images_generated -> waiting_review`。

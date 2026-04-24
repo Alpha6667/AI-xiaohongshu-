@@ -341,6 +341,99 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(rate_limited_resp.status_code, 200)
         self.assertEqual(rate_limited_resp.json()["failureType"], "rate_limited")
 
+    def test_openclaw_publish_adapter_state_flow(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "OpenClaw 发布链路",
+                "title": "OpenClaw 发布链路标题",
+                "body": "OpenClaw 发布链路正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        self.client.post(
+            f"/api/posts/{post_id}/submit-review",
+            json={"comment": "提交", "operator": "qa"},
+        )
+        self.client.post(
+            f"/api/posts/{post_id}/approve",
+            json={"comment": "通过", "operator": "qa"},
+        )
+
+        publishing_resp = self.client.post(
+            f"/api/posts/{post_id}/openclaw/execute-publish",
+            json={"operator": "openclaw", "simulateResult": "none"},
+        )
+        self.assertEqual(publishing_resp.status_code, 200)
+        self.assertEqual(publishing_resp.json()["status"], "publishing")
+        self.assertEqual(publishing_resp.json()["publishStatus"], "queued")
+
+        success_resp = self.client.post(
+            f"/api/posts/{post_id}/openclaw/execute-publish",
+            json={
+                "operator": "openclaw",
+                "simulateResult": "succeeded",
+                "platformPostId": "xh_openclaw_1001",
+                "detail": "mock success",
+            },
+        )
+        self.assertEqual(success_resp.status_code, 200)
+        self.assertEqual(success_resp.json()["status"], "published")
+        self.assertEqual(success_resp.json()["publishStatus"], "succeeded")
+        self.assertEqual(success_resp.json()["platformPostId"], "xh_openclaw_1001")
+
+    def test_openclaw_publish_failed_classification_and_repeat_protection(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "OpenClaw 失败分类",
+                "title": "OpenClaw 失败分类标题",
+                "body": "OpenClaw 失败分类正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        post_id = create_resp.json()["id"]
+        self.client.post(f"/api/posts/{post_id}/submit-review", json={"comment": "提交", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/approve", json={"comment": "通过", "operator": "qa"})
+
+        self.client.post(
+            f"/api/posts/{post_id}/openclaw/execute-publish",
+            json={"operator": "openclaw", "simulateResult": "none"},
+        )
+
+        failed_resp = self.client.post(
+            f"/api/posts/{post_id}/openclaw/execute-publish",
+            json={
+                "operator": "openclaw",
+                "simulateResult": "failed",
+                "detail": "mock failed",
+                "errorMessage": "rate limit",
+                "failureType": "rate_limited",
+            },
+        )
+        self.assertEqual(failed_resp.status_code, 200)
+        self.assertEqual(failed_resp.json()["status"], "publish_failed")
+        self.assertEqual(failed_resp.json()["publishStatus"], "failed")
+        self.assertEqual(failed_resp.json()["failureType"], "rate_limited")
+
+        repeat_resp = self.client.post(
+            f"/api/posts/{post_id}/openclaw/execute-publish",
+            json={"operator": "openclaw", "simulateResult": "none"},
+        )
+        self.assertEqual(repeat_resp.status_code, 409)
+
+        detail_resp = self.client.get(f"/api/posts/{post_id}")
+        self.assertEqual(detail_resp.status_code, 200)
+        detail_payload = detail_resp.json()
+        self.assertEqual(detail_payload["status"], "publish_failed")
+        self.assertGreaterEqual(len(detail_payload["publishRecords"]), 1)
+        self.assertEqual(detail_payload["publishRecords"][-1]["failureType"], "rate_limited")
+
     def test_append_metrics_snapshot_keeps_history(self) -> None:
         before_detail_resp = self.client.get("/api/posts/post_seed_published")
         self.assertEqual(before_detail_resp.status_code, 200)

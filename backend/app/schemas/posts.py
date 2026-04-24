@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
@@ -56,6 +58,15 @@ class PublishResponse(BaseModel):
 class PublishResultWritebackRequest(BaseModel):
     publishStatus: PublishStatus
     operator: str = "worker"
+    detail: str = ""
+    platformPostId: str | None = None
+    errorMessage: str | None = None
+    failureType: PublishFailureType | None = None
+
+
+class OpenClawPublishExecuteRequest(BaseModel):
+    operator: str = "openclaw"
+    simulateResult: Literal["none", "succeeded", "failed"] = "none"
     detail: str = ""
     platformPostId: str | None = None
     errorMessage: str | None = None

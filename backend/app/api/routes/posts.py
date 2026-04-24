@@ -5,6 +5,7 @@ from app.schemas.posts import (
     GenerateTaskRequest,
     MetricsSnapshotAppendRequest,
     MetricsSnapshotResponse,
+    OpenClawPublishExecuteRequest,
     PostCreateRequest,
     PostDetailResponse,
     PostSummaryResponse,
@@ -19,6 +20,7 @@ from app.services.posts import (
     approve_post,
     create_generation_task,
     create_post,
+    execute_openclaw_publish,
     get_post_detail,
     list_posts,
     publish_post,
@@ -80,6 +82,11 @@ def generate_images_route(post_id: str, payload: GenerateTaskRequest) -> TaskRec
 @router.post("/{post_id}/publish", response_model=PublishResponse)
 def publish_post_route(post_id: str, payload: ReviewRequest) -> PublishResponse:
     return publish_post(post_id, payload)
+
+
+@router.post("/{post_id}/openclaw/execute-publish", response_model=PublishResponse)
+def execute_openclaw_publish_route(post_id: str, payload: OpenClawPublishExecuteRequest) -> PublishResponse:
+    return execute_openclaw_publish(post_id, payload)
 
 
 @router.post("/{post_id}/publish-result", response_model=PublishResponse)

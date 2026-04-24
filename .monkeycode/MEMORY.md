@@ -351,3 +351,13 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 文案生成后需真实写入 `post` 可消费字段，图片生成后需真实挂到素材结构。
   - 文案和图片都完成后任务进入 `waiting_review`，并保持任务状态与 `post` 内容/素材一致。
   - 重复触发生成不得写脏数据或产生矛盾状态。
+
+[发布适配层与 OpenClaw 闭环优先]
+- Date: 2026-04-24
+- Context: 用户要求下一步先做发布适配层，并打通内部 OpenClaw 发布执行闭环
+- Instructions:
+  - 发布能力需要统一抽象为 `preparePublish`、`submitPublish`、`writebackPublishResult`、`fetchMetrics`。
+  - 先允许 fake/mock publisher，不要求本轮接真实小红书。
+  - 状态链路需覆盖 `approved -> publishing -> published/publish_failed`。
+  - 发布失败必须稳定分类为 `retryable`、`non_retryable`、`rate_limited`。
+  - 重复触发不得写脏状态，发布记录需要与帖子状态一致并可在详情页消费。
