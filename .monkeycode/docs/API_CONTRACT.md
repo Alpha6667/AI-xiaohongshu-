@@ -149,11 +149,13 @@
   - 按 `source + eventId` 幂等去重
   - 保存原始消息记录
   - 创建 `pending_generation` 阶段的 `message task`
+  - 为该任务创建或关联 `post`，并保持 `messageTask.postId <-> post.messageTaskId` 双向关联一致
 - 响应字段：
   - `accepted`
   - `duplicated`
   - `rawMessageId`
   - `messageTaskId`
+  - `postId`
 
 ### `GET /api/dashboard/summary`
 

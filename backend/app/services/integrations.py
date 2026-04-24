@@ -1,9 +1,10 @@
 from fastapi import HTTPException, status
 
 from app.db.config import get_settings
-from app.models.enums import MessageTaskStage
+from app.models.enums import MessageTaskStage, PostStatus
 from app.models.inbound_message import InboundMessage
 from app.models.message_task import MessageTask
+from app.models.post import Post
 from app.repositories.memory import new_id, now_iso, repository
 from app.schemas.integrations import QQMessageIngestRequest, QQMessageIngestResponse
 
@@ -28,15 +29,57 @@ def _validate_signature(payload: QQMessageIngestRequest) -> str:
     return provided_secret
 
 
+def _ensure_post_for_message_task(task: MessageTask) -> Post:
+    if task.post_id is not None:
+        linked_post = repository.posts.get(task.post_id)
+        if linked_post is not None:
+            if linked_post.message_task_id != task.id:
+                linked_post.message_task_id = task.id
+                linked_post.updated_at = now_iso()
+            return linked_post
+
+    for post in repository.posts.values():
+        if post.message_task_id == task.id:
+            task.post_id = post.id
+            task.updated_at = now_iso()
+            return post
+
+    timestamp = now_iso()
+    post = Post(
+        id=new_id("post"),
+        topic=task.topic,
+        title=task.topic,
+        body=task.source_message,
+        tags=[],
+        status=PostStatus.DRAFT,
+        asset_ids=[],
+        platform_post_id=None,
+        account_id=task.account_id,
+        message_task_id=task.id,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    repository.posts[post.id] = post
+    task.post_id = post.id
+    task.updated_at = timestamp
+    return post
+
+
 def ingest_qq_message(payload: QQMessageIngestRequest) -> QQMessageIngestResponse:
     validated_signature = _validate_signature(payload)
     duplicated_message = _find_inbound_message_by_event(payload.source, payload.eventId)
     if duplicated_message is not None:
+        duplicated_task = repository.message_tasks.get(duplicated_message.message_task_id)
+        if duplicated_task is None:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Message task not found")
+        duplicated_post = _ensure_post_for_message_task(duplicated_task)
+        repository.save()
         return QQMessageIngestResponse(
             accepted=True,
             duplicated=True,
             rawMessageId=duplicated_message.id,
             messageTaskId=duplicated_message.message_task_id,
+            postId=duplicated_post.id,
         )
 
     timestamp = now_iso()
@@ -57,6 +100,7 @@ def ingest_qq_message(payload: QQMessageIngestRequest) -> QQMessageIngestRespons
         updated_at=timestamp,
     )
     repository.message_tasks[task.id] = task
+    created_post = _ensure_post_for_message_task(task)
 
     inbound_message = InboundMessage(
         id=new_id("qqmsg"),
@@ -79,4 +123,5 @@ def ingest_qq_message(payload: QQMessageIngestRequest) -> QQMessageIngestRespons
         duplicated=False,
         rawMessageId=inbound_message.id,
         messageTaskId=task.id,
+        postId=created_post.id,
     )

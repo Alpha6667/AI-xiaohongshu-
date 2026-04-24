@@ -407,7 +407,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(linked_post.status_code, 200)
         self.assertEqual(linked_post.json()["accountId"], linked_task["accountId"])
 
-    def test_qq_message_ingestion_creates_real_task_and_deduplicates(self) -> None:
+    def test_qq_message_ingestion_creates_task_and_post_link_for_review(self) -> None:
         payload = {
             "source": "qq",
             "senderId": "qq_u_1001",
@@ -423,23 +423,53 @@ class BackendApiMinimalTests(unittest.TestCase):
         ingest_payload = ingest_resp.json()
         self.assertTrue(ingest_payload["accepted"])
         self.assertFalse(ingest_payload["duplicated"])
-
-        duplicate_resp = self.client.post("/api/integrations/qq/messages", json=payload)
-        self.assertEqual(duplicate_resp.status_code, 201)
-        duplicate_payload = duplicate_resp.json()
-        self.assertTrue(duplicate_payload["accepted"])
-        self.assertTrue(duplicate_payload["duplicated"])
-        self.assertEqual(duplicate_payload["messageTaskId"], ingest_payload["messageTaskId"])
+        self.assertIn("postId", ingest_payload)
 
         tasks_resp = self.client.get("/api/tasks")
         self.assertEqual(tasks_resp.status_code, 200)
         tasks = tasks_resp.json()
         self.assertGreaterEqual(len(tasks), 1)
         self.assertEqual(tasks[0]["id"], ingest_payload["messageTaskId"])
+        self.assertEqual(tasks[0]["postId"], ingest_payload["postId"])
         self.assertEqual(tasks[0]["sourceMessage"], payload["content"])
         self.assertEqual(tasks[0]["stage"], "pending_generation")
 
+        post_detail_resp = self.client.get(f"/api/posts/{ingest_payload['postId']}")
+        self.assertEqual(post_detail_resp.status_code, 200)
+        post_detail = post_detail_resp.json()
+        self.assertEqual(post_detail["messageTaskId"], ingest_payload["messageTaskId"])
+        self.assertEqual(post_detail["status"], "draft")
+
         self.assertTrue(any(item.event_id == payload["eventId"] for item in repository.inbound_messages.values()))
+
+    def test_qq_duplicate_event_does_not_create_multiple_posts_for_same_task(self) -> None:
+        payload = {
+            "source": "qq",
+            "senderId": "qq_u_2002",
+            "senderName": "重复用户",
+            "conversationId": "qq_c_3002",
+            "content": "周五发一条门店活动预热",
+            "sentAt": "2026-04-23T10:00:00+00:00",
+            "eventId": "qq_event_dup_1",
+            "signature": "dev-qq-shared-secret",
+        }
+        first_resp = self.client.post("/api/integrations/qq/messages", json=payload)
+        self.assertEqual(first_resp.status_code, 201)
+        first_payload = first_resp.json()
+
+        duplicate_resp = self.client.post("/api/integrations/qq/messages", json=payload)
+        self.assertEqual(duplicate_resp.status_code, 201)
+        duplicate_payload = duplicate_resp.json()
+        self.assertTrue(duplicate_payload["duplicated"])
+        self.assertEqual(duplicate_payload["messageTaskId"], first_payload["messageTaskId"])
+        self.assertEqual(duplicate_payload["postId"], first_payload["postId"])
+
+        matched_posts = [
+            item
+            for item in repository.posts.values()
+            if item.message_task_id == first_payload["messageTaskId"]
+        ]
+        self.assertEqual(len(matched_posts), 1)
 
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")

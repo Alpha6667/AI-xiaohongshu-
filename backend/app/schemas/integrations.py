@@ -26,3 +26,4 @@ class QQMessageIngestResponse(BaseModel):
     duplicated: bool
     rawMessageId: str
     messageTaskId: str
+    postId: str

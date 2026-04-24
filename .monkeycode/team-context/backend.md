@@ -61,6 +61,14 @@
 - 2026-04-24 已完成去重复验：同一 `eventId` 重放两次仅保留一条任务，第一次 `duplicated=false`，第二次 `duplicated=true`，对应 `messageTaskId=taskmsg_15128e20e1`。
 - 现阶段后端不需要再为 QQ 入站扩新功能，优先级已转为去重复验、前端页面验收和下一阶段生成链路承接。
 
+## 第九轮 message task 承接到 review 同步
+
+- 本轮目标是打通 `message task -> post -> /review` 最小承接链路，不扩小红书发布、多账号自动分配和权限系统。
+- QQ 入站创建真实任务时，后端会同步创建或关联一个 `post` 作为确认对象。
+- 后端保证双向关联：`messageTask.postId` 与 `post.messageTaskId` 一致。
+- 对同一入站事件（同 `source + eventId`）保持幂等，不重复生成 `post`。
+- 现有 `POST /api/integrations/qq/messages`、去重逻辑和 `/api/tasks` 排序行为保持兼容。
+
 ## 第八轮 QQ 消息入任务链路同步
 
 - 本轮仅聚焦“QQ 消息 -> 后端真实 message task”，不涉及小红书发布、多账号调度、权限系统。
