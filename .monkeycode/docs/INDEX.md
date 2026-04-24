@@ -14,6 +14,9 @@
 - `OPENCLAW_BACKEND_TASK.md`：OpenClaw 最小发布执行后端任务单
 - `PRODUCT_FLOW_OPENCLAW_TO_XHS.md`：OpenClaw 到小红书的产品主链路说明
 - `XHS_DATA_SYNC_PRODUCT_FLOW.md`：小红书账号数据拉取产品流程说明
+- `OPENCLAW_XHS_BACKEND_EXECUTION_TASK.md`：OpenClaw 到小红书闭环后端执行任务单
+- `OPENCLAW_XHS_FRONTEND_EXECUTION_TASK.md`：OpenClaw 到小红书闭环前端执行任务单
+- `OPENCLAW_XHS_OPENCLAW_EXECUTION_TASK.md`：OpenClaw 到小红书闭环 OpenClaw 执行任务单
 
 ## 协作说明
 
