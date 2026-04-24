@@ -83,3 +83,4 @@
 - 已新增账号归属真实化任务单：`.monkeycode/docs/ACCOUNT_OWNERSHIP_BACKEND_TASK.md` 与 `.monkeycode/docs/ACCOUNT_OWNERSHIP_FRONTEND_TASK.md`，可直接分发给前后端执行
 - 已新增 `.monkeycode/docs/GENERATION_CHAIN_BACKEND_TASK.md`，用于把下一步“真实生成链路承接”直接分发给后端执行
 - 已新增 `.monkeycode/docs/GENERATION_CHAIN_FRONTEND_TASK.md`，用于把下一步“真实生成链路承接”直接分发给前端执行
+- 已新增 `.monkeycode/docs/REAL_XIAOHONGSHU_MINIMAL_ACCEPTANCE.md`，用于把下一步“真实小红书最小发布验收”直接分发给前后端协作执行
