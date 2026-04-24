@@ -270,3 +270,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
 - Instructions:
   - 下一步优先做 QQ 入站重复事件验证，确保同一个 `eventId` 不会创建重复任务。
   - 去重复验通过后，再进入前端 `/tasks` 页面真实验收。
+
+[QQ 入站幂等去重已验证]
+- Date: 2026-04-24
+- Context: Agent 在腾讯云服务器完成 QQ 入站重复事件验证后记录
+- Category: 测试方法
+- Instructions:
+  - 已验证固定 `eventId=qq_event_dedupe_20260424_1` 连续上报两次时，后端第一次返回 `duplicated=false`，第二次返回 `duplicated=true`。
+  - 两次请求返回的 `messageTaskId` 相同，均为 `taskmsg_15128e20e1`。
+  - `/api/tasks` 中仅存在一条 `sourceMessage` 为 `QQ 去重复验 20260424` 的任务，说明当前幂等去重正常。

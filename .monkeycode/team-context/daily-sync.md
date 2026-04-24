@@ -63,4 +63,6 @@
 - 已在腾讯云服务器完成 QQ 真实转发验收，OpenClaw 收到 QQ 消息后可自动转发到 backend
 - 后端日志已出现多次 `POST /api/integrations/qq/messages HTTP/1.1 201 Created`
 - `/api/tasks` 已确认出现真实任务 `taskmsg_25c7863918`，其 `sourceMessage` 为 `QQ 发唯一测试消息`，`stage` 为 `pending_generation`
+- 已完成去重复验：固定 `eventId=qq_event_dedupe_20260424_1` 重放两次后，第一次返回 `duplicated=false`，第二次返回 `duplicated=true`，且任务 ID 均为 `taskmsg_15128e20e1`
+- `/api/tasks` 中仅存在一条 `sourceMessage` 为 `QQ 去重复验 20260424` 的任务，说明后端幂等去重正常
 - 当前可以确认第一阶段真实链路 `QQ -> OpenClaw -> backend -> /api/tasks` 已闭环

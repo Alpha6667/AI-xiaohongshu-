@@ -93,6 +93,8 @@
 - OpenClaw 已按约定把真实 QQ 消息转发到 `POST /api/integrations/qq/messages`。
 - 后端已成功返回 `201 Created`，并在 `/api/tasks` 中生成真实任务。
 - 已确认真实任务样例：`sourceMessage="QQ 发唯一测试消息"`，`stage="pending_generation"`。
+- 已完成幂等去重复验：同一 `eventId=qq_event_dedupe_20260424_1` 连续上报两次时，第一次返回 `duplicated=false`，第二次返回 `duplicated=true`，且两次 `messageTaskId` 同为 `taskmsg_15128e20e1`。
+- 已确认 `/api/tasks` 中仅保留一条 `sourceMessage="QQ 去重复验 20260424"` 的任务记录。
 - 当前可以认定 `QQ -> OpenClaw -> backend -> /api/tasks` 第一阶段闭环已经打通。
 
 ## 当前阻塞

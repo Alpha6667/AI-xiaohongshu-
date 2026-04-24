@@ -7,6 +7,7 @@
 - 当前后端边界仍保持为：只接收入站消息、做去重、落原始消息、建真实任务，不触发小红书发布，也不自动分配账号。
 - 当前本地补跑 `python3 -m unittest tests.test_api_minimal` 被环境阻塞，缺少 `fastapi` 依赖；继续验证前需先完成 backend 依赖安装。
 - 2026-04-24 已完成腾讯云真实验收：OpenClaw 转发的 QQ 消息已成功创建真实任务，样例任务 `sourceMessage="QQ 发唯一测试消息"`，`stage="pending_generation"`。
+- 2026-04-24 已完成去重复验：同一 `eventId` 重放两次仅保留一条任务，第一次 `duplicated=false`，第二次 `duplicated=true`，对应 `messageTaskId=taskmsg_15128e20e1`。
 - 现阶段后端不需要再为 QQ 入站扩新功能，优先级已转为去重复验、前端页面验收和下一阶段生成链路承接。
 
 ## 第八轮 QQ 消息入任务链路同步
