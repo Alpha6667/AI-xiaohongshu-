@@ -128,6 +128,8 @@
 - 后端已补齐 `GET /api/tasks` 与 `GET /api/accounts` 的主要展示字段，前端这轮开始把 `title`、`stageLabel`、`nextAction`、`accountName`、`plannedAt`、`requiresHumanReview` 以及账号聚合字段作为主路径消费。
 - 当前仍保留的兼容主要是接口请求异常时整页回退到展示层推导，以及帖子侧 `accountId`、`messageTaskId` 缺失时的归属兜底。
 - 后端真实 `stage` 使用 `pending_generation`、`waiting_review` 等枚举，前端仍需要一层轻量归一化，映射到现有页面内部的展示阶段。
+- 2026-04-24 已完成 `/tasks` 页面源码级真实验收：页面 HTML 中已命中 `QQ 发唯一测试消息`、`QQ 去重复验 20260424` 和 `待生成`，且未命中“当前仍在使用展示层回退任务数据”，说明当前页面已展示真实任务而非 fallback 数据。
+- 同次验收中，`QQ 去重复验 20260424` 在页面源码中仅出现 1 次，前端层面的去重展示也已通过。
 
 ## 需要协作
 

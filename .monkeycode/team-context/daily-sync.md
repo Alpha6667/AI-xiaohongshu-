@@ -65,4 +65,6 @@
 - `/api/tasks` 已确认出现真实任务 `taskmsg_25c7863918`，其 `sourceMessage` 为 `QQ 发唯一测试消息`，`stage` 为 `pending_generation`
 - 已完成去重复验：固定 `eventId=qq_event_dedupe_20260424_1` 重放两次后，第一次返回 `duplicated=false`，第二次返回 `duplicated=true`，且任务 ID 均为 `taskmsg_15128e20e1`
 - `/api/tasks` 中仅存在一条 `sourceMessage` 为 `QQ 去重复验 20260424` 的任务，说明后端幂等去重正常
+- 已完成前端 `/tasks` 页面源码级验收：页面 HTML 已命中 `QQ 发唯一测试消息`、`QQ 去重复验 20260424`、`待生成`，且未命中回退提示“当前仍在使用展示层回退任务数据`
+- 页面源码中 `QQ 去重复验 20260424` 仅出现 1 次，说明前端展示层同样未出现重复任务
 - 当前可以确认第一阶段真实链路 `QQ -> OpenClaw -> backend -> /api/tasks` 已闭环

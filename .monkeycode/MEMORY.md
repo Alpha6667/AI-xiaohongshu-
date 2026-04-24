@@ -279,3 +279,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 已验证固定 `eventId=qq_event_dedupe_20260424_1` 连续上报两次时，后端第一次返回 `duplicated=false`，第二次返回 `duplicated=true`。
   - 两次请求返回的 `messageTaskId` 相同，均为 `taskmsg_15128e20e1`。
   - `/api/tasks` 中仅存在一条 `sourceMessage` 为 `QQ 去重复验 20260424` 的任务，说明当前幂等去重正常。
+
+[前端 Tasks 真实验收已通过]
+- Date: 2026-04-24
+- Context: Agent 在完成 `/tasks` 页面源码级验收后记录
+- Category: 测试方法
+- Instructions:
+  - 已验证前端 `/tasks` 页面源码中包含真实任务 `QQ 发唯一测试消息`、`QQ 去重复验 20260424` 和状态文案 `待生成`。
+  - 页面源码未命中“当前仍在使用展示层回退任务数据”，说明当前前端使用的是后端真实任务数据。
+  - `QQ 去重复验 20260424` 在页面源码中仅出现 1 次，说明前端展示层去重结果正常。
