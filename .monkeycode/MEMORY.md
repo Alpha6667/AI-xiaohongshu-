@@ -324,3 +324,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 已验证 `/dashboard` 页面命中 `发布中心`、`OpenClaw`、`待发送`、`发送中`、`已发布`、`发送失败` 等真实状态关键词。
   - 任务 A `post_f01d2157a6` 当前在真实数据中为 `approved`，任务 B `post_d61a46fec4` 为 `draft`，与页面当前阶段展示一致。
   - 当前未命中失败分类关键词，是因为验收样本里没有失败发布记录，不应误判为页面问题。
+
+[Posts 页面真实链路现状]
+- Date: 2026-04-24
+- Context: Agent 在执行 `/posts` 与 `/posts/[id]` 页面真实验收时发现
+- Category: 代码模式
+- Instructions:
+  - `/posts` 列表页和 `/posts/[id]` 详情页当前都直连真实 `GET /api/posts` 与 `GET /api/posts/{id}`，不再是纯展示原型。
+  - 当前 `/posts` 列表只展示 `status == published` 的帖子，因此未发布的真实 QQ 验收帖子不会自然进入列表。
+  - 当真实 `post.accountId` 和 `task.accountId` 都为空时，前端详情页仍会回退到种子账号归属展示，这会影响多账号视角的真实性判断。

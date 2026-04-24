@@ -134,6 +134,10 @@
 - 任务 A 最终状态已正确流转到 `approved`，任务 B 最终状态已正确回到 `draft`，且两条任务的 `reviewRecords` 都正确追加了两条操作记录。
 - 2026-04-24 已完成 `/dashboard` 页面源码级验收：页面 HTML 已命中 `发布中心`、`OpenClaw` 以及状态关键词 `待发送`、`发送中`、`已发布`、`发送失败`。
 - 当前页面未命中失败分类关键词 `平台限流`、`可重试失败`、`不可重试失败`，原因是当前验收数据中没有失败发布样本，属正常结果。
+- 2026-04-24 已完成 `/posts` 页面源码级验收：页面当前已直连真实 `GET /api/posts` 和 `GET /api/dashboard/summary`，线上展示的唯一列表项 `post_seed_published` 与接口返回的已发布真实记录一致，不是列表 fallback 数据。
+- 2026-04-24 已完成 `/posts/[id]` 详情页验收：`/posts/post_seed_published` 与 `/api/posts/post_seed_published` 的已发布状态、平台 ID、素材、指标历史一致；`/posts/post_f01d2157a6` 也已正确展示真实 `approved` 状态和两条 `reviewRecords`。
+- 当前仍有一个明确缺口：当真实 `post.accountId` 与 `task.accountId` 都为空时，详情页“归属账号”仍会回退到前端种子账号；例如 `post_f01d2157a6` 当前展示为 `小鹿的穿搭日记`，这不是后端真实归属。
+- 当前 `/posts` 列表只展示 `status === "published"` 的帖子，因此本轮 QQ 验收产生的 `approved` / `draft` 真实帖子不会自然出现在列表中，需等待真实发布样本或调整页面策略后再继续验收列表承接。
 
 ## 需要协作
 

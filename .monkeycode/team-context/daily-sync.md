@@ -76,3 +76,6 @@
 - 已完成 `/dashboard` 页面源码级验收：页面已命中 `发布中心`、`OpenClaw`、`待发送`、`发送中`、`已发布`、`发送失败`
 - 当前失败分类关键词未命中，原因是验收数据中没有失败发布样本，属正常情况
 - 任务 A `post_f01d2157a6` 在发布中心对应为“待发送”，任务 B `post_d61a46fec4` 保持 `draft`，与后端真实状态一致
+- 已完成 `/posts` 页面验收：页面直连真实 `GET /api/posts`，当前展示的 `post_seed_published` 与接口返回一致，不是帖子列表 fallback
+- 已完成 `/posts/[id]` 页面验收：`/posts/post_seed_published` 与 `/api/posts/post_seed_published` 一致；`/posts/post_f01d2157a6` 也已正确展示真实 `approved` 状态与两条审核记录
+- 新发现缺口：真实 QQ 验收帖子目前缺少 `accountId`，导致详情页账号归属仍回退到前端种子账号，多账号视角还不能算完全真实

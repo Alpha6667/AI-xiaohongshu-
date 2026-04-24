@@ -70,6 +70,9 @@
 - 两条真实任务的 `reviewRecords` 均正确追加了两条记录，说明 `/review` 动作已能稳定驱动后端状态变化。
 - 2026-04-24 已完成 `/dashboard` 页面验收：真实页面已命中 `发布中心`、`OpenClaw`、`待发送`、`发送中`、`已发布`、`发送失败` 等状态关键词。
 - 任务 A `post_f01d2157a6` 当前仍为 `approved`，任务 B `post_d61a46fec4` 当前为 `draft`，两条记录都带 `messageTaskId`，与发布中心当前展示阶段一致。
+- 2026-04-24 已完成 `/posts` 与 `/posts/[id]` 验收：两页都在消费真实 `GET /api/posts` / `GET /api/posts/{id}` 返回，不再是纯展示页。
+- 当前线上 `/posts` 列表展示的唯一已发布样本是 `post_seed_published`，其标题、平台 ID、指标历史和详情页内容都与后端真实接口一致。
+- 当前后端仍有一个会影响页面真实性的字段缺口：真实 QQ 验收帖子如 `post_f01d2157a6`、`post_d61a46fec4` 的 `post.accountId` 和对应 `task.accountId` 仍为 `null`，导致前端详情页只能回退到种子账号归属展示。
 - 现阶段后端不需要再为 QQ 入站扩新功能，优先级已转为去重复验、前端页面验收和下一阶段生成链路承接。
 
 ## 第九轮 message task 承接到 review 同步
