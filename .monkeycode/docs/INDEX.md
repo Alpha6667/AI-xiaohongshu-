@@ -10,6 +10,7 @@
 - `GENERATION_CHAIN_BACKEND_TASK.md`：真实生成链路后端任务单
 - `GENERATION_CHAIN_FRONTEND_TASK.md`：真实生成链路前端任务单
 - `REAL_XIAOHONGSHU_MINIMAL_ACCEPTANCE.md`：真实小红书最小发布验收协作说明
+- `OPENCLAW_PUBLISH_WEBHOOK_DESIGN.md`：OpenClaw 发布 Webhook 设计说明
 
 ## 协作说明
 
