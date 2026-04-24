@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getTaskOverview } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getGenerationReadiness, getTaskOverview } from "../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -69,13 +69,19 @@ export default async function TasksPage() {
       <section className="publish-center-list">
         {tasks.map((task) => (
           <SectionCard key={task.id} className="product-card publish-card message-task-card">
-            <div className="publish-card-head">
+            {(() => {
+              const readiness = getGenerationReadiness({ hasCopy: task.hasCopy, hasImages: task.hasImages, requiresReview: task.requiresReview });
+
+              return (
+                <>
+                  <div className="publish-card-head">
               <div>
                 <span className="eyebrow">{task.accountName}</span>
                 <h3>{task.topic}</h3>
               </div>
               <div className="tag-row">
                 <StatusPill label={task.stageLabel} tone={task.stageTone} />
+                <StatusPill label={readiness.label} tone={readiness.tone} />
                 <StatusPill label={`计划 ${new Date(task.plannedAt).toLocaleString("zh-CN")}`} />
               </div>
             </div>
@@ -93,18 +99,24 @@ export default async function TasksPage() {
               </article>
               <article className="detail-meta-card">
                 <span className="eyebrow">内容准备度</span>
-                <strong>{task.hasCopy && task.hasImages ? "已可进入确认" : "仍在补齐中"}</strong>
-                <p>文案 {task.hasCopy ? "已生成" : "待生成"}，图片 {task.hasImages ? "已生成" : "待生成"}。</p>
+                <strong>{readiness.label}</strong>
+                <p>{readiness.description}</p>
               </article>
             </div>
 
             <div className="row-metrics">
               <span>消息时间 {new Date(task.requestedAt).toLocaleString("zh-CN")}</span>
-              <span>人工确认 {task.requiresReview ? "需要" : "暂不需要"}</span>
-              <Link href={`/review?postId=${task.postId}`} className="text-link product-link">
+              <span>文案 {task.hasCopy ? "已生成" : "待生成"}</span>
+              <span>图片 {task.hasImages ? "已生成" : "待生成"}</span>
+              <span>人工确认 {task.requiresReview ? "已进入" : "尚未进入"}</span>
+              <span>下一步 {task.nextAction}</span>
+              <Link href={task.postId ? `/review?postId=${task.postId}` : "/review"} className="text-link product-link">
                 去内容确认台
               </Link>
             </div>
+                </>
+              );
+            })()}
           </SectionCard>
         ))}
       </section>

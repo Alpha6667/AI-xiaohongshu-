@@ -1,4 +1,4 @@
-import type { AccountRecord, AssetSummary, MessageTaskRecord, PostDetail, PostListItem, PostStatus, PublishRecord } from "./api/types";
+import type { AccountRecord, MessageTaskRecord, PostDetail, PostListItem, PostStatus, PublishRecord } from "./api/types";
 
 type AccountStatus = "online" | "offline" | "busy";
 type MessageTaskStage = "waiting_generation" | "ready_to_confirm" | "waiting_publish" | "publishing" | "published" | "failed";
@@ -34,6 +34,13 @@ export interface MessageTask {
   hasImages: boolean;
   requiresReview: boolean;
   nextAction: string;
+}
+
+export interface GenerationReadiness {
+  key: "pending" | "copy_ready" | "image_ready" | "review_ready";
+  label: string;
+  description: string;
+  tone: "neutral" | "warm" | "positive";
 }
 
 const unassignedAccount: AccountOverview = {
@@ -187,42 +194,64 @@ export function getWorkspaceCandidates(posts: PostListItem[]) {
 }
 
 export function buildCopyVariants(post: PostDetail) {
-  const intro = post.body.split(/[。！？]/).map((part) => part.trim()).filter(Boolean);
-  const firstLine = intro[0] ?? post.body;
-  const secondLine = intro[1] ?? "把重点放在真实体验、收藏价值和可执行步骤上。";
-  const tags = post.tags.slice(0, 3).map((tag) => `#${tag}`).join(" ");
+  const hasRealCopy = post.title.trim().length > 0 && post.body.trim().length > 0;
+  if (!hasRealCopy) {
+    return [];
+  }
 
   return [
     {
-      id: `${post.id}-copy-1`,
-      name: "版本 A",
-      summary: "稳妥日常版，适合直接发布",
+      id: `${post.id}-copy-real`,
+      name: "真实结果",
+      summary: "当前后端已返回的文案结果",
       title: post.title,
-      body: `${firstLine}。${secondLine}。最后补一段今天就能照着做的小步骤，方便读者收藏。${tags ? `\n\n${tags}` : ""}`,
-    },
-    {
-      id: `${post.id}-copy-2`,
-      name: "版本 B",
-      summary: "更强调情绪钩子和收藏点",
-      title: `${post.title}｜今天就想把这一版发出去`,
-      body: `如果今天只发一条，我会发这版：${firstLine}。把最容易被忽略的细节说清楚，再给读者一个马上能照做的清单。${tags ? `\n\n${tags}` : ""}`,
-    },
-    {
-      id: `${post.id}-copy-3`,
-      name: "版本 C",
-      summary: "更像真实分享，适合评论互动",
-      title: `${post.topic}：我会留下这一版`,
-      body: `先说结论：${post.title}。${firstLine}。如果你也准备发同类主题，建议把“为什么值得试”和“具体怎么做”写在前两屏，更容易带来评论和收藏。${tags ? `\n\n${tags}` : ""}`,
+      body: post.body,
     },
   ];
 }
 
-export function getCandidateAssets(post: PostDetail, assets: AssetSummary[]) {
+export function getCandidateAssets(post: PostDetail) {
   if (post.assets.length > 0) {
     return post.assets;
   }
 
-  return assets.slice(0, 4);
+  return [];
+}
+
+export function getGenerationReadiness(input: { hasCopy: boolean; hasImages: boolean; requiresReview: boolean }) : GenerationReadiness {
+  if (input.hasCopy && input.hasImages) {
+    return {
+      key: "review_ready",
+      label: "已可确认",
+      description: input.requiresReview ? "文案和图片都已生成，当前已经进入人工确认阶段。" : "文案和图片都已生成，已经可以进入确认流程。",
+      tone: "positive",
+    };
+  }
+
+  if (input.hasCopy) {
+    return {
+      key: "copy_ready",
+      label: "文案已生成",
+      description: "当前已经有真实文案结果，但图片还没生成完成。",
+      tone: "warm",
+    };
+  }
+
+  if (input.hasImages) {
+    return {
+      key: "image_ready",
+      label: "图片已生成",
+      description: "当前已经有真实图片结果，但文案还没生成完成。",
+      tone: "warm",
+    };
+  }
+
+  return {
+    key: "pending",
+    label: "尚未生成完成",
+    description: "当前还没有真实文案或图片结果返回。",
+    tone: "neutral",
+  };
 }
 
 export function getPublishNarrative(post: PostDetail) {

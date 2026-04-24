@@ -29,7 +29,7 @@ function getSelectedPostId(searchParams: { postId?: string | string[] } | undefi
 
 export default async function ReviewPage({ searchParams }: { searchParams?: Promise<{ postId?: string | string[] }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const [posts, assets, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), apiClient.assets.list(), getAccountsOrNull(), getTasksOrNull()]);
+  const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
   const candidates = getWorkspaceCandidates(posts);
@@ -41,7 +41,7 @@ export default async function ReviewPage({ searchParams }: { searchParams?: Prom
     <div className="page-stack">
       <SectionCard>
         <SectionHeading eyebrow="内容确认台" title="确认系统已经生成好的候选文案、候选图片，并明确由哪个账号发" description="这里不再从零输入主题，而是承接消息任务中心里已经生成好的内容，完成最后一次人工确认。" />
-        <ComposerWorkbench post={selectedPost} allAssets={assets} candidates={candidates} accounts={accounts} task={selectedTask} />
+        <ComposerWorkbench post={selectedPost} candidates={candidates} accounts={accounts} task={selectedTask} />
       </SectionCard>
     </div>
   );

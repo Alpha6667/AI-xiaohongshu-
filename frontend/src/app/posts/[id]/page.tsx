@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getMessageTaskForPost, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -122,11 +122,16 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts, !accountRecords) : buildMessageTasks(postList, accounts);
   const account = getAccountForPost(post, accounts, !accountRecords);
   const messageTask = getMessageTaskForPost(post, tasks);
+  const generationReadiness = getGenerationReadiness({
+    hasCopy: Boolean(post.title.trim() && post.body.trim()),
+    hasImages: post.assets.length > 0 || post.assetIds.length > 0,
+    requiresReview: messageTask?.requiresReview ?? post.status === "in_review",
+  });
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="帖子记录" title={post.title} description="直接看这条内容从定稿、发送到数据回写的完整记录。" />
+        <SectionHeading eyebrow="帖子记录" title={post.title || post.topic} description="直接看这条内容从定稿、发送到数据回写的完整记录。" />
 
         <div className="detail-overview">
           <div>
@@ -142,12 +147,22 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           <div className="detail-primary">
             <SectionCard className="nested-card">
               <SectionHeading eyebrow="最终稿" title="这次实际准备发出的内容" />
-              <p className="body-copy">{post.body}</p>
-              <div className="tag-row">
-                {post.tags.map((tag) => (
-                  <StatusPill key={tag} label={`#${tag}`} />
-                ))}
-              </div>
+              {post.title.trim() || post.body.trim() ? (
+                <>
+                  <strong>{post.title || "当前标题尚未生成"}</strong>
+                  <p className="body-copy">{post.body}</p>
+                  <div className="tag-row">
+                    {post.tags.map((tag) => (
+                      <StatusPill key={tag} label={`#${tag}`} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <article className="state-card state-card-neutral">
+                  <strong>文案还没生成完成</strong>
+                  <p>当前后端还没有返回真实标题和正文，所以这里暂时没有可查看的最终稿。</p>
+                </article>
+              )}
             </SectionCard>
 
             <SectionCard className="nested-card">
@@ -172,6 +187,31 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <strong>{latestPublishRecord?.status || "暂无结果"}</strong>
                   <p>{latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "当前还没有发布结果记录。"}</p>
                   {getFailureTypeLabel(latestPublishRecord?.failureType) ? <p>失败分类：{getFailureTypeLabel(latestPublishRecord?.failureType)}</p> : null}
+                </article>
+              </div>
+            </SectionCard>
+
+            <SectionCard className="nested-card">
+              <SectionHeading eyebrow="生成准备度" title="这条内容目前走到哪一步" />
+              <article className={`state-card state-card-${generationReadiness.tone}`}>
+                <strong>{generationReadiness.label}</strong>
+                <p>{generationReadiness.description}</p>
+              </article>
+              <div className="detail-meta-grid">
+                <article className="detail-meta-card">
+                  <span className="eyebrow">文案结果</span>
+                  <strong>{post.title.trim() && post.body.trim() ? "文案已生成" : "尚未生成完成"}</strong>
+                  <p>{post.title.trim() && post.body.trim() ? "后端已返回真实标题和正文。" : "当前还没有真实标题和正文可用。"}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">图片结果</span>
+                  <strong>{post.assets.length > 0 || post.assetIds.length > 0 ? "图片已生成" : "尚未生成完成"}</strong>
+                  <p>{post.assets.length > 0 || post.assetIds.length > 0 ? "后端已返回真实素材或素材关联。" : "当前还没有真实素材可用。"}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">人工确认</span>
+                  <strong>{messageTask?.requiresReview ?? post.status === "in_review" ? "已进入人工确认" : "尚未进入人工确认"}</strong>
+                  <p>{messageTask?.nextAction ?? "等待任务链路继续推进后再进入确认。"}</p>
                 </article>
               </div>
             </SectionCard>

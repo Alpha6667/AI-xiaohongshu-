@@ -5,20 +5,18 @@ import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
-import type { AssetSummary, PostDetail, PostListItem } from "../lib/api/types";
+import type { PostDetail, PostListItem } from "../lib/api/types";
 import type { AccountOverview, MessageTask } from "../lib/product";
 import { buildCopyVariants, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../lib/product";
 import { StatusPill } from "./ui";
 
 export function ComposerWorkbench({
   post,
-  allAssets,
   candidates,
   accounts,
   task,
 }: {
   post: PostDetail | null;
-  allAssets: AssetSummary[];
   candidates: PostListItem[];
   accounts: AccountOverview[];
   task: MessageTask | null;
@@ -28,7 +26,9 @@ export function ComposerWorkbench({
   const [notice, setNotice] = useState<string | null>(null);
 
   const copyVariants = useMemo(() => (post ? buildCopyVariants(post) : []), [post]);
-  const imageCandidates = useMemo(() => (post ? getCandidateAssets(post, allAssets) : []), [allAssets, post]);
+  const imageCandidates = useMemo(() => (post ? getCandidateAssets(post) : []), [post]);
+  const hasRealCopy = copyVariants.length > 0;
+  const hasRealImages = imageCandidates.length > 0;
 
   const initialAccountId = task?.accountId ?? accounts[0]?.id ?? "";
   const [selectedCopyId, setSelectedCopyId] = useState(copyVariants[0]?.id ?? "");
@@ -196,22 +196,30 @@ export function ComposerWorkbench({
             </button>
           </div>
 
-          <div className="candidate-grid">
-            {copyVariants.map((variant) => {
-              const active = variant.id === selectedCopy?.id;
+          {hasRealCopy ? (
+            <div className="candidate-grid">
+              {copyVariants.map((variant) => {
+                const active = variant.id === selectedCopy?.id;
 
-              return (
-                <button key={variant.id} type="button" className={`candidate-card${active ? " candidate-card-active" : ""}`} onClick={() => setSelectedCopyId(variant.id)}>
-                  <div className="candidate-head">
-                    <StatusPill label={variant.name} tone={active ? "positive" : "neutral"} />
-                    <span className="muted-inline">{variant.summary}</span>
-                  </div>
-                  <strong>{variant.title}</strong>
-                  <p>{variant.body}</p>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button key={variant.id} type="button" className={`candidate-card${active ? " candidate-card-active" : ""}`} onClick={() => setSelectedCopyId(variant.id)}>
+                    <div className="candidate-head">
+                      <StatusPill label={variant.name} tone={active ? "positive" : "neutral"} />
+                      <span className="muted-inline">{variant.summary}</span>
+                    </div>
+                    <strong>{variant.title}</strong>
+                    <p>{variant.body}</p>
+                    {post.tags.length > 0 ? <p className="muted-inline">标签：{post.tags.map((tag) => `#${tag}`).join(" ")}</p> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <article className="state-card state-card-neutral">
+              <strong>文案还没生成完成</strong>
+              <p>当前后端还没有返回真实标题和正文，所以这里暂时没有可确认的文案结果。</p>
+            </article>
+          )}
         </section>
 
         <section className="product-card">
@@ -223,21 +231,28 @@ export function ComposerWorkbench({
             <span className="muted-inline">候选图 {imageCandidates.length} 张</span>
           </div>
 
-          <div className="candidate-image-grid">
-            {imageCandidates.map((asset) => {
-              const active = asset.id === selectedAsset?.id;
+          {hasRealImages ? (
+            <div className="candidate-image-grid">
+              {imageCandidates.map((asset) => {
+                const active = asset.id === selectedAsset?.id;
 
-              return (
-                <button key={asset.id} type="button" className={`image-option${active ? " image-option-active" : ""}`} onClick={() => setSelectedAssetId(asset.id)}>
-                  <div className="image-option-cover" style={{ backgroundImage: `url(${asset.url})` }} />
-                  <div className="image-option-copy">
-                    <strong>{asset.name}</strong>
-                    <p>{asset.fileName}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button key={asset.id} type="button" className={`image-option${active ? " image-option-active" : ""}`} onClick={() => setSelectedAssetId(asset.id)}>
+                    <div className="image-option-cover" style={{ backgroundImage: `url(${asset.url})` }} />
+                    <div className="image-option-copy">
+                      <strong>{asset.name}</strong>
+                      <p>{asset.fileName}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <article className="state-card state-card-neutral">
+              <strong>图片还没生成完成</strong>
+              <p>当前后端还没有返回真实素材，所以这里暂时没有可确认的配图结果。</p>
+            </article>
+          )}
         </section>
 
         <section className="product-card preview-card">
@@ -254,8 +269,8 @@ export function ComposerWorkbench({
               <div className="phone-screen">
                 {selectedAsset ? <div className="phone-cover" style={{ backgroundImage: `url(${selectedAsset.url})` }} /> : null}
                 <div className="phone-copy">
-                  <strong>{selectedCopy?.title ?? post.title}</strong>
-                  <p>{selectedCopy?.body ?? post.body}</p>
+                <strong>{selectedCopy?.title ?? (hasRealCopy ? post.title : "等待真实文案结果")}</strong>
+                <p>{selectedCopy?.body ?? (hasRealCopy ? post.body : "当前还没有可预览的真实文案内容。")}</p>
                 </div>
               </div>
             </div>
@@ -268,13 +283,13 @@ export function ComposerWorkbench({
               </article>
               <article className="preview-summary-card">
                 <span className="eyebrow">最终文案</span>
-                <strong>{selectedCopy?.title ?? post.title}</strong>
-                <p>{selectedCopy?.summary ?? "当前先用帖子里已有文案。"}</p>
+                <strong>{selectedCopy?.title ?? (hasRealCopy ? post.title : "等待真实文案结果")}</strong>
+                <p>{selectedCopy?.summary ?? (hasRealCopy ? "当前展示的是后端返回的真实文案。" : "文案生成完成后，这里会显示真实标题和正文。")}</p>
               </article>
               <article className="preview-summary-card">
                 <span className="eyebrow">最终图片</span>
-                <strong>{selectedAsset?.name ?? "暂未选择图片"}</strong>
-                <p>{selectedAsset ? "这张图会被保存为这次任务的最终封面。" : "需要先从候选图里挑一张。"}</p>
+                <strong>{selectedAsset?.name ?? "等待真实图片结果"}</strong>
+                <p>{selectedAsset ? "这张图会被保存为这次任务的最终封面。" : "图片生成完成后，这里会显示真实素材。"}</p>
               </article>
               {publishNarrative ? (
                 <article className={`state-card state-card-${publishNarrative.tone}`}>
@@ -318,7 +333,7 @@ export function ComposerWorkbench({
           </label>
 
           <div className="action-column">
-            <button type="button" onClick={handleSaveSelection} disabled={pending || !selectedCopy || !selectedAccount}>
+            <button type="button" onClick={handleSaveSelection} disabled={pending || !selectedCopy || !selectedAccount || !hasRealCopy}>
               保存这次确认版
             </button>
             <button type="button" className="secondary-button" onClick={() => handleSubmitReview("submit")} disabled={pending || post.status !== "draft"}>
@@ -330,7 +345,7 @@ export function ComposerWorkbench({
             <button type="button" className="secondary-button" onClick={() => handleSubmitReview("reject")} disabled={pending || post.status !== "in_review"}>
               退回修改
             </button>
-            <button type="button" className="accent-button" onClick={() => handleSubmitReview("publish")} disabled={pending || post.status !== "approved" || !selectedAccount}>
+            <button type="button" className="accent-button" onClick={() => handleSubmitReview("publish")} disabled={pending || post.status !== "approved" || !selectedAccount || !hasRealCopy || !hasRealImages}>
               交给 OpenClaw 按此账号去发
             </button>
           </div>
