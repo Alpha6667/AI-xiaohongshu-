@@ -90,3 +90,4 @@
 - 已新增 `.monkeycode/docs/XHS_DATA_SYNC_PRODUCT_FLOW.md`，用于统一“登录后台后自动拉取小红书作品与互动数据”的产品流程理解
 - 已新增三份执行任务单：`.monkeycode/docs/OPENCLAW_XHS_BACKEND_EXECUTION_TASK.md`、`.monkeycode/docs/OPENCLAW_XHS_FRONTEND_EXECUTION_TASK.md`、`.monkeycode/docs/OPENCLAW_XHS_OPENCLAW_EXECUTION_TASK.md`，用于把两份产品文档继续拆分到后端、前端与 OpenClaw 各自落地
 - 已新增 `.monkeycode/docs/OPENCLAW_XHS_REMAINING_WORK_PLAN.md`，用于把当前剩余工作按优先级排成执行顺序表，明确各方启动顺序与里程碑
+- 已新增 `.monkeycode/docs/XHS_LOGIN_STATE_STRATEGY.md`，用于明确小红书仅支持扫码/验证码登录时，系统如何做账号接入、登录态保存、复用、失效检测与续期

@@ -18,6 +18,7 @@
 - `OPENCLAW_XHS_FRONTEND_EXECUTION_TASK.md`：OpenClaw 到小红书闭环前端执行任务单
 - `OPENCLAW_XHS_OPENCLAW_EXECUTION_TASK.md`：OpenClaw 到小红书闭环 OpenClaw 执行任务单
 - `OPENCLAW_XHS_REMAINING_WORK_PLAN.md`：OpenClaw 到小红书剩余工作执行顺序表
+- `XHS_LOGIN_STATE_STRATEGY.md`：小红书登录态接入与复用策略
 
 ## 协作说明
 
