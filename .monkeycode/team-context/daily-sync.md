@@ -85,3 +85,4 @@
 - 已新增 `.monkeycode/docs/GENERATION_CHAIN_FRONTEND_TASK.md`，用于把下一步“真实生成链路承接”直接分发给前端执行
 - 已新增 `.monkeycode/docs/REAL_XIAOHONGSHU_MINIMAL_ACCEPTANCE.md`，用于把下一步“真实小红书最小发布验收”直接分发给前后端协作执行
 - 已新增 `.monkeycode/docs/OPENCLAW_PUBLISH_WEBHOOK_DESIGN.md`，用于把“backend -> OpenClaw 真实发布执行 webhook”接口设计直接分发给前后端协作落地
+- 已新增 `.monkeycode/docs/OPENCLAW_BACKEND_TASK.md`，用于把 OpenClaw 侧最小发布执行能力建设任务直接分发给 OpenClaw 侧实现者
