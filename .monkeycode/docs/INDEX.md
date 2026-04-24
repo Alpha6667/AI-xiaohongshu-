@@ -12,6 +12,7 @@
 - `REAL_XIAOHONGSHU_MINIMAL_ACCEPTANCE.md`：真实小红书最小发布验收协作说明
 - `OPENCLAW_PUBLISH_WEBHOOK_DESIGN.md`：OpenClaw 发布 Webhook 设计说明
 - `OPENCLAW_BACKEND_TASK.md`：OpenClaw 最小发布执行后端任务单
+- `PRODUCT_FLOW_OPENCLAW_TO_XHS.md`：OpenClaw 到小红书的产品主链路说明
 
 ## 协作说明
 
