@@ -81,3 +81,4 @@
 - 新发现缺口：真实 QQ 验收帖子目前缺少 `accountId`，导致详情页账号归属仍回退到前端种子账号，多账号视角还不能算完全真实
 - 已新增 `.monkeycode/docs/NEXT_PHASE_EXECUTION_PLAN.md`，明确下一阶段按“账号归属真实化 -> 生成链路 -> 帖子页承接策略 -> 发布适配层 -> OpenClaw 内部发布闭环 -> 真实小红书最小验收 -> 真实数据回收”顺序推进
 - 已新增账号归属真实化任务单：`.monkeycode/docs/ACCOUNT_OWNERSHIP_BACKEND_TASK.md` 与 `.monkeycode/docs/ACCOUNT_OWNERSHIP_FRONTEND_TASK.md`，可直接分发给前后端执行
+- 已新增 `.monkeycode/docs/GENERATION_CHAIN_BACKEND_TASK.md`，用于把下一步“真实生成链路承接”直接分发给后端执行
