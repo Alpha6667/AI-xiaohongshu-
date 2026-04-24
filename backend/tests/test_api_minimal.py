@@ -433,11 +433,14 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(tasks[0]["postId"], ingest_payload["postId"])
         self.assertEqual(tasks[0]["sourceMessage"], payload["content"])
         self.assertEqual(tasks[0]["stage"], "pending_generation")
+        self.assertIsNotNone(tasks[0]["accountId"])
+        self.assertIsNotNone(tasks[0]["accountName"])
 
         post_detail_resp = self.client.get(f"/api/posts/{ingest_payload['postId']}")
         self.assertEqual(post_detail_resp.status_code, 200)
         post_detail = post_detail_resp.json()
         self.assertEqual(post_detail["messageTaskId"], ingest_payload["messageTaskId"])
+        self.assertEqual(post_detail["accountId"], tasks[0]["accountId"])
         self.assertEqual(post_detail["status"], "draft")
 
         self.assertTrue(any(item.event_id == payload["eventId"] for item in repository.inbound_messages.values()))
@@ -463,6 +466,16 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertTrue(duplicate_payload["duplicated"])
         self.assertEqual(duplicate_payload["messageTaskId"], first_payload["messageTaskId"])
         self.assertEqual(duplicate_payload["postId"], first_payload["postId"])
+
+        tasks_resp = self.client.get("/api/tasks")
+        self.assertEqual(tasks_resp.status_code, 200)
+        matched_task = next(item for item in tasks_resp.json() if item["id"] == first_payload["messageTaskId"])
+        self.assertIsNotNone(matched_task["accountId"])
+        self.assertIsNotNone(matched_task["accountName"])
+
+        post_detail_resp = self.client.get(f"/api/posts/{first_payload['postId']}")
+        self.assertEqual(post_detail_resp.status_code, 200)
+        self.assertEqual(post_detail_resp.json()["accountId"], matched_task["accountId"])
 
         matched_posts = [
             item

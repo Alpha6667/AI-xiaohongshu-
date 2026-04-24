@@ -1,7 +1,8 @@
 from fastapi import HTTPException, status
 
 from app.db.config import get_settings
-from app.models.enums import MessageTaskStage, PostStatus
+from app.models.account import Account
+from app.models.enums import AccountStatus, MessageTaskStage, PostStatus
 from app.models.inbound_message import InboundMessage
 from app.models.message_task import MessageTask
 from app.models.post import Post
@@ -29,12 +30,44 @@ def _validate_signature(payload: QQMessageIngestRequest) -> str:
     return provided_secret
 
 
+def _resolve_ingest_account_id() -> str:
+    if repository.accounts:
+        return sorted(repository.accounts.keys())[0]
+
+    timestamp = now_iso()
+    fallback_account = Account(
+        id="account_ingest_default",
+        name="默认接入账号",
+        handle="@ingest_default",
+        status=AccountStatus.ONLINE,
+        summary="用于承接 QQ/OpenClaw 入站任务的默认账号",
+        last_active_at=timestamp,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    repository.accounts[fallback_account.id] = fallback_account
+    return fallback_account.id
+
+
+def _ensure_task_account(task: MessageTask) -> None:
+    if task.account_id is not None:
+        return
+    task.account_id = _resolve_ingest_account_id()
+    task.updated_at = now_iso()
+
+
 def _ensure_post_for_message_task(task: MessageTask) -> Post:
     if task.post_id is not None:
         linked_post = repository.posts.get(task.post_id)
         if linked_post is not None:
+            changed = False
             if linked_post.message_task_id != task.id:
                 linked_post.message_task_id = task.id
+                changed = True
+            if task.account_id is not None and linked_post.account_id != task.account_id:
+                linked_post.account_id = task.account_id
+                changed = True
+            if changed:
                 linked_post.updated_at = now_iso()
             return linked_post
 
@@ -42,6 +75,9 @@ def _ensure_post_for_message_task(task: MessageTask) -> Post:
         if post.message_task_id == task.id:
             task.post_id = post.id
             task.updated_at = now_iso()
+            if task.account_id is not None and post.account_id != task.account_id:
+                post.account_id = task.account_id
+                post.updated_at = now_iso()
             return post
 
     timestamp = now_iso()
@@ -72,6 +108,7 @@ def ingest_qq_message(payload: QQMessageIngestRequest) -> QQMessageIngestRespons
         duplicated_task = repository.message_tasks.get(duplicated_message.message_task_id)
         if duplicated_task is None:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Message task not found")
+        _ensure_task_account(duplicated_task)
         duplicated_post = _ensure_post_for_message_task(duplicated_task)
         repository.save()
         return QQMessageIngestResponse(
@@ -90,7 +127,7 @@ def ingest_qq_message(payload: QQMessageIngestRequest) -> QQMessageIngestRespons
         topic=topic,
         stage=MessageTaskStage.PENDING_GENERATION,
         post_id=None,
-        account_id=None,
+        account_id=_resolve_ingest_account_id(),
         requested_at=payload.sentAt,
         scheduled_at=None,
         has_copy=False,

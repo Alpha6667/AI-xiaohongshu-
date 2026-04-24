@@ -5,6 +5,14 @@
 - 下一阶段执行顺序以 `.monkeycode/docs/NEXT_PHASE_EXECUTION_PLAN.md` 为准。
 - 后端当前最优先的两个动作是：先补真实 QQ 帖子的账号归属，再打通 `pending_generation` 之后的真实生成状态推进。
 
+## 第十轮真实入站任务账号归属收口
+
+- 本轮聚焦真实 QQ/OpenClaw 入站任务的账号归属，目标是消除主路径 `accountId` 为空数据。
+- 真实 `message task` 创建时稳定写入 `accountId`，并通过 `/api/tasks` 稳定返回 `accountName`。
+- 真实任务承接 `post` 时，`post.accountId` 与 `task.accountId` 保持一致。
+- 对同一 `eventId` 的重放请求保持幂等，不新增任务和帖子，也不写乱已有关联账号。
+- 保持现有边界：不扩小红书真实发布、多账号自动分配、权限系统。
+
 ## 下一阶段任务：Message Task 承接到 Review
 
 - 当前 `QQ -> OpenClaw -> backend -> /tasks` 已真实打通，前端 `/tasks` 也已确认展示的是后端真实任务数据。

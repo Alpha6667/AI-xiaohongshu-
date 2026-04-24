@@ -333,3 +333,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - `/posts` 列表页和 `/posts/[id]` 详情页当前都直连真实 `GET /api/posts` 与 `GET /api/posts/{id}`，不再是纯展示原型。
   - 当前 `/posts` 列表只展示 `status == published` 的帖子，因此未发布的真实 QQ 验收帖子不会自然进入列表。
   - 当真实 `post.accountId` 和 `task.accountId` 都为空时，前端详情页仍会回退到种子账号归属展示，这会影响多账号视角的真实性判断。
+
+[真实入站账号归属收口]
+- Date: 2026-04-24
+- Context: 用户要求补齐 QQ/OpenClaw 真实入站任务与承接帖子账号归属，避免主路径出现空 accountId
+- Instructions:
+  - 真实 message task 创建时必须稳定写入 `accountId`，并通过 `/api/tasks` 返回对应 `accountName`。
+  - 真实 post 创建或关联时必须稳定写入 `accountId`，且与任务归属一致。
+  - 同一任务链路中需保持 `task.accountId`、`task.accountName`、`post.accountId`、`messageTask.postId`、`post.messageTaskId` 可互相对应。
+  - 同一 `eventId` 重放不得写乱账号归属。

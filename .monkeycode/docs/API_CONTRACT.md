@@ -115,6 +115,9 @@
   - `hasCopy`
   - `hasImages`
   - `requiresHumanReview`
+- 真实 QQ/OpenClaw 入站任务约束：
+  - `postId` 稳定非空（可直接用于 `/review?postId=...`）
+  - `accountId` 与 `accountName` 稳定非空
 
 ### `GET /api/accounts`
 
@@ -149,7 +152,9 @@
   - 按 `source + eventId` 幂等去重
   - 保存原始消息记录
   - 创建 `pending_generation` 阶段的 `message task`
+  - 为真实入站任务稳定写入 `accountId`
   - 为该任务创建或关联 `post`，并保持 `messageTask.postId <-> post.messageTaskId` 双向关联一致
+  - 保持 `task.accountId == post.accountId`
 - 响应字段：
   - `accepted`
   - `duplicated`
