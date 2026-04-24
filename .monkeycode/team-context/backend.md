@@ -1,5 +1,56 @@
 # Backend Sync
 
+## 下一阶段任务：Message Task 承接到 Review
+
+- 当前 `QQ -> OpenClaw -> backend -> /tasks` 已真实打通，前端 `/tasks` 也已确认展示的是后端真实任务数据。
+- 下一阶段的核心缺口不在 `/tasks`，而在“真实 message task 如何进入内容确认台 `/review`”。
+- 现状是：QQ 入站后已能创建 `message task`，但这些任务还没有稳定的 `postId` 关联，因此前端 `/review` 还不能直接承接最新真实 QQ 任务。
+
+### 本轮目标
+
+1. 补齐 `message task -> post` 承接链路
+- 当真实 QQ 入站任务进入 `pending_generation` 后，后端需要能为其生成或关联一个对应的 `post`。
+- 该 `post` 应成为前端 `/review` 页可消费的确认对象，而不是只停留在任务中心。
+
+2. 补齐双向关联字段
+- 为真实 `message task` 回写 `postId`。
+- 为对应 `post` 回写 `messageTaskId`。
+- 保持后续 `/review?postId=...`、帖子详情、任务列表都能稳定追溯同一条来源消息。
+
+3. 保持现有链路稳定
+- 不破坏当前已打通的 QQ 入站接口、幂等去重和 `/api/tasks` 展示。
+- 不扩小红书真实发布、多账号自动分配、权限系统。
+
+### 本轮必须交付
+
+1. 真实任务承接策略
+- 为 `pending_generation` 的真实 QQ `message task` 增加生成或绑定 `post` 的最小后端逻辑。
+- 保证同一条真实任务不会重复生成多个 `post`。
+
+2. 关联字段稳定返回
+- `GET /api/tasks` 中的真实任务应稳定返回可用的 `postId`。
+- `GET /api/posts` 与 `GET /api/posts/{id}` 中应稳定返回 `messageTaskId`。
+
+3. Review 可承接
+- 前端后续应可通过 `/review?postId=<postId>` 打开该真实任务对应的内容确认页。
+- `/review` 页面中的“消息来源”区域应能展示该真实任务原始 `sourceMessage`。
+
+4. 最小测试补充
+- 至少补一组“真实 QQ 入站任务生成/关联 post”的测试。
+- 至少补一组“同一任务不重复生成多个 post”的测试。
+
+### 本轮边界
+
+- 不要求本轮完成真实 AI 文案生成和真实图片生成。
+- 不要求本轮补完整的内容生成 worker。
+- 本轮重点仅是把“真实任务中心”正确承接到“内容确认台”入口。
+
+### 完成标准
+
+- 真实 QQ 消息进入后端后，不仅能在 `/tasks` 看到任务，也能找到与之关联的 `post`。
+- 前端 `/review?postId=...` 能打开该任务对应的确认页。
+- 页面中的消息来源、任务阶段和确认对象彼此一致，不再停留在仅靠种子 `post` 验证的状态。
+
 ## 第八轮 QQ 联调收尾说明
 
 - QQ 入站最小实现已在提交 `13a67be` 落地，当前需要的不是继续扩功能，而是完成 OpenClaw 到后端的真实联调验收。
