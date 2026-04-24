@@ -1,6 +1,6 @@
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, buildAccountOverview, getAccountForPost, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, buildAccountOverview, getAccountForPost, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
 
 async function getAccountsOrNull() {
   try {
@@ -10,12 +10,18 @@ async function getAccountsOrNull() {
   }
 }
 
-function getPublishSteps(status: string, hasPublishRecord: boolean) {
+function getPublishSteps(post: { status: string; publishRecords: Array<{ status: string }> }) {
+  const latestRecord = post.publishRecords.at(-1);
+  const hasQueued = latestRecord?.status === "queued" || post.status === "publishing" || post.status === "published" || post.status === "publish_failed";
+  const isExecuting = post.status === "publishing";
+  const isPublished = post.status === "published" || latestRecord?.status === "succeeded";
+  const isFailed = post.status === "publish_failed" || latestRecord?.status === "failed";
+
   return [
-    { label: "OpenClaw 已接单", done: hasPublishRecord },
-    { label: "已上传并提交", done: status === "publishing" || status === "published" || status === "publish_failed", active: status === "publishing" },
-    { label: "等待平台审核", done: status === "published" || status === "publish_failed", active: status === "publishing" },
-    { label: "结果已回到后台", done: status === "published", failed: status === "publish_failed" },
+    { label: "待交给 OpenClaw", done: hasQueued || isPublished || isFailed, active: !hasQueued && !isPublished && !isFailed },
+    { label: "已交给 OpenClaw", done: hasQueued || isPublished || isFailed, active: latestRecord?.status === "queued" },
+    { label: "执行中", done: isExecuting || isPublished || isFailed, active: isExecuting },
+    { label: isFailed ? "发布失败" : "已发布", done: isPublished || isFailed, failed: isFailed },
   ];
 }
 
@@ -63,7 +69,8 @@ export default async function DashboardPage() {
           details.map((post) => {
             const latestRecord = post.publishRecords.at(-1);
             const narrative = getPublishNarrative(post);
-            const steps = getPublishSteps(post.status, post.publishRecords.length > 0);
+            const publishFlowState = getPublishFlowState(post);
+            const steps = getPublishSteps(post);
             const account = getAccountForPost(post, accounts, !accountRecords);
 
             return (
@@ -75,6 +82,7 @@ export default async function DashboardPage() {
                   </div>
                   <div className="tag-row">
                     <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+                    <StatusPill label={publishFlowState.label} tone={publishFlowState.tone} />
                     {getFailureTypeLabel(latestRecord?.failureType) ? <StatusPill label={getFailureTypeLabel(latestRecord?.failureType) ?? ""} tone="critical" /> : null}
                   </div>
                 </div>
@@ -93,6 +101,11 @@ export default async function DashboardPage() {
                     <p>{narrative.nextAction}</p>
                   </article>
 
+                  <article className={`state-card state-card-${publishFlowState.tone}`}>
+                    <strong>{publishFlowState.label}</strong>
+                    <p>{publishFlowState.detail}</p>
+                  </article>
+
                   <div className="detail-meta-grid">
                     <article className="detail-meta-card">
                       <span className="eyebrow">执行账号</span>
@@ -101,13 +114,18 @@ export default async function DashboardPage() {
                     </article>
                     <article className="detail-meta-card">
                       <span className="eyebrow">OpenClaw 回写</span>
-                      <strong>{latestRecord?.status ?? "尚未开始"}</strong>
+                      <strong>{getPublishRecordLabel(latestRecord?.status)}</strong>
                       <p>{latestRecord?.detail ?? "还没有产生发送记录。"}</p>
                     </article>
                     <article className="detail-meta-card">
                       <span className="eyebrow">平台结果</span>
                       <strong>{post.platformPostId ?? "待回写"}</strong>
                       <p>{post.publishedAt ? `通过时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : latestRecord?.errorMessage ?? "等待平台结果。"}</p>
+                    </article>
+                    <article className="detail-meta-card">
+                      <span className="eyebrow">下一步动作</span>
+                      <strong>{publishFlowState.label}</strong>
+                      <p>{narrative.nextAction}</p>
                     </article>
                   </div>
                 </div>

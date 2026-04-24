@@ -43,6 +43,12 @@ export interface GenerationReadiness {
   tone: "neutral" | "warm" | "positive";
 }
 
+export interface PublishFlowState {
+  label: string;
+  detail: string;
+  tone: "neutral" | "warm" | "positive" | "critical";
+}
+
 const unassignedAccount: AccountOverview = {
   id: "",
   name: "未分配账号",
@@ -308,6 +314,64 @@ export function getPublishNarrative(post: PostDetail) {
     nextAction: "先去消息任务中心确认系统是否已完成生成，再进入内容确认台。",
     tone: "neutral" as const,
   };
+}
+
+export function getPublishFlowState(post: PostDetail): PublishFlowState {
+  const latestRecord = post.publishRecords.at(-1);
+
+  if (post.status === "publish_failed" || latestRecord?.status === "failed") {
+    return {
+      label: "发布失败",
+      detail: latestRecord?.errorMessage || latestRecord?.detail || "真实发布已失败，等待后端回写更明确的失败原因。",
+      tone: "critical",
+    };
+  }
+
+  if (post.status === "published" || latestRecord?.status === "succeeded") {
+    return {
+      label: "已发布",
+      detail: post.publishedAt ? `发布时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : "真实发布已完成，等待发布时间回写。",
+      tone: "positive",
+    };
+  }
+
+  if (post.status === "publishing") {
+    return {
+      label: "执行中",
+      detail: latestRecord?.detail || "OpenClaw 已接单，当前正在执行发布并等待回写。",
+      tone: "warm",
+    };
+  }
+
+  if (latestRecord?.status === "queued") {
+    return {
+      label: "已交给 OpenClaw",
+      detail: latestRecord.detail || "真实发布请求已提交给 OpenClaw，等待进入执行阶段。",
+      tone: "warm",
+    };
+  }
+
+  return {
+    label: "待交给 OpenClaw",
+    detail: "当前还没有真实发布记录，仍停留在待发阶段。",
+    tone: "neutral",
+  };
+}
+
+export function getPublishRecordLabel(status?: PublishRecord["status"] | null) {
+  if (status === "queued") {
+    return "已交给 OpenClaw";
+  }
+
+  if (status === "succeeded") {
+    return "已发布";
+  }
+
+  if (status === "failed") {
+    return "发布失败";
+  }
+
+  return "暂无结果";
 }
 
 export function getPerformanceSuggestion(post: PostListItem) {

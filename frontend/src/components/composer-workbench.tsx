@@ -7,7 +7,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { apiClient } from "../lib/api/client";
 import type { PostDetail, PostListItem } from "../lib/api/types";
 import type { AccountOverview, MessageTask } from "../lib/product";
-import { buildCopyVariants, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishNarrative, getStatusLabel, getStatusTone } from "../lib/product";
+import { buildCopyVariants, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getStatusLabel, getStatusTone } from "../lib/product";
 import { StatusPill } from "./ui";
 
 export function ComposerWorkbench({
@@ -48,6 +48,7 @@ export function ComposerWorkbench({
   const selectedAsset = imageCandidates.find((item) => item.id === selectedAssetId) ?? imageCandidates[0] ?? null;
   const selectedAccount = accounts.find((item) => item.id === selectedAccountId) ?? accounts[0] ?? null;
   const publishNarrative = post ? getPublishNarrative(post) : null;
+  const publishFlowState = post ? getPublishFlowState(post) : null;
   const latestPublishRecord = post?.publishRecords.at(-1);
 
   async function handleRefreshAICandidates() {
@@ -59,11 +60,11 @@ export function ComposerWorkbench({
     setNotice(null);
 
     try {
-      const [copyTask, imageTask] = await Promise.all([
+      await Promise.all([
         apiClient.posts.generateCopy(post.id, { operator: "frontend-operator", payload: { topic: post.topic, title: post.title } }),
         apiClient.posts.generateImages(post.id, { operator: "frontend-operator", payload: { title: post.title, topic: post.topic } }),
       ]);
-      setNotice(`已刷新候选内容：文案任务 ${copyTask.status}，图片任务 ${imageTask.status}。`);
+      setNotice(`已刷新候选内容，文案和图片任务都已重新提交，等待真实结果回写。`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "刷新候选内容失败");
@@ -123,8 +124,9 @@ export function ComposerWorkbench({
 
       if (action === "publish") {
         const publishResult = await apiClient.posts.publish(post.id, { comment: reviewComment, operator: "frontend-operator" });
+        const publishLabel = getPublishRecordLabel(publishResult.publishStatus);
         const failureType = getFailureTypeLabel(publishResult.failureType);
-        setNotice(`已交给 OpenClaw 去发${selectedAccount ? `，目标账号 ${selectedAccount.name}` : ""}。当前状态：${publishResult.publishStatus}${failureType ? `，失败分类：${failureType}` : ""}。`);
+        setNotice(`${publishLabel}${selectedAccount ? `，目标账号 ${selectedAccount.name}` : ""}。${publishResult.detail}${failureType ? ` 失败分类：${failureType}。` : ""}`);
       }
 
       startTransition(() => router.refresh());
@@ -157,6 +159,7 @@ export function ComposerWorkbench({
           <div className="tag-row">
             <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
             {task ? <StatusPill label={task.stageLabel} tone={task.stageTone} /> : null}
+            {publishFlowState ? <StatusPill label={publishFlowState.label} tone={publishFlowState.tone} /> : null}
             {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
             {getFailureTypeLabel(latestPublishRecord?.failureType) ? <StatusPill label={getFailureTypeLabel(latestPublishRecord?.failureType) ?? ""} tone="critical" /> : null}
           </div>
@@ -291,6 +294,13 @@ export function ComposerWorkbench({
                 <strong>{selectedAsset?.name ?? "等待真实图片结果"}</strong>
                 <p>{selectedAsset ? "这张图会被保存为这次任务的最终封面。" : "图片生成完成后，这里会显示真实素材。"}</p>
               </article>
+              {publishFlowState ? (
+                <article className={`preview-summary-card state-card state-card-${publishFlowState.tone}`}>
+                  <span className="eyebrow">当前发布进度</span>
+                  <strong>{publishFlowState.label}</strong>
+                  <p>{publishFlowState.detail}</p>
+                </article>
+              ) : null}
               {publishNarrative ? (
                 <article className={`state-card state-card-${publishNarrative.tone}`}>
                   <strong>{publishNarrative.headline}</strong>

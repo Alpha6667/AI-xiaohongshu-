@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPublishNarrative, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -118,6 +118,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const metricsState = getMetricsState(post);
   const latestPublishRecord = post.publishRecords.at(-1);
   const publishNarrative = getPublishNarrative(post);
+  const publishFlowState = getPublishFlowState(post);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(postList);
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts, !accountRecords) : buildMessageTasks(postList, accounts);
   const account = getAccountForPost(post, accounts, !accountRecords);
@@ -136,6 +137,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <div className="detail-overview">
           <div>
             <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+            <StatusPill label={publishFlowState.label} tone={publishFlowState.tone} />
             <p className="detail-topic">主题：{post.topic}</p>
           </div>
           <Link href="/posts" className="text-link product-link">
@@ -167,6 +169,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
             <SectionCard className="nested-card">
               <SectionHeading eyebrow="发送结果" title="OpenClaw 与平台回写" description="这里看发送现在走到哪一步，以及下一步该怎么处理。" />
+              <article className={`state-card state-card-${publishFlowState.tone}`}>
+                <strong>{publishFlowState.label}</strong>
+                <p>{publishFlowState.detail}</p>
+              </article>
               <article className={`state-card state-card-${publishNarrative.tone}`}>
                 <strong>{publishNarrative.headline}</strong>
                 <p>{publishNarrative.nextAction}</p>
@@ -184,8 +190,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">最近一次结果</span>
-                  <strong>{latestPublishRecord?.status || "暂无结果"}</strong>
+                  <strong>{getPublishRecordLabel(latestPublishRecord?.status)}</strong>
                   <p>{latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "当前还没有发布结果记录。"}</p>
+                  {latestPublishRecord?.createdAt ? <p>记录时间：{new Date(latestPublishRecord.createdAt).toLocaleString("zh-CN")}</p> : null}
                   {getFailureTypeLabel(latestPublishRecord?.failureType) ? <p>失败分类：{getFailureTypeLabel(latestPublishRecord?.failureType)}</p> : null}
                 </article>
               </div>
@@ -304,7 +311,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   post.publishRecords.map((record) => (
                     <article key={record.id} className="plain-row-card">
                       <div className="tag-row">
-                        <StatusPill label={record.status} tone={record.status === "failed" ? "critical" : record.status === "succeeded" ? "positive" : "warm"} />
+                        <StatusPill label={getPublishRecordLabel(record.status)} tone={record.status === "failed" ? "critical" : record.status === "succeeded" ? "positive" : "warm"} />
                         <span className="muted-inline">{new Date(record.createdAt).toLocaleString("zh-CN")}</span>
                       </div>
                       <p>{record.detail}</p>
