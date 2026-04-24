@@ -1,4 +1,10 @@
-export type PostStatus = "draft" | "in_review" | "approved" | "publishing" | "published" | "publish_failed";
+export type PostStatus = "draft" | "in_review" | "approved" | "publishing" | "under_review" | "published" | "rejected" | "publish_failed";
+
+export type AccountConnectionStatus = "connected" | "disconnected" | "reauth_required" | "validating" | "unknown";
+
+export type AccountSyncStatus = "idle" | "syncing" | "succeeded" | "failed" | "unknown";
+
+export type ReviewStatus = "pending" | "under_review" | "approved" | "rejected" | "unknown";
 
 export interface DashboardSummary {
   totalPosts: number;
@@ -23,6 +29,15 @@ export interface AccountRecord {
   publishedCount?: number | null;
   totalEngagement?: number | null;
   bestTopic?: string | null;
+  connectionStatus?: AccountConnectionStatus | string | null;
+  reauthRequired?: boolean | null;
+  connectedAt?: string | null;
+  lastValidatedAt?: string | null;
+  lastUsedAt?: string | null;
+  lastAuthError?: string | null;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  lastSyncError?: string | null;
 }
 
 export interface MessageTaskRecord {
@@ -101,9 +116,12 @@ export interface PublishResponse {
   detail: string;
   createdAt: string;
   message: string;
+  executionId?: string | null;
   platformPostId?: string | null;
+  publishedAt?: string | null;
   errorMessage?: string | null;
   failureType?: "retryable" | "non_retryable" | "rate_limited" | null;
+  executionLogs?: string[];
 }
 
 export interface PostMetrics {
@@ -127,9 +145,11 @@ export interface PublishRecord {
   status: "queued" | "succeeded" | "failed";
   createdAt: string;
   detail: string;
+  executionId?: string | null;
   platformPostId?: string | null;
   errorMessage?: string | null;
   failureType?: "retryable" | "non_retryable" | "rate_limited" | null;
+  executionLogs?: string[];
 }
 
 export interface MetricsHistoryItem {
@@ -154,6 +174,14 @@ export interface PostListItem {
   accountId?: string | null;
   messageTaskId?: string | null;
   platformPostId?: string | null;
+  platformUrl?: string | null;
+  reviewStatus?: ReviewStatus | string | null;
+  likeCount?: number | null;
+  collectCount?: number | null;
+  commentCount?: number | null;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  syncError?: string | null;
   latestMetrics: PostMetrics;
   createdAt: string;
   updatedAt: string;

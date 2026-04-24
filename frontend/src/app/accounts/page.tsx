@@ -1,8 +1,9 @@
 import Link from "next/link";
 
+import { RefreshButton } from "../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountStatusLabel, getAccountStatusTone } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone } from "../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -28,7 +29,7 @@ export default async function AccountsPage() {
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="多账号运营" title="不要把账号能力藏在设置里，这里直接看谁在线、谁待处理、谁表现更好" description="这一页先把多账号运营结构搭对，后续再补更细的排班和权限。" />
+        <SectionHeading eyebrow="多账号运营" title="直接看哪些账号已连接、哪些需要重新登录、哪些同步异常" description="这里优先展示真实账号可用性，而不是只看运营卡片。" />
 
         {accountRecords ? null : (
           <article className="state-card state-card-warm">
@@ -41,33 +42,38 @@ export default async function AccountsPage() {
           <article className="dashboard-highlight">
             <span className="eyebrow">账号概览</span>
             <strong>{accounts.length}</strong>
-            <p>当前后台纳管的账号数量。重点先看哪些账号在线、今天谁有任务、哪个账号最近更值得继续发。</p>
+            <p>重点先看哪些账号已连接可真实发布，哪些账号登录失效需要处理，哪些账号最近拉数失败。</p>
           </article>
 
           <div className="metric-grid publish-metric-grid">
             <article className="metric-tile">
-              <span>在线账号</span>
-              <strong>{accounts.filter((account) => account.status === "online").length}</strong>
+              <span>已连接</span>
+              <strong>{accounts.filter((account) => account.connectionStatus === "connected" && !account.reauthRequired).length}</strong>
             </article>
             <article className="metric-tile">
-              <span>执行中账号</span>
-              <strong>{accounts.filter((account) => account.status === "busy").length}</strong>
+              <span>需重新登录</span>
+              <strong>{accounts.filter((account) => account.connectionStatus === "reauth_required" || account.reauthRequired).length}</strong>
             </article>
             <article className="metric-tile">
-              <span>今日待处理任务</span>
-              <strong>{accounts.reduce((sum, account) => sum + account.waitingCount, 0)}</strong>
+              <span>同步中</span>
+              <strong>{accounts.filter((account) => account.lastSyncStatus === "syncing").length}</strong>
             </article>
             <article className="metric-tile">
-              <span>最近总互动</span>
-              <strong>{accounts.reduce((sum, account) => sum + account.totalEngagement, 0).toLocaleString()}</strong>
+              <span>同步失败</span>
+              <strong>{accounts.filter((account) => account.lastSyncStatus === "failed").length}</strong>
             </article>
           </div>
+        </div>
+
+        <div className="action-row">
+          <RefreshButton />
         </div>
       </SectionCard>
 
       <section className="product-grid product-grid-two">
         {accounts.map((account) => {
           const accountTasks = tasks.filter((task) => task.accountId === account.id);
+          const availability = getAccountAvailabilityNotice(account);
 
           return (
             <SectionCard key={account.id} className="product-card account-card">
@@ -76,10 +82,19 @@ export default async function AccountsPage() {
                   <span className="eyebrow">{account.handle}</span>
                   <h3>{account.name}</h3>
                 </div>
-                <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
+                <div className="tag-row">
+                  <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
+                  <StatusPill label={getAccountConnectionStatusLabel(account.connectionStatus)} tone={getAccountConnectionStatusTone(account.connectionStatus)} />
+                  <StatusPill label={getAccountSyncStatusLabel(account.lastSyncStatus)} tone={getAccountSyncStatusTone(account.lastSyncStatus)} />
+                </div>
               </div>
 
               <p>{account.summary}</p>
+
+              <article className={`state-card state-card-${availability.tone}`}>
+                <strong>{availability.title}</strong>
+                <p>{availability.detail}</p>
+              </article>
 
               <div className="product-stat-grid account-stat-grid">
                 <article className="metric-tile">
@@ -105,6 +120,19 @@ export default async function AccountsPage() {
                 <strong>{account.bestTopic}</strong>
                 <p>最近活跃时间 {new Date(account.lastActiveAt).toLocaleString("zh-CN")}</p>
               </article>
+
+              <div className="detail-meta-grid">
+                <article className="detail-meta-card">
+                  <span className="eyebrow">最近一次验证</span>
+                  <strong>{account.lastValidatedAt ? new Date(account.lastValidatedAt).toLocaleString("zh-CN") : "暂无记录"}</strong>
+                  <p>{account.connectedAt ? `连接建立于 ${new Date(account.connectedAt).toLocaleString("zh-CN")}` : "后端暂未返回连接建立时间。"}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">最近一次同步</span>
+                  <strong>{account.lastSyncAt ? new Date(account.lastSyncAt).toLocaleString("zh-CN") : "暂无记录"}</strong>
+                  <p>{account.lastSyncError ?? "当前没有同步错误摘要。"}</p>
+                </article>
+              </div>
 
               <div className="queue-list">
                 {accountTasks.slice(0, 2).map((task) => (

@@ -7,7 +7,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { apiClient } from "../lib/api/client";
 import type { PostDetail, PostListItem } from "../lib/api/types";
 import type { AccountOverview, MessageTask } from "../lib/product";
-import { buildCopyVariants, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getStatusLabel, getStatusTone } from "../lib/product";
+import { buildCopyVariants, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getSharedConfirmationInfo, getStatusLabel, getStatusTone } from "../lib/product";
 import { StatusPill } from "./ui";
 
 export function ComposerWorkbench({
@@ -50,6 +50,8 @@ export function ComposerWorkbench({
   const publishNarrative = post ? getPublishNarrative(post) : null;
   const publishFlowState = post ? getPublishFlowState(post) : null;
   const latestPublishRecord = post?.publishRecords.at(-1);
+  const sharedConfirmation = post ? getSharedConfirmationInfo(post, task) : null;
+  const accountAvailability = selectedAccount ? getAccountAvailabilityNotice(selectedAccount) : null;
 
   async function handleRefreshAICandidates() {
     if (!post) {
@@ -88,8 +90,9 @@ export function ComposerWorkbench({
         body: selectedCopy.body,
         tags: post.tags,
         assetIds: selectedAsset ? [selectedAsset.id] : post.assetIds,
+        accountId: selectedAccount?.id,
       });
-      setNotice(`已保存当前确认版。${selectedAccount ? `默认发布账号已选择为 ${selectedAccount.name}。` : ""}`);
+      setNotice(`已保存当前确认版。${selectedAccount ? `当前归属账号已更新为 ${selectedAccount.name}。` : ""}`);
       startTransition(() => router.refresh());
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "保存最终版失败");
@@ -107,6 +110,10 @@ export function ComposerWorkbench({
     setNotice(null);
 
     try {
+      if ((action === "approve" || action === "publish") && selectedAccount?.id && selectedAccount.id !== post.accountId) {
+        await apiClient.posts.update(post.id, { accountId: selectedAccount.id });
+      }
+
       if (action === "submit") {
         await apiClient.posts.submitReview(post.id, { comment: reviewComment, operator: "frontend-operator" });
         setNotice("已提交人工确认，接下来可以在这里通过或退回。");
@@ -165,6 +172,19 @@ export function ComposerWorkbench({
           </div>
         </div>
 
+        {sharedConfirmation ? (
+          <section className="product-card message-source-card">
+            <div className="product-section-head compact-section-head">
+              <div>
+                <span className="eyebrow">同一份确认对象</span>
+                <h3>{sharedConfirmation.headline}</h3>
+              </div>
+              <StatusPill label={sharedConfirmation.sourceLabel} tone="positive" />
+            </div>
+            <p>{sharedConfirmation.detail}</p>
+          </section>
+        ) : null}
+
         {task ? (
           <section className="product-card message-source-card">
             <div className="product-section-head compact-section-head">
@@ -184,6 +204,13 @@ export function ComposerWorkbench({
                 <strong>{task.stageLabel}</strong>
                 <p>{task.nextAction}</p>
               </article>
+              {selectedAccount ? (
+                <article className="detail-meta-card">
+                  <span className="eyebrow">账号真实状态</span>
+                  <strong>{accountAvailability?.title ?? "账号状态待确认"}</strong>
+                  <p>{accountAvailability?.detail ?? "请先检查账号连接状态。"}</p>
+                </article>
+              ) : null}
             </div>
           </section>
         ) : null}
@@ -283,6 +310,12 @@ export function ComposerWorkbench({
                 <span className="eyebrow">发布账号</span>
                 <strong>{selectedAccount?.name ?? "暂未选择账号"}</strong>
                 <p>{selectedAccount ? `${selectedAccount.handle}，当前状态 ${getAccountStatusLabel(selectedAccount.status)}。` : "先从右侧选择一个要发布的账号。"}</p>
+                {selectedAccount ? (
+                  <div className="tag-row">
+                    <StatusPill label={getAccountConnectionStatusLabel(selectedAccount.connectionStatus)} tone={getAccountConnectionStatusTone(selectedAccount.connectionStatus)} />
+                    {selectedAccount.lastValidatedAt ? <StatusPill label={`最近验证 ${new Date(selectedAccount.lastValidatedAt).toLocaleString("zh-CN")}`} /> : null}
+                  </div>
+                ) : null}
               </article>
               <article className="preview-summary-card">
                 <span className="eyebrow">最终文案</span>
@@ -305,6 +338,12 @@ export function ComposerWorkbench({
                 <article className={`state-card state-card-${publishNarrative.tone}`}>
                   <strong>{publishNarrative.headline}</strong>
                   <p>{publishNarrative.nextAction}</p>
+                </article>
+              ) : null}
+              {accountAvailability ? (
+                <article className={`state-card state-card-${accountAvailability.tone}`}>
+                  <strong>{accountAvailability.title}</strong>
+                  <p>{accountAvailability.detail}</p>
                 </article>
               ) : null}
             </div>
@@ -332,6 +371,10 @@ export function ComposerWorkbench({
                     <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
                   </div>
                   <p>{account.summary}</p>
+                  <div className="tag-row">
+                    <StatusPill label={getAccountConnectionStatusLabel(account.connectionStatus)} tone={getAccountConnectionStatusTone(account.connectionStatus)} />
+                    {account.lastValidatedAt ? <StatusPill label={`最近验证 ${new Date(account.lastValidatedAt).toLocaleString("zh-CN")}`} /> : null}
+                  </div>
                 </button>
               );
             })}
@@ -355,12 +398,13 @@ export function ComposerWorkbench({
             <button type="button" className="secondary-button" onClick={() => handleSubmitReview("reject")} disabled={pending || post.status !== "in_review"}>
               退回修改
             </button>
-            <button type="button" className="accent-button" onClick={() => handleSubmitReview("publish")} disabled={pending || post.status !== "approved" || !selectedAccount || !hasRealCopy || !hasRealImages}>
+            <button type="button" className="accent-button" onClick={() => handleSubmitReview("publish")} disabled={pending || post.status !== "approved" || !selectedAccount || !hasRealCopy || !hasRealImages || !accountAvailability?.canPublish}>
               交给 OpenClaw 按此账号去发
             </button>
           </div>
 
           {latestPublishRecord?.errorMessage ? <p className="feedback-text">最近失败原因：{latestPublishRecord.errorMessage}</p> : null}
+          {selectedAccount && !accountAvailability?.canPublish ? <p className="feedback-text">当前账号还不能真实发布，请先处理连接状态后再继续。</p> : null}
           {notice ? <p className="feedback-text">{notice}</p> : null}
         </section>
 

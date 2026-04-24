@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { RefreshButton } from "../../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPostInteractionSummary, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getSharedConfirmationInfo, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -123,6 +124,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts, !accountRecords) : buildMessageTasks(postList, accounts);
   const account = getAccountForPost(post, accounts, !accountRecords);
   const messageTask = getMessageTaskForPost(post, tasks);
+  const sharedConfirmation = getSharedConfirmationInfo(post, messageTask);
+  const accountAvailability = getAccountAvailabilityNotice(account);
+  const syncState = getPostSyncState(post);
+  const interactionSummary = getPostInteractionSummary(post);
+  const reviewStatus = getReviewStatus(post);
   const generationReadiness = getGenerationReadiness({
     hasCopy: Boolean(post.title.trim() && post.body.trim()),
     hasImages: post.assets.length > 0 || post.assetIds.length > 0,
@@ -137,16 +143,28 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <div className="detail-overview">
           <div>
             <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+            <StatusPill label={getReviewStatusLabel(reviewStatus)} tone={getReviewStatusTone(reviewStatus)} />
             <StatusPill label={publishFlowState.label} tone={publishFlowState.tone} />
             <p className="detail-topic">主题：{post.topic}</p>
           </div>
-          <Link href="/posts" className="text-link product-link">
-            返回帖子与数据
-          </Link>
+          <div className="action-row">
+            <RefreshButton />
+            <Link href="/posts" className="text-link product-link">
+              返回帖子与数据
+            </Link>
+          </div>
         </div>
 
         <div className="detail-layout">
           <div className="detail-primary">
+            <SectionCard className="nested-card">
+              <SectionHeading eyebrow="同一份确认对象" title={sharedConfirmation.headline} />
+              <article className="state-card state-card-positive">
+                <strong>{sharedConfirmation.sourceLabel}</strong>
+                <p>{sharedConfirmation.detail}</p>
+              </article>
+            </SectionCard>
+
             <SectionCard className="nested-card">
               <SectionHeading eyebrow="最终稿" title="这次实际准备发出的内容" />
               {post.title.trim() || post.body.trim() ? (
@@ -187,6 +205,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <span className="eyebrow">平台回写</span>
                   <strong>{latestPublishRecord?.platformPostId || post.platformPostId || "待回写"}</strong>
                   <p>{post.publishedAt ? `发布时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : "当前还没有平台发布时间回写。"}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">平台审核状态</span>
+                  <strong>{getReviewStatusLabel(reviewStatus)}</strong>
+                  <p>{publishFlowState.detail}</p>
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">最近一次结果</span>
@@ -249,6 +272,18 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 <strong>{metricsState.title}</strong>
                 <p>{metricsState.description}</p>
               </article>
+              <div className="detail-meta-grid">
+                <article className="detail-meta-card">
+                  <span className="eyebrow">当前互动</span>
+                  <strong>点赞 {interactionSummary.likes.toLocaleString()}</strong>
+                  <p>收藏 {interactionSummary.collects.toLocaleString()}，评论 {interactionSummary.comments.toLocaleString()}，浏览 {post.latestMetrics.views.toLocaleString()}。</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">最近同步</span>
+                  <strong>{syncState.label}</strong>
+                  <p>{syncState.detail}</p>
+                </article>
+              </div>
               <div className="history-stack">
                 {post.metricsHistory.length > 0 ? (
                   post.metricsHistory.map((item) => (
@@ -283,6 +318,16 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <span className="eyebrow">原始消息任务</span>
                   <strong>{post.messageTaskId ?? messageTask?.id ?? "已进入帖子详情视图"}</strong>
                   <p>{messageTask?.sourceMessage ?? "这条内容已经脱离消息中心的待办队列，正在查看完整记录。"}</p>
+                </article>
+                <article className={`detail-meta-card state-card state-card-${accountAvailability.tone}`}>
+                  <span className="eyebrow">账号可用性</span>
+                  <strong>{accountAvailability.title}</strong>
+                  <p>{accountAvailability.detail}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">平台链接</span>
+                  <strong>{post.platformUrl ? "可直接查看平台页" : "暂未回写平台链接"}</strong>
+                  <p>{post.platformUrl ?? "后端当前只返回平台帖子标识，等待平台链接字段稳定回写。"}</p>
                 </article>
               </div>
             </SectionCard>
@@ -335,7 +380,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               <article className="detail-meta-card">
                 <span className="eyebrow">最新汇总</span>
                 <strong>浏览 {post.latestMetrics.views.toLocaleString()}</strong>
-                <p>点赞 {post.latestMetrics.likes.toLocaleString()}，收藏 {post.latestMetrics.favorites.toLocaleString()}，评论 {post.latestMetrics.comments.toLocaleString()}，关注转化 {post.latestMetrics.followConversions.toLocaleString()}。</p>
+                <p>点赞 {interactionSummary.likes.toLocaleString()}，收藏 {interactionSummary.collects.toLocaleString()}，评论 {interactionSummary.comments.toLocaleString()}，关注转化 {post.latestMetrics.followConversions.toLocaleString()}。</p>
               </article>
             </SectionCard>
           </div>

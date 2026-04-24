@@ -130,6 +130,12 @@
 
 ## 当前问题
 
+- 2026-04-24 已开始第三优先级真实展示收口：`/accounts` 已切到账号连接状态、最近验证、最近同步和错误摘要主路径展示；`/review`、`/dashboard`、`/posts`、`/posts/[id]` 已开始统一消费 `connectionStatus`、`lastSyncAt`、`lastSyncStatus`、`reviewStatus`、`under_review`、`rejected`、互动计数字段。
+- `frontend/src/lib/product.ts` 现已统一补齐“同一份确认对象”说明、账号可真实发布提示、平台审核中/审核未通过语义、作品同步状态和互动数据优先级（优先用 `likeCount` / `collectCount` / `commentCount`，缺失时再回落 `latestMetrics`）。
+- 内容确认台现在会在保存确认版时真实回写 `post.accountId`，因此所选发布账号不再只是纯前端临时选择。
+- `/posts` 已改为展示真实帖子主表，不再只看 `published`；列表里会同时露出平台审核中、审核未通过和同步结果。
+- 当前仍需后端继续稳定返回 `platformUrl`、账号连接字段和同步字段，前端现在已经有展示位，但部分真实样本可能仍为空。
+
 - 后端已补齐 `GET /api/tasks` 与 `GET /api/accounts` 的主要展示字段，前端这轮开始把 `title`、`stageLabel`、`nextAction`、`accountName`、`plannedAt`、`requiresHumanReview` 以及账号聚合字段作为主路径消费。
 - 当前已进一步收口账号归属展示：如果接口成功但帖子或任务没有真实 `accountId` / `accountName`，页面会明确显示“未分配账号”，不再回退到种子账号。
 - 后端真实 `stage` 使用 `pending_generation`、`waiting_review` 等枚举，前端仍需要一层轻量归一化，映射到现有页面内部的展示阶段。

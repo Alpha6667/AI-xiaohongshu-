@@ -1,6 +1,7 @@
+import { RefreshButton } from "../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, buildAccountOverview, getAccountForPost, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, buildAccountOverview, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
 
 async function getAccountsOrNull() {
   try {
@@ -12,23 +13,26 @@ async function getAccountsOrNull() {
 
 function getPublishSteps(post: { status: string; publishRecords: Array<{ status: string }> }) {
   const latestRecord = post.publishRecords.at(-1);
-  const hasQueued = latestRecord?.status === "queued" || post.status === "publishing" || post.status === "published" || post.status === "publish_failed";
+  const hasQueued = latestRecord?.status === "queued" || post.status === "publishing" || post.status === "under_review" || post.status === "published" || post.status === "rejected" || post.status === "publish_failed";
   const isExecuting = post.status === "publishing";
+  const isUnderReview = post.status === "under_review";
   const isPublished = post.status === "published" || latestRecord?.status === "succeeded";
+  const isRejected = post.status === "rejected";
   const isFailed = post.status === "publish_failed" || latestRecord?.status === "failed";
 
   return [
-    { label: "待交给 OpenClaw", done: hasQueued || isPublished || isFailed, active: !hasQueued && !isPublished && !isFailed },
-    { label: "已交给 OpenClaw", done: hasQueued || isPublished || isFailed, active: latestRecord?.status === "queued" },
-    { label: "执行中", done: isExecuting || isPublished || isFailed, active: isExecuting },
-    { label: isFailed ? "发布失败" : "已发布", done: isPublished || isFailed, failed: isFailed },
+    { label: "待交给 OpenClaw", done: hasQueued || isPublished || isRejected || isFailed, active: !hasQueued && !isPublished && !isRejected && !isFailed },
+    { label: "已交给 OpenClaw", done: hasQueued || isPublished || isRejected || isFailed, active: latestRecord?.status === "queued" },
+    { label: "执行中", done: isExecuting || isUnderReview || isPublished || isRejected || isFailed, active: isExecuting },
+    { label: "平台审核中", done: isUnderReview || isPublished || isRejected, active: isUnderReview },
+    { label: isFailed ? "发布失败" : isRejected ? "审核未通过" : "已发布", done: isPublished || isRejected || isFailed, failed: isRejected || isFailed },
   ];
 }
 
 export default async function DashboardPage() {
   const [summary, posts, accountRecords] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list(), getAccountsOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "published" || post.status === "publish_failed")).slice(0, 6);
+  const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "under_review" || post.status === "published" || post.status === "rejected" || post.status === "publish_failed")).slice(0, 6);
   const details = await Promise.all(centerPosts.map((post) => apiClient.posts.getById(post.id)));
 
   return (
@@ -53,14 +57,18 @@ export default async function DashboardPage() {
               <strong>{posts.filter((post) => post.status === "publishing").length}</strong>
             </article>
             <article className="metric-tile">
-              <span>发送失败</span>
-              <strong>{posts.filter((post) => post.status === "publish_failed").length}</strong>
+              <span>平台审核中</span>
+              <strong>{posts.filter((post) => post.status === "under_review").length}</strong>
             </article>
             <article className="metric-tile">
-              <span>涉及账号</span>
-              <strong>{accounts.filter((account) => account.todayTaskCount > 0).length}</strong>
+              <span>发送失败</span>
+              <strong>{posts.filter((post) => post.status === "publish_failed" || post.status === "rejected").length}</strong>
             </article>
           </div>
+        </div>
+
+        <div className="action-row">
+          <RefreshButton />
         </div>
       </SectionCard>
 
@@ -72,6 +80,8 @@ export default async function DashboardPage() {
             const publishFlowState = getPublishFlowState(post);
             const steps = getPublishSteps(post);
             const account = getAccountForPost(post, accounts, !accountRecords);
+            const availability = getAccountAvailabilityNotice(account);
+            const reviewStatus = getReviewStatus(post);
 
             return (
               <SectionCard key={post.id} className="product-card publish-card">
@@ -82,6 +92,7 @@ export default async function DashboardPage() {
                   </div>
                   <div className="tag-row">
                     <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+                    <StatusPill label={getReviewStatusLabel(reviewStatus)} tone={getReviewStatusTone(reviewStatus)} />
                     <StatusPill label={publishFlowState.label} tone={publishFlowState.tone} />
                     {getFailureTypeLabel(latestRecord?.failureType) ? <StatusPill label={getFailureTypeLabel(latestRecord?.failureType) ?? ""} tone="critical" /> : null}
                   </div>
@@ -104,6 +115,11 @@ export default async function DashboardPage() {
                   <article className={`state-card state-card-${publishFlowState.tone}`}>
                     <strong>{publishFlowState.label}</strong>
                     <p>{publishFlowState.detail}</p>
+                  </article>
+
+                  <article className={`state-card state-card-${availability.tone}`}>
+                    <strong>{availability.title}</strong>
+                    <p>{availability.detail}</p>
                   </article>
 
                   <div className="detail-meta-grid">

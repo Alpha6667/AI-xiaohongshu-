@@ -113,7 +113,7 @@ export const apiClient = {
     getById(postId: string) {
       return apiFetch<PostDetail>(endpoint(`/posts/${postId}`));
     },
-    update(postId: string, payload: { topic?: string; title?: string; body?: string; tags?: string[]; assetIds?: string[] }) {
+    update(postId: string, payload: { topic?: string; title?: string; body?: string; tags?: string[]; assetIds?: string[]; accountId?: string }) {
       return apiFetch<PostListItem>(endpoint(`/posts/${postId}`), {
         method: "PATCH",
         body: JSON.stringify(payload),
