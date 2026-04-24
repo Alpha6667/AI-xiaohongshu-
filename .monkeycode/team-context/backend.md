@@ -1,5 +1,10 @@
 # Backend Sync
 
+## 当前优先级说明
+
+- 下一阶段执行顺序以 `.monkeycode/docs/NEXT_PHASE_EXECUTION_PLAN.md` 为准。
+- 后端当前最优先的两个动作是：先补真实 QQ 帖子的账号归属，再打通 `pending_generation` 之后的真实生成状态推进。
+
 ## 下一阶段任务：Message Task 承接到 Review
 
 - 当前 `QQ -> OpenClaw -> backend -> /tasks` 已真实打通，前端 `/tasks` 也已确认展示的是后端真实任务数据。
