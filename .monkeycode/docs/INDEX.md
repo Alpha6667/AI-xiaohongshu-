@@ -22,6 +22,7 @@
 - `XHS_LOGIN_STATE_BACKEND_TASK.md`：小红书登录态策略后端执行任务单
 - `XHS_LOGIN_STATE_FRONTEND_TASK.md`：小红书登录态策略前端执行任务单
 - `XHS_LOGIN_STATE_OPENCLAW_TASK.md`：小红书登录态策略 OpenClaw 执行任务单
+- `OPENCLAW_XHS_MASTER_NAVIGATION.md`：OpenClaw 小红书项目总导航
 
 ## 协作说明
 
