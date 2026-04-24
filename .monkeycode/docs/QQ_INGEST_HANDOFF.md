@@ -87,6 +87,14 @@
 6. 确认任务阶段为 `pending_generation`。
 7. 对同一事件重放一次，确认返回 `duplicated=true` 且未生成重复任务。
 
+## 当前状态
+
+- 2026-04-24 已在腾讯云服务器完成一轮真实验收。
+- OpenClaw 已按约定把真实 QQ 消息转发到 `POST /api/integrations/qq/messages`。
+- 后端已成功返回 `201 Created`，并在 `/api/tasks` 中生成真实任务。
+- 已确认真实任务样例：`sourceMessage="QQ 发唯一测试消息"`，`stage="pending_generation"`。
+- 当前可以认定 `QQ -> OpenClaw -> backend -> /api/tasks` 第一阶段闭环已经打通。
+
 ## 当前阻塞
 
 - 本地自动化补跑暂被环境依赖阻塞：当前环境未安装 backend 依赖，执行 `python3 -m unittest tests.test_api_minimal` 会报 `ModuleNotFoundError: No module named 'fastapi'`。

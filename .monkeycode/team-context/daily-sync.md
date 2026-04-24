@@ -57,3 +57,10 @@
 - QQ 接入第一阶段边界保持不变：不触发小红书发布、不做多账号自动调度、不扩权限系统
 - 已补最小联调文档，下一步应由 OpenClaw 按约定 payload 调用后端，并做一次真实 QQ 到 `/tasks` 的验收
 - 当前本地环境直接执行 `python3 -m unittest tests.test_api_minimal` 失败，原因是 backend 依赖未安装，错误表现为 `ModuleNotFoundError: No module named 'fastapi'`
+
+## 2026-04-24
+
+- 已在腾讯云服务器完成 QQ 真实转发验收，OpenClaw 收到 QQ 消息后可自动转发到 backend
+- 后端日志已出现多次 `POST /api/integrations/qq/messages HTTP/1.1 201 Created`
+- `/api/tasks` 已确认出现真实任务 `taskmsg_25c7863918`，其 `sourceMessage` 为 `QQ 发唯一测试消息`，`stage` 为 `pending_generation`
+- 当前可以确认第一阶段真实链路 `QQ -> OpenClaw -> backend -> /api/tasks` 已闭环

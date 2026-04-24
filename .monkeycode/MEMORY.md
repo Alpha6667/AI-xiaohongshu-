@@ -254,3 +254,12 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 直接运行 `backend/tests/test_api_minimal.py` 前，需要先安装 backend 项目依赖，否则会在导入 `fastapi.testclient` 时失败。
   - 当前环境若未安装 backend 依赖，错误会表现为 `ModuleNotFoundError: No module named 'fastapi'`。
   - QQ 接入相关自动化验证前，应先完成 backend 依赖安装，再执行 `python3 -m unittest tests.test_api_minimal`。
+
+[QQ 真实打通已完成]
+- Date: 2026-04-24
+- Context: Agent 在腾讯云服务器完成 OpenClaw QQ 转发到 backend 的真实验收后记录
+- Category: 测试方法
+- Instructions:
+  - 当前已完成第一阶段真实闭环：`QQ -> OpenClaw -> backend -> /api/tasks`。
+  - 已验证真实任务样例 `sourceMessage` 为 `QQ 发唯一测试消息`，任务阶段为 `pending_generation`。
+  - 后续讨论不应再回到“QQ 是否可接入”，而应以上述真实闭环已成立为前提推进下一阶段。
