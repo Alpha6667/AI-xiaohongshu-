@@ -84,8 +84,7 @@ export function ComposerWorkbench({
     setNotice(null);
 
     try {
-      await apiClient.posts.update(post.id, {
-        topic: post.topic,
+      await apiClient.confirmations.update(post.id, {
         title: selectedCopy.title,
         body: selectedCopy.body,
         tags: post.tags,
@@ -111,7 +110,7 @@ export function ComposerWorkbench({
 
     try {
       if ((action === "approve" || action === "publish") && selectedAccount?.id && selectedAccount.id !== post.accountId) {
-        await apiClient.posts.update(post.id, { accountId: selectedAccount.id });
+        await apiClient.confirmations.update(post.id, { accountId: selectedAccount.id });
       }
 
       if (action === "submit") {

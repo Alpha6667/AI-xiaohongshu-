@@ -6,7 +6,9 @@ class PostStatus(StrEnum):
     IN_REVIEW = "in_review"
     APPROVED = "approved"
     PUBLISHING = "publishing"
+    UNDER_REVIEW = "under_review"
     PUBLISHED = "published"
+    REJECTED = "rejected"
     PUBLISH_FAILED = "publish_failed"
 
 
@@ -55,3 +57,27 @@ class AccountStatus(StrEnum):
     ONLINE = "online"
     BUSY = "busy"
     OFFLINE = "offline"
+
+
+class AccountConnectionStatus(StrEnum):
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    REAUTH_REQUIRED = "reauth_required"
+    VALIDATING = "validating"
+    UNKNOWN = "unknown"
+
+
+class AccountSyncStatus(StrEnum):
+    IDLE = "idle"
+    SYNCING = "syncing"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    UNKNOWN = "unknown"
+
+
+class ReviewStatus(StrEnum):
+    PENDING = "pending"
+    UNDER_REVIEW = "under_review"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    UNKNOWN = "unknown"

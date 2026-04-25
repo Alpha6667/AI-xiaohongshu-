@@ -2,12 +2,14 @@ from fastapi import HTTPException, status
 
 from app.models.asset import Asset
 from app.models.enums import (
+    AccountSyncStatus,
     GenerationTaskType,
     MessageTaskStage,
     PostStatus,
     PublishFailureType,
     PublishStatus,
     ReviewAction,
+    ReviewStatus,
     TaskStatus,
 )
 from app.models.generation_task import GenerationTask
@@ -58,6 +60,29 @@ def _latest_metrics(post_id: str) -> PostMetricsResponse:
     )
 
 
+def _derive_review_status(post: Post) -> ReviewStatus:
+    if post.review_status != ReviewStatus.UNKNOWN:
+        return post.review_status
+    if post.status == PostStatus.UNDER_REVIEW:
+        return ReviewStatus.UNDER_REVIEW
+    if post.status == PostStatus.REJECTED:
+        return ReviewStatus.REJECTED
+    if post.status in {PostStatus.APPROVED, PostStatus.PUBLISHED}:
+        return ReviewStatus.APPROVED
+    if post.status in {PostStatus.DRAFT, PostStatus.IN_REVIEW}:
+        return ReviewStatus.PENDING
+    return ReviewStatus.UNKNOWN
+
+
+def _latest_interaction_counts(post: Post) -> tuple[int | None, int | None, int | None]:
+    latest_metrics = _latest_metrics(post.id)
+    return (
+        post.like_count if post.like_count is not None else latest_metrics.likes,
+        post.collect_count if post.collect_count is not None else latest_metrics.favorites,
+        post.comment_count if post.comment_count is not None else latest_metrics.comments,
+    )
+
+
 def _serialize_review_records(post: Post) -> list[ReviewRecordResponse]:
     return [
         ReviewRecordResponse(
@@ -79,9 +104,11 @@ def _serialize_publish_records(post: Post) -> list[PublishLogResponse]:
             status=record.status,
             detail=record.detail,
             createdAt=record.created_at,
+            executionId=record.id,
             platformPostId=record.platform_post_id,
             errorMessage=record.error_message,
             failureType=record.failure_type,
+            executionLogs=[record.detail],
         )
         for record_id in post.publish_log_ids
         if (record := repository.publish_logs.get(record_id)) is not None
@@ -123,6 +150,9 @@ def _serialize_assets(post: Post) -> list[AssetSummaryResponse]:
 
 
 def _serialize_post(post: Post) -> PostSummaryResponse:
+    latest_metrics = _latest_metrics(post.id)
+    like_count, collect_count, comment_count = _latest_interaction_counts(post)
+    message_task = _get_message_task_by_post(post)
     return PostSummaryResponse(
         id=post.id,
         topic=post.topic,
@@ -132,10 +162,22 @@ def _serialize_post(post: Post) -> PostSummaryResponse:
         status=post.status,
         assetIds=post.asset_ids,
         latestTaskIds=post.generation_task_ids[-3:],
-        latestMetrics=_latest_metrics(post.id),
+        latestMetrics=latest_metrics,
         platformPostId=post.platform_post_id,
+        platformUrl=post.platform_url,
         accountId=post.account_id,
+        accountName=(repository.accounts[post.account_id].name if post.account_id and post.account_id in repository.accounts else None),
         messageTaskId=post.message_task_id,
+        reviewStatus=_derive_review_status(post),
+        likeCount=like_count,
+        collectCount=collect_count,
+        commentCount=comment_count,
+        lastSyncAt=post.last_sync_at,
+        lastSyncStatus=post.last_sync_status,
+        syncError=post.sync_error,
+        sourceMessage=message_task.source_message if message_task is not None else None,
+        confirmationSource=("web" if post.review_record_ids else "openclaw"),
+        confirmationSourceLabel=("当前以网页确认版为准" if post.review_record_ids else "当前以 OpenClaw 最新生成结果为准"),
         createdAt=post.created_at,
         updatedAt=post.updated_at,
         publishedAt=post.published_at,
@@ -296,6 +338,7 @@ def submit_review(post_id: str, request: ReviewRequest) -> PostDetailResponse:
     if post.status != PostStatus.DRAFT:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft posts can be submitted for review")
     post.status = PostStatus.IN_REVIEW
+    post.review_status = ReviewStatus.PENDING
     _add_review_record(post, ReviewAction.SUBMIT, request)
     return get_post_detail(post_id)
 
@@ -305,6 +348,7 @@ def approve_post(post_id: str, request: ReviewRequest) -> PostDetailResponse:
     if post.status != PostStatus.IN_REVIEW:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only in_review posts can be approved")
     post.status = PostStatus.APPROVED
+    post.review_status = ReviewStatus.APPROVED
     _add_review_record(post, ReviewAction.APPROVE, request)
     return get_post_detail(post_id)
 
@@ -314,6 +358,7 @@ def reject_post(post_id: str, request: ReviewRequest) -> PostDetailResponse:
     if post.status != PostStatus.IN_REVIEW:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only in_review posts can be rejected")
     post.status = PostStatus.DRAFT
+    post.review_status = ReviewStatus.PENDING
     _add_review_record(post, ReviewAction.REJECT, request)
     return get_post_detail(post_id)
 
@@ -364,9 +409,12 @@ def publish_post(post_id: str, request: ReviewRequest) -> PublishResponse:
         detail=prepared.publish_log.detail,
         createdAt=prepared.publish_log.created_at,
         message="Publish request accepted and queued",
+        executionId=prepared.publish_log.id,
         platformPostId=prepared.publish_log.platform_post_id,
+        publishedAt=prepared.post.published_at,
         errorMessage=prepared.publish_log.error_message,
         failureType=prepared.publish_log.failure_type,
+        executionLogs=[prepared.publish_log.detail],
     )
 
 
@@ -379,9 +427,12 @@ def _serialize_publish_response(post: Post, log: PublishLog, message: str) -> Pu
         detail=log.detail,
         createdAt=log.created_at,
         message=message,
+        executionId=log.id,
         platformPostId=log.platform_post_id,
+        publishedAt=post.published_at,
         errorMessage=log.error_message,
         failureType=log.failure_type,
+        executionLogs=[log.detail],
     )
 
 
@@ -437,9 +488,11 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
 
     if payload.publishStatus == PublishStatus.SUCCEEDED:
         post.status = PostStatus.PUBLISHED
+        post.review_status = ReviewStatus.APPROVED
         post.published_at = now_iso()
         if payload.platformPostId is not None:
             post.platform_post_id = payload.platformPostId
+            post.platform_url = f"https://www.xiaohongshu.com/explore/{payload.platformPostId}"
             log.platform_post_id = payload.platformPostId
         log.error_message = None
         log.failure_type = None
@@ -459,9 +512,12 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
         detail=log.detail,
         createdAt=log.created_at,
         message="Publish result writeback completed",
+        executionId=log.id,
         platformPostId=log.platform_post_id,
+        publishedAt=post.published_at,
         errorMessage=log.error_message,
         failureType=log.failure_type,
+        executionLogs=[log.detail],
     )
 
 
@@ -480,6 +536,12 @@ def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest)
     )
     history = repository.metrics_snapshots.setdefault(post.id, [])
     history.append(snapshot)
+    post.like_count = snapshot.likes
+    post.collect_count = snapshot.favorites
+    post.comment_count = snapshot.comments
+    post.last_sync_at = timestamp
+    post.last_sync_status = AccountSyncStatus.SUCCEEDED
+    post.sync_error = None
     post.updated_at = now_iso()
     repository.save()
     return MetricsSnapshotResponse(

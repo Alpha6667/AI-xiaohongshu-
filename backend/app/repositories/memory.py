@@ -10,13 +10,16 @@ from dataclasses import asdict
 from app.models.account import Account
 from app.models.asset import Asset
 from app.models.enums import (
+    AccountConnectionStatus,
     AccountStatus,
+    AccountSyncStatus,
     GenerationTaskType,
     MessageTaskStage,
     PostStatus,
     PublishFailureType,
     PublishStatus,
     ReviewAction,
+    ReviewStatus,
     TaskStatus,
 )
 from app.models.generation_task import GenerationTask
@@ -70,8 +73,20 @@ class InMemoryRepository:
                 status=PostStatus(value["status"]),
                 asset_ids=list(value.get("asset_ids", [])),
                 platform_post_id=value.get("platform_post_id"),
+                platform_url=value.get("platform_url"),
                 account_id=value.get("account_id"),
                 message_task_id=value.get("message_task_id"),
+                review_status=(ReviewStatus(value["review_status"]) if value.get("review_status") is not None else ReviewStatus.UNKNOWN),
+                like_count=value.get("like_count"),
+                collect_count=value.get("collect_count"),
+                comment_count=value.get("comment_count"),
+                last_sync_at=value.get("last_sync_at"),
+                last_sync_status=(
+                    AccountSyncStatus(value["last_sync_status"])
+                    if value.get("last_sync_status") is not None
+                    else AccountSyncStatus.UNKNOWN
+                ),
+                sync_error=value.get("sync_error"),
                 created_at=value.get("created_at", ""),
                 updated_at=value.get("updated_at", ""),
                 published_at=value.get("published_at"),
@@ -163,6 +178,23 @@ class InMemoryRepository:
                 last_active_at=value.get("last_active_at"),
                 created_at=value["created_at"],
                 updated_at=value["updated_at"],
+                connection_status=(
+                    AccountConnectionStatus(value["connection_status"])
+                    if value.get("connection_status") is not None
+                    else AccountConnectionStatus.UNKNOWN
+                ),
+                reauth_required=value.get("reauth_required", False),
+                connected_at=value.get("connected_at"),
+                last_validated_at=value.get("last_validated_at"),
+                last_used_at=value.get("last_used_at"),
+                last_auth_error=value.get("last_auth_error"),
+                last_sync_at=value.get("last_sync_at"),
+                last_sync_status=(
+                    AccountSyncStatus(value["last_sync_status"])
+                    if value.get("last_sync_status") is not None
+                    else AccountSyncStatus.UNKNOWN
+                ),
+                last_sync_error=value.get("last_sync_error"),
             )
             for key, value in (payload.get("accounts", {}) or {}).items()
         }
@@ -249,6 +281,11 @@ class InMemoryRepository:
                 last_active_at=created_at,
                 created_at=created_at,
                 updated_at=created_at,
+                connection_status=AccountConnectionStatus.CONNECTED,
+                connected_at=created_at,
+                last_validated_at=created_at,
+                last_sync_at=created_at,
+                last_sync_status=AccountSyncStatus.SUCCEEDED,
             )
             self.accounts["account_seed_store"] = Account(
                 id="account_seed_store",
@@ -259,6 +296,11 @@ class InMemoryRepository:
                 last_active_at=created_at,
                 created_at=created_at,
                 updated_at=created_at,
+                connection_status=AccountConnectionStatus.VALIDATING,
+                connected_at=created_at,
+                last_validated_at=created_at,
+                last_sync_at=created_at,
+                last_sync_status=AccountSyncStatus.SYNCING,
             )
 
         default_account_id = next(iter(self.accounts.keys())) if self.accounts else None
@@ -276,7 +318,9 @@ class InMemoryRepository:
                 PostStatus.IN_REVIEW: MessageTaskStage.WAITING_REVIEW,
                 PostStatus.APPROVED: MessageTaskStage.WAITING_PUBLISH,
                 PostStatus.PUBLISHING: MessageTaskStage.PUBLISHING,
+                PostStatus.UNDER_REVIEW: MessageTaskStage.PUBLISHING,
                 PostStatus.PUBLISHED: MessageTaskStage.PUBLISHED,
+                PostStatus.REJECTED: MessageTaskStage.FAILED,
                 PostStatus.PUBLISH_FAILED: MessageTaskStage.FAILED,
             }[post.status]
 
@@ -320,6 +364,8 @@ class InMemoryRepository:
             tags=["敏感肌", "春季护肤", "内容策划"],
             status=PostStatus.DRAFT,
             asset_ids=[asset.id],
+            review_status=ReviewStatus.PENDING,
+            last_sync_status=AccountSyncStatus.IDLE,
             account_id="account_seed_brand",
             created_at=created_at,
             updated_at=created_at,
@@ -331,6 +377,8 @@ class InMemoryRepository:
             body="从灯光、收纳和桌面秩序切入，强调轻改造。",
             tags=["桌搭", "办公区", "氛围感"],
             status=PostStatus.IN_REVIEW,
+            review_status=ReviewStatus.PENDING,
+            last_sync_status=AccountSyncStatus.IDLE,
             account_id="account_seed_store",
             created_at=created_at,
             updated_at=created_at,
@@ -344,7 +392,14 @@ class InMemoryRepository:
             status=PostStatus.PUBLISHED,
             asset_ids=[asset.id],
             platform_post_id="xh_123456",
+            platform_url="https://www.xiaohongshu.com/explore/xh_123456",
             account_id="account_seed_brand",
+            review_status=ReviewStatus.APPROVED,
+            like_count=1260,
+            collect_count=842,
+            comment_count=115,
+            last_sync_at=created_at,
+            last_sync_status=AccountSyncStatus.SUCCEEDED,
             created_at=created_at,
             updated_at=created_at,
             published_at=created_at,

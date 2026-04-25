@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.assets import router as assets_router
 from app.api.routes.accounts import router as accounts_router
+from app.api.routes.confirmations import router as confirmations_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.health import router as health_router
 from app.api.routes.integrations import router as integrations_router
@@ -28,4 +29,5 @@ app.include_router(assets_router)
 app.include_router(dashboard_router)
 app.include_router(tasks_router)
 app.include_router(accounts_router)
+app.include_router(confirmations_router)
 app.include_router(integrations_router)

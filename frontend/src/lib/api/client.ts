@@ -1,8 +1,12 @@
 import type {
   AccountRecord,
+  AccountWorksSyncResponse,
   AssetSummary,
   AssetUploadPayload,
   AssetUploadResponse,
+  ConfirmationDetail,
+  ConfirmationSummary,
+  ConfirmationUpdatePayload,
   DashboardSummary,
   GenerationTaskPayload,
   MessageTaskRecord,
@@ -76,8 +80,40 @@ export const apiClient = {
   },
   accounts: {
     listEndpoint: endpoint("/accounts"),
+    worksSyncEndpoint(accountId: string) {
+      return endpoint(`/accounts/${accountId}/works-sync`);
+    },
     list() {
       return apiFetch<AccountRecord[]>(endpoint("/accounts"));
+    },
+    getWorksSync(accountId: string) {
+      return apiFetch<AccountWorksSyncResponse>(endpoint(`/accounts/${accountId}/works-sync`));
+    },
+    triggerWorksSync(accountId: string) {
+      return apiFetch<AccountWorksSyncResponse>(endpoint(`/accounts/${accountId}/works-sync`), {
+        method: "POST",
+      });
+    },
+  },
+  confirmations: {
+    listEndpoint: endpoint("/confirmations"),
+    detailEndpoint(postId: string) {
+      return endpoint(`/confirmations/${postId}`);
+    },
+    updateEndpoint(postId: string) {
+      return endpoint(`/confirmations/${postId}`);
+    },
+    list() {
+      return apiFetch<ConfirmationSummary[]>(endpoint("/confirmations"));
+    },
+    getById(postId: string) {
+      return apiFetch<ConfirmationDetail>(endpoint(`/confirmations/${postId}`));
+    },
+    update(postId: string, payload: ConfirmationUpdatePayload) {
+      return apiFetch<ConfirmationDetail>(endpoint(`/confirmations/${postId}`), {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
     },
   },
   posts: {
@@ -179,10 +215,17 @@ export const apiClient = {
   },
   review: {
     async list() {
-      const posts = await apiFetch<PostListItem[]>(endpoint("/posts"));
-      const inReviewPosts = posts.filter((post) => post.status === "in_review");
-      const details = await Promise.all(inReviewPosts.map((post) => apiFetch<PostDetail>(endpoint(`/posts/${post.id}`))));
-      return details.map(getReviewQueueItem);
+      try {
+        const confirmations = await apiFetch<ConfirmationSummary[]>(endpoint("/confirmations"));
+        const inReviewPosts = confirmations.filter((post) => post.status === "in_review");
+        const details = await Promise.all(inReviewPosts.map((post) => apiFetch<ConfirmationDetail>(endpoint(`/confirmations/${post.id}`))));
+        return details.map(getReviewQueueItem);
+      } catch {
+        const posts = await apiFetch<PostListItem[]>(endpoint("/posts"));
+        const inReviewPosts = posts.filter((post) => post.status === "in_review");
+        const details = await Promise.all(inReviewPosts.map((post) => apiFetch<PostDetail>(endpoint(`/posts/${post.id}`))));
+        return details.map(getReviewQueueItem);
+      }
     },
   },
   workspace: {

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from app.models.enums import AccountStatus
+from app.models.enums import AccountConnectionStatus, AccountStatus, AccountSyncStatus
 
 
 @dataclass(slots=True)
@@ -13,3 +13,12 @@ class Account:
     last_active_at: str | None
     created_at: str
     updated_at: str
+    connection_status: AccountConnectionStatus = AccountConnectionStatus.UNKNOWN
+    reauth_required: bool = False
+    connected_at: str | None = None
+    last_validated_at: str | None = None
+    last_used_at: str | None = None
+    last_auth_error: str | None = None
+    last_sync_at: str | None = None
+    last_sync_status: AccountSyncStatus = AccountSyncStatus.UNKNOWN
+    last_sync_error: str | None = None

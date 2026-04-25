@@ -40,6 +40,33 @@ export interface AccountRecord {
   lastSyncError?: string | null;
 }
 
+export interface AccountWorkSyncItem {
+  postId: string;
+  title: string;
+  topic: string;
+  platformPostId?: string | null;
+  platformUrl?: string | null;
+  publishedAt?: string | null;
+  reviewStatus?: ReviewStatus | string | null;
+  likeCount: number;
+  collectCount: number;
+  commentCount: number;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  syncError?: string | null;
+  updatedAt: string;
+}
+
+export interface AccountWorksSyncResponse {
+  accountId: string;
+  connectionStatus?: AccountConnectionStatus | string | null;
+  reauthRequired?: boolean | null;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  lastSyncError?: string | null;
+  works: AccountWorkSyncItem[];
+}
+
 export interface MessageTaskRecord {
   id: string;
   postId?: string | null;
@@ -195,6 +222,30 @@ export interface PostDetail extends PostListItem {
   reviewRecords: ReviewRecord[];
   publishRecords: PublishRecord[];
   metricsHistory: MetricsHistoryItem[];
+}
+
+export interface ConfirmationSummary extends PostListItem {
+  postId: string;
+  accountName?: string | null;
+  sourceMessage?: string | null;
+  confirmationSource?: string | null;
+  confirmationSourceLabel?: string | null;
+}
+
+export interface ConfirmationDetail extends PostDetail {
+  postId: string;
+  accountName?: string | null;
+  sourceMessage?: string | null;
+  confirmationSource?: string | null;
+  confirmationSourceLabel?: string | null;
+}
+
+export interface ConfirmationUpdatePayload {
+  title?: string;
+  body?: string;
+  tags?: string[];
+  assetIds?: string[];
+  accountId?: string;
 }
 
 export interface ReviewQueueItem {

@@ -1,7 +1,24 @@
 import { ComposerWorkbench } from "../../components/composer-workbench";
 import { SectionCard, SectionHeading } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
+import type { PostDetail, PostListItem } from "../../lib/api/types";
 import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getMessageTaskForPost, getWorkspaceCandidates } from "../../lib/product";
+
+async function getConfirmationsOrFallback(): Promise<PostListItem[]> {
+  try {
+    return await apiClient.confirmations.list();
+  } catch {
+    return await apiClient.posts.list();
+  }
+}
+
+async function getConfirmationDetailOrFallback(postId: string): Promise<PostDetail> {
+  try {
+    return await apiClient.confirmations.getById(postId);
+  } catch {
+    return await apiClient.posts.getById(postId);
+  }
+}
 
 async function getTasksOrNull() {
   try {
@@ -29,12 +46,12 @@ function getSelectedPostId(searchParams: { postId?: string | string[] } | undefi
 
 export default async function ReviewPage({ searchParams }: { searchParams?: Promise<{ postId?: string | string[] }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
+  const [posts, accountRecords, taskRecords] = await Promise.all([getConfirmationsOrFallback(), getAccountsOrNull(), getTasksOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
   const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
   const candidates = getWorkspaceCandidates(posts);
   const selectedPostId = getSelectedPostId(resolvedSearchParams) ?? candidates[0]?.id ?? null;
-  const selectedPost = selectedPostId ? await apiClient.posts.getById(selectedPostId) : null;
+  const selectedPost = selectedPostId ? await getConfirmationDetailOrFallback(selectedPostId) : null;
   const selectedTask = selectedPost ? getMessageTaskForPost(selectedPost, tasks) : null;
 
   return (
