@@ -379,3 +379,13 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 用户既可以在 QQ/OpenClaw 里查看候选文案和图片，也可以在 HTML 网页上查看同一份候选内容。
   - 用户确认后，可通过 OpenClaw 指令直接要求发布所选文案和图片；网页端也应能完成同样的确认与发布操作。
   - 发布后需要进入“小红书审核中 -> 审核通过后发布 / 未通过则提醒”的链路，提醒应同时覆盖 OpenClaw 和网页端。
+
+[OpenClaw DeepSeek V4 兼容现状]
+- Date: 2026-04-28
+- Context: Agent 在排查 OpenClaw 使用 DeepSeek V4 Flash / Pro 时发现
+- Category: 环境配置
+- Instructions:
+  - 当前服务器上真正生效的 OpenClaw CLI 来自 pnpm 全局路径 `/root/.local/share/pnpm/openclaw`，而不是最初猜测的 nvm 全局 node_modules 路径。
+  - DeepSeek V4 Flash / Pro 的流式响应会返回 `reasoning_content`，OpenClaw 当前 `openai-completions` 适配层会把它当成内部 `thinking` 内容处理，导致后续请求报 `The reasoning_content in the thinking mode must be passed back to the API.`。
+  - 本次最小修复点位于 `@mariozechner/pi-ai/dist/providers/openai-completions.js`，策略是对 `deepseek.com` 跳过 `reasoning_content` 到内部 `thinking` 的转换，并避免自动补空的 `assistantMsg.reasoning_content`。
+  - `openclaw tui` 默认使用 session key `main`，验证模型修复时必须显式传新的 `--session` 值，避免旧会话上下文污染结果。
