@@ -26,6 +26,9 @@
 - `OPENCLAW_DEEPSEEK_V4_TROUBLESHOOTING.md`：OpenClaw 接入 DeepSeek V4 的失败原因与最小修复记录
 - `XHS_REAL_PUBLISH_SUCCESS_REVIEW_2026-04-29.md`：本次小红书真实发布成功的完整复盘
 - `XHS_FINAL_CLOSING_CHECKLIST.md`：小红书项目最后收尾事项清单
+- `IMAGE_MODEL_PROVIDER_INTEGRATION_PLAN.md`：生图模型厂商接入与配置页方案
+- `IMAGE_MODEL_PROVIDER_FRONTEND_TASK.md`：生图模型厂商配置页前端任务单
+- `IMAGE_MODEL_PROVIDER_BACKEND_TASK.md`：生图模型厂商配置与服务端接入边界任务单
 
 ## 协作说明
 

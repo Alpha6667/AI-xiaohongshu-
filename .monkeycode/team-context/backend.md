@@ -1,5 +1,14 @@
 # Backend Sync
 
+## 第十三轮生图模型厂商配置与适配层任务
+
+- 当前新增一轮后端任务：补模型厂商配置存储、Key 脱敏读取、默认模型映射和无 Key 错误语义。
+- 直接阅读：
+  - `.monkeycode/docs/IMAGE_MODEL_PROVIDER_INTEGRATION_PLAN.md`
+  - `.monkeycode/docs/IMAGE_MODEL_PROVIDER_BACKEND_TASK.md`
+- 当前用户还没有真实 Key，因此本轮不以完整真实出图联调为前提。
+- 本轮重点是先把配置接口、服务端边界和后续真实接入 OpenAI / 火山方舟的抽象搭好。
+
 ## 第十二轮发布适配层与 OpenClaw 发布闭环
 
 - 本轮新增发布适配层，先以 fake/mock publisher 打通平台内部闭环，不把业务层写死在小红书页面细节。

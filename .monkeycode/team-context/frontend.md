@@ -1,5 +1,14 @@
 # Frontend Sync
 
+## 第十三轮生图模型配置页任务
+
+- 当前新增一轮前端任务：补可视化“模型设置页”，承接生图厂商选择、Key 录入、默认模型自动切换和无 Key 空态。
+- 直接阅读：
+  - `.monkeycode/docs/IMAGE_MODEL_PROVIDER_INTEGRATION_PLAN.md`
+  - `.monkeycode/docs/IMAGE_MODEL_PROVIDER_FRONTEND_TASK.md`
+- 当前用户还没有真实 Key，因此本轮不以真实出图联调为阻塞条件。
+- 本轮重点是先把页面结构、交互、脱敏展示和与 `/review` 的错误提示链路搭好。
+
 ## 当前优先级说明
 
 - 下一阶段执行顺序以 `.monkeycode/docs/NEXT_PHASE_EXECUTION_PLAN.md` 为准。
