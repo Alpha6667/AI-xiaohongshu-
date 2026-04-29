@@ -34,7 +34,7 @@ from app.schemas.posts import (
     ReviewRequest,
     TaskRecordResponse,
 )
-from app.services.publisher import PreparedPublish, publisher_adapter
+from app.services.publisher import MetricsFetchError, PreparedPublish, publisher_adapter
 from app.services.image_provider import ProviderNotConfiguredError, prepare_image_provider_for_generation
 
 
@@ -448,6 +448,23 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
             log.platform_post_id = payload.platformPostId
         log.error_message = None
         log.failure_type = None
+        try:
+            metrics = publisher_adapter.fetch_metrics(post)
+            history = repository.metrics_snapshots.setdefault(post.id, [])
+            history.append(
+                MetricsSnapshot(
+                    id=new_id("metric"),
+                    post_id=post.id,
+                    views=metrics["views"],
+                    likes=metrics["likes"],
+                    favorites=metrics["favorites"],
+                    comments=metrics["comments"],
+                    follow_conversions=metrics["followConversions"],
+                    snapshot_at=now_iso(),
+                )
+            )
+        except MetricsFetchError as exc:
+            log.detail = f"{log.detail} | metrics_fetch:{exc.code}"
     else:
         post.status = PostStatus.PUBLISH_FAILED
         log.error_message = payload.errorMessage or payload.detail or "Publish failed"

@@ -1,10 +1,14 @@
 from dataclasses import dataclass
+import json
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from fastapi import HTTPException, status
 
 from app.models.enums import PostStatus, PublishStatus
 from app.models.post import Post
 from app.models.publish_log import PublishLog
+from app.db.config import get_settings
 from app.repositories.memory import new_id, now_iso, repository
 
 
@@ -12,6 +16,13 @@ from app.repositories.memory import new_id, now_iso, repository
 class PreparedPublish:
     post: Post
     publish_log: PublishLog
+
+
+class MetricsFetchError(RuntimeError):
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+        self.message = message
 
 
 class FakePublisherAdapter:
@@ -46,17 +57,51 @@ class FakePublisherAdapter:
         return prepared
 
     def fetch_metrics(self, post: Post) -> dict[str, int]:
-        snapshots = repository.metrics_snapshots.get(post.id, [])
-        if not snapshots:
-            return {"views": 0, "likes": 0, "favorites": 0, "comments": 0, "followConversions": 0}
-        latest = snapshots[-1]
-        return {
-            "views": latest.views,
-            "likes": latest.likes,
-            "favorites": latest.favorites,
-            "comments": latest.comments,
-            "followConversions": latest.follow_conversions,
-        }
+        settings = get_settings()
+        metrics_url = getattr(settings, "openclaw_metrics_webhook_url", "")
+        if not metrics_url:
+            raise MetricsFetchError("metrics_fetch_not_configured", "OpenClaw metrics webhook URL is not configured")
+        if not post.platform_post_id:
+            raise MetricsFetchError("platform_post_id_missing", "Platform post id is required for metrics fetch")
+
+        payload = json.dumps({"postId": post.id, "platformPostId": post.platform_post_id}).encode("utf-8")
+        request = Request(metrics_url, data=payload, method="POST")
+        request.add_header("Content-Type", "application/json")
+
+        auth_token = getattr(settings, "openclaw_metrics_auth_token", "")
+        if auth_token:
+            request.add_header("Authorization", f"Bearer {auth_token}")
+
+        timeout_seconds = max(1, int(getattr(settings, "openclaw_metrics_timeout_seconds", 10)))
+
+        try:
+            with urlopen(request, timeout=timeout_seconds) as response:
+                content = response.read().decode("utf-8")
+        except HTTPError as exc:
+            raise MetricsFetchError("metrics_fetch_http_error", f"Metrics fetch http error: {exc.code}") from exc
+        except URLError as exc:
+            raise MetricsFetchError("metrics_fetch_network_error", f"Metrics fetch network error: {exc.reason}") from exc
+
+        try:
+            raw = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise MetricsFetchError("metrics_fetch_invalid_response", "Metrics fetch response is not valid JSON") from exc
+
+        required_keys = ("views", "likes", "favorites", "comments", "followConversions")
+        missing_keys = [key for key in required_keys if key not in raw]
+        if missing_keys:
+            raise MetricsFetchError("metrics_fetch_invalid_payload", "Metrics response missing required fields")
+
+        try:
+            return {
+                "views": int(raw["views"]),
+                "likes": int(raw["likes"]),
+                "favorites": int(raw["favorites"]),
+                "comments": int(raw["comments"]),
+                "followConversions": int(raw["followConversions"]),
+            }
+        except (TypeError, ValueError) as exc:
+            raise MetricsFetchError("metrics_fetch_invalid_payload", "Metrics response contains invalid numeric fields") from exc
 
 
 publisher_adapter = FakePublisherAdapter()

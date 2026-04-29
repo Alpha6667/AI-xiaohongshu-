@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.repositories.memory import repository
+from app.services.publisher import MetricsFetchError
 
 
 def reset_repository() -> None:
@@ -361,6 +363,97 @@ class BackendApiMinimalTests(unittest.TestCase):
         )
         self.assertEqual(rate_limited_resp.status_code, 200)
         self.assertEqual(rate_limited_resp.json()["failureType"], "rate_limited")
+
+    def test_publish_success_writeback_auto_fetches_metrics_snapshot(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "发布后自动拉取指标",
+                "title": "发布后自动拉取指标标题",
+                "body": "发布后自动拉取指标正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        self.client.post(f"/api/posts/{post_id}/submit-review", json={"comment": "提交", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/approve", json={"comment": "通过", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/publish", json={"comment": "进入发布", "operator": "qa"})
+
+        before_count = len(self.client.get(f"/api/posts/{post_id}").json()["metricsHistory"])
+
+        with patch("app.services.posts.publisher_adapter.fetch_metrics") as fetch_mock:
+            fetch_mock.return_value = {
+                "views": 321,
+                "likes": 45,
+                "favorites": 12,
+                "comments": 6,
+                "followConversions": 3,
+            }
+            writeback_resp = self.client.post(
+                f"/api/posts/{post_id}/publish-result",
+                json={
+                    "publishStatus": "succeeded",
+                    "operator": "worker",
+                    "detail": "发布成功",
+                    "platformPostId": "xh_metrics_1",
+                },
+            )
+
+        self.assertEqual(writeback_resp.status_code, 200)
+        self.assertEqual(writeback_resp.json()["status"], "published")
+        fetch_mock.assert_called_once()
+
+        after_detail = self.client.get(f"/api/posts/{post_id}").json()
+        after_history = after_detail["metricsHistory"]
+        self.assertEqual(len(after_history), before_count + 1)
+        self.assertEqual(after_history[-1]["views"], 321)
+        self.assertEqual(after_history[-1]["likes"], 45)
+        self.assertEqual(after_history[-1]["favorites"], 12)
+        self.assertEqual(after_history[-1]["comments"], 6)
+        self.assertEqual(after_history[-1]["followConversions"], 3)
+
+    def test_publish_success_writeback_metrics_fetch_failure_keeps_publish_success(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "发布后拉取指标失败容错",
+                "title": "发布后拉取指标失败容错标题",
+                "body": "发布后拉取指标失败容错正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        self.client.post(f"/api/posts/{post_id}/submit-review", json={"comment": "提交", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/approve", json={"comment": "通过", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/publish", json={"comment": "进入发布", "operator": "qa"})
+
+        before_count = len(self.client.get(f"/api/posts/{post_id}").json()["metricsHistory"])
+
+        with patch("app.services.posts.publisher_adapter.fetch_metrics") as fetch_mock:
+            fetch_mock.side_effect = MetricsFetchError("metrics_fetch_network_error", "network down")
+            writeback_resp = self.client.post(
+                f"/api/posts/{post_id}/publish-result",
+                json={
+                    "publishStatus": "succeeded",
+                    "operator": "worker",
+                    "detail": "发布成功",
+                    "platformPostId": "xh_metrics_2",
+                },
+            )
+
+        self.assertEqual(writeback_resp.status_code, 200)
+        self.assertEqual(writeback_resp.json()["status"], "published")
+        fetch_mock.assert_called_once()
+
+        after_detail = self.client.get(f"/api/posts/{post_id}").json()
+        self.assertEqual(after_detail["status"], "published")
+        self.assertEqual(len(after_detail["metricsHistory"]), before_count)
 
     def test_openclaw_publish_adapter_state_flow(self) -> None:
         create_resp = self.client.post(
