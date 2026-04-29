@@ -25,6 +25,7 @@
 - `OPENCLAW_XHS_MASTER_NAVIGATION.md`：OpenClaw 小红书项目总导航
 - `OPENCLAW_DEEPSEEK_V4_TROUBLESHOOTING.md`：OpenClaw 接入 DeepSeek V4 的失败原因与最小修复记录
 - `XHS_REAL_PUBLISH_SUCCESS_REVIEW_2026-04-29.md`：本次小红书真实发布成功的完整复盘
+- `XHS_FINAL_CLOSING_CHECKLIST.md`：小红书项目最后收尾事项清单
 
 ## 协作说明
 
