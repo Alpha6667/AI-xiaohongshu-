@@ -29,6 +29,8 @@
 - `IMAGE_MODEL_PROVIDER_INTEGRATION_PLAN.md`：生图模型厂商接入与配置页方案
 - `IMAGE_MODEL_PROVIDER_FRONTEND_TASK.md`：生图模型厂商配置页前端任务单
 - `IMAGE_MODEL_PROVIDER_BACKEND_TASK.md`：生图模型厂商配置与服务端接入边界任务单
+- `SERVER_MINIMAL_DEPLOYMENT.md`：部署到自有服务器的最小上线方案
+- `OPENCLAW_SERVER_DEPLOY_HANDOFF.md`：发给 OpenClaw 的服务器部署交接文案
 
 ## 协作说明
 
