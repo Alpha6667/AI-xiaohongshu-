@@ -389,3 +389,11 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - DeepSeek V4 Flash / Pro 的流式响应会返回 `reasoning_content`，OpenClaw 当前 `openai-completions` 适配层会把它当成内部 `thinking` 内容处理，导致后续请求报 `The reasoning_content in the thinking mode must be passed back to the API.`。
   - 本次最小修复点位于 `@mariozechner/pi-ai/dist/providers/openai-completions.js`，策略是对 `deepseek.com` 跳过 `reasoning_content` 到内部 `thinking` 的转换，并避免自动补空的 `assistantMsg.reasoning_content`。
   - `openclaw tui` 默认使用 session key `main`，验证模型修复时必须显式传新的 `--session` 值，避免旧会话上下文污染结果。
+
+[不要重启 OpenClaw 主服务]
+- Date: 2026-04-29
+- Context: 用户说明排障时重启 Gateway 测试曾把 OpenClaw 服务整体带挂
+- Instructions:
+  - 排查 Gateway 或模型问题时，不要重启会影响当前 OpenClaw 会话链路的主服务。
+  - 不要通过“重启 OpenClaw 服务”来做 Gateway 测试，优先使用前台临时实例、独立端口或最小化验证方式。
+  - 后续所有排障步骤都应先区分：是独立测试实例，还是会影响现网 OpenClaw 主服务。
