@@ -131,9 +131,11 @@
 ## 当前问题
 
 - 2026-04-29 已新增 `/settings/models`，用于配置生图厂商、API Key、默认模型和可选 Base URL；全局导航已补“AI 生成设置”入口。
-- 前端已新增 `GET /api/settings/image-provider`、`POST /api/settings/image-provider`、`POST /api/settings/image-provider/test` 的客户端封装与类型定义，优先按文档约定接真实接口。
-- 当前分支后端尚未提供上述模型配置接口，所以设置页会明确进入“前端草稿模式”，允许先确认厂商、默认模型和交互，不会假装已经可真实出图。
-- `/review` 的“刷新候选内容”现在会单独识别图片生成未配置厂商或 Key 的失败语义；若命中 `provider_not_configured` 或等价错误，会明确提示去 `/settings/models` 完成配置，而不是继续把图片生成失败伪装成成功。
+- 前端已新增 `GET /api/settings/image-provider`、`POST /api/settings/image-provider`、`POST /api/settings/image-provider/test` 的客户端封装与类型定义，并按后端最终契约联调。
+- `GET /api/settings/image-provider` 现在只按 `provider`、`imageModel`、`baseUrl`、`hasKey`、`maskedKey`、`updatedAt` 渲染页面状态，不依赖任何明文 key。
+- `POST /api/settings/image-provider` 保存时允许只传 `provider`；若前端未手动改模型名，则不传 `imageModel`，直接承接后端默认模型补齐逻辑。
+- `POST /api/settings/image-provider/test` 现在按业务响应体解析，不只看 HTTP 状态：前端会读取 `ok` 与 `code`，对 `provider_not_configured` 和 `provider_model_not_configured` 给出明确提示。
+- `/review` 的“刷新候选内容”现在只按真实 `generate-images` 错误语义识别设置缺口：命中 `provider_not_configured` 或 `provider_model_not_configured` 时，会明确提示去 `/settings/models` 完成配置，不再沿用旧的宽泛兜底判断。
 - 厂商切换已按文档内置默认模型映射：`openai -> gpt-image-1`、`bfl -> flux.2`、`volcengine -> seedream`、`tencent -> hunyuan-image`、`alibaba -> wanx`、`stability -> stable-image`；切换厂商后页面会自动带出推荐模型，但仍允许手动改名。
 - 设置页读取配置时只展示 `maskedKey` / `hasKey`，不提供完整 Key 回显或复制完整 Key 的入口，页面文案也已明确 Key 只用于服务端请求第三方模型。
 

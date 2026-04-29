@@ -9,8 +9,8 @@ export type ReviewStatus = "pending" | "under_review" | "approved" | "rejected" 
 export type ImageProviderId = "openai" | "volcengine" | "tencent" | "alibaba" | "bfl" | "stability";
 
 export interface ImageProviderConfig {
-  provider: ImageProviderId;
-  imageModel: string;
+  provider?: ImageProviderId | null;
+  imageModel?: string | null;
   baseUrl?: string | null;
   hasKey: boolean;
   maskedKey?: string | null;
@@ -25,9 +25,12 @@ export interface ImageProviderConfigPayload {
 }
 
 export interface ImageProviderTestResponse {
-  ok?: boolean;
+  ok: boolean;
+  code?: "provider_not_configured" | "provider_model_not_configured" | string | null;
+  provider?: ImageProviderId | string | null;
+  imageModel?: string | null;
+  baseUrl?: string | null;
   message: string;
-  errorCode?: string | null;
 }
 
 export interface DashboardSummary {

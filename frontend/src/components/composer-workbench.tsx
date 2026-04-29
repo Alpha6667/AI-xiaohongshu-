@@ -6,7 +6,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type { PostDetail, PostListItem } from "../lib/api/types";
-import { getImageProviderSetupMessage, isProviderNotConfiguredMessage } from "../lib/image-provider";
+import { getImageProviderSetupMessage, isImageProviderSetupError } from "../lib/image-provider";
 import type { AccountOverview, MessageTask } from "../lib/product";
 import { buildCopyVariants, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getSharedConfirmationInfo, getStatusLabel, getStatusTone } from "../lib/product";
 import { StatusPill } from "./ui";
@@ -83,7 +83,7 @@ export function ComposerWorkbench({
 
       const copyFailedMessage = copyResult.status === "rejected" ? getErrorMessage(copyResult.reason) : null;
       const imageFailedMessage = imageResult.status === "rejected" ? getErrorMessage(imageResult.reason) : null;
-      const imageNeedsProviderSetup = imageFailedMessage ? isProviderNotConfiguredMessage(imageFailedMessage) : false;
+      const imageNeedsProviderSetup = imageFailedMessage ? isImageProviderSetupError(imageFailedMessage) : false;
 
       if (imageNeedsProviderSetup) {
         setImageProviderSetupRequired(true);
@@ -102,10 +102,9 @@ export function ComposerWorkbench({
       }
 
       setNotice(imageFailedMessage ? getImageProviderSetupMessage(imageFailedMessage) : (copyFailedMessage ?? "刷新候选内容失败"));
-        
     } catch (error) {
       const message = getErrorMessage(error);
-      setImageProviderSetupRequired(isProviderNotConfiguredMessage(message));
+      setImageProviderSetupRequired(isImageProviderSetupError(message));
       setNotice(getImageProviderSetupMessage(message));
     } finally {
       setPending(false);

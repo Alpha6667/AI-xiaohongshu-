@@ -48,8 +48,17 @@ async function apiFetch<T>(pathname: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    const error = new Error(message || `Request failed: ${response.status}`) as Error & { status?: number };
+    const rawMessage = await response.text();
+    let message = rawMessage || `Request failed: ${response.status}`;
+    try {
+      const parsed = JSON.parse(rawMessage) as { detail?: string };
+      if (typeof parsed.detail === "string" && parsed.detail) {
+        message = parsed.detail;
+      }
+    } catch {
+      // Keep raw response text when it is not JSON.
+    }
+    const error = new Error(message) as Error & { status?: number };
     error.status = response.status;
     throw error;
   }
@@ -93,9 +102,10 @@ export const apiClient = {
         body: JSON.stringify(payload),
       });
     },
-    testImageProvider() {
+    testImageProvider(payload?: { provider?: string }) {
       return apiFetch<ImageProviderTestResponse>(endpoint("/settings/image-provider/test"), {
         method: "POST",
+        body: JSON.stringify(payload ?? {}),
       });
     },
   },

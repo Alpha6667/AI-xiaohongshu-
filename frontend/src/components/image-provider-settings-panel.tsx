@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type { ImageProviderConfig, ImageProviderId } from "../lib/api/types";
-import { getDefaultImageModel, getImageProviderLabel, getImageProviderSetupMessage, imageProviderOptions } from "../lib/image-provider";
+import { getDefaultImageModel, getImageProviderLabel, getImageProviderSetupMessage, getImageProviderTestMessage, imageProviderOptions } from "../lib/image-provider";
 import { StatusPill } from "./ui";
 
 const initialProvider: ImageProviderId = "openai";
@@ -23,6 +23,7 @@ function buildEmptyConfig(): ImageProviderConfig {
 export function ImageProviderSettingsPanel() {
   const [config, setConfig] = useState<ImageProviderConfig>(buildEmptyConfig());
   const [apiKey, setApiKey] = useState("");
+  const [modelEdited, setModelEdited] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [backendReady, setBackendReady] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -39,13 +40,14 @@ export function ImageProviderSettingsPanel() {
           return;
         }
         setConfig({
-          provider: payload.provider,
-          imageModel: payload.imageModel || getDefaultImageModel(payload.provider),
+          provider: payload.provider ?? initialProvider,
+          imageModel: payload.imageModel || (payload.provider ? getDefaultImageModel(payload.provider) : getDefaultImageModel(initialProvider)),
           baseUrl: payload.baseUrl ?? "",
           hasKey: payload.hasKey,
           maskedKey: payload.maskedKey ?? null,
           updatedAt: payload.updatedAt ?? null,
         });
+        setModelEdited(Boolean(payload.imageModel && payload.provider && payload.imageModel !== getDefaultImageModel(payload.provider)));
         setBackendReady(true);
       } catch (error) {
         if (disposed) {
@@ -73,6 +75,7 @@ export function ImageProviderSettingsPanel() {
       provider,
       imageModel: getDefaultImageModel(provider),
     }));
+    setModelEdited(false);
     setNotice(null);
   }
 
@@ -82,19 +85,21 @@ export function ImageProviderSettingsPanel() {
 
     try {
       const payload = await apiClient.settings.saveImageProvider({
-        provider: config.provider,
+        provider: currentProvider,
         apiKey: apiKey.trim() || undefined,
-        imageModel: config.imageModel.trim() || getDefaultImageModel(config.provider),
+        imageModel: modelEdited ? (config.imageModel?.trim() || undefined) : undefined,
         baseUrl: config.baseUrl?.trim() || undefined,
       });
+      const nextProvider = (payload.provider as ImageProviderId | null | undefined) ?? currentProvider;
       setConfig({
-        provider: payload.provider,
-        imageModel: payload.imageModel || getDefaultImageModel(payload.provider),
+        provider: nextProvider,
+        imageModel: payload.imageModel || getDefaultImageModel(nextProvider),
         baseUrl: payload.baseUrl ?? "",
         hasKey: payload.hasKey,
         maskedKey: payload.maskedKey ?? null,
         updatedAt: payload.updatedAt ?? null,
       });
+      setModelEdited(Boolean(payload.imageModel && payload.imageModel !== getDefaultImageModel(nextProvider)));
       setApiKey("");
       setBackendReady(true);
       setNotice(payload.hasKey ? "已保存模型厂商配置，后端后续会用这套配置去请求第三方生图服务。" : "已保存厂商和模型，但当前仍未配置 API Key。" );
@@ -106,17 +111,12 @@ export function ImageProviderSettingsPanel() {
   }
 
   async function handleTest() {
-    if (!config.hasKey && !apiKey.trim()) {
-      setNotice("当前还没有可用的 API Key，先保存厂商和 Key，再测试连接。");
-      return;
-    }
-
     setTesting(true);
     setNotice(null);
 
     try {
-      const result = await apiClient.settings.testImageProvider();
-      setNotice(result.message || "测试请求已发出，请以后端返回结果为准。");
+      const result = await apiClient.settings.testImageProvider({ provider: currentProvider });
+      setNotice(getImageProviderTestMessage(result));
     } catch (error) {
       setNotice(error instanceof Error ? getImageProviderSetupMessage(error.message) : "测试连接失败");
     } finally {
@@ -124,7 +124,8 @@ export function ImageProviderSettingsPanel() {
     }
   }
 
-  const recommendedModel = getDefaultImageModel(config.provider);
+  const currentProvider = config.provider ?? initialProvider;
+  const recommendedModel = getDefaultImageModel(currentProvider);
   const maskedKeyText = config.maskedKey ?? (config.hasKey ? "已配置，等待后端返回脱敏值" : "尚未配置");
 
   return (
@@ -150,7 +151,7 @@ export function ImageProviderSettingsPanel() {
           </article>
           <article className="state-card state-card-neutral">
             <strong>当前推荐模型</strong>
-            <p>{getImageProviderLabel(config.provider)} 默认使用 `{recommendedModel}`，切换厂商时会自动带出对应推荐模型。</p>
+            <p>{getImageProviderLabel(currentProvider)} 默认使用 `{recommendedModel}`，切换厂商时会自动带出对应推荐模型。</p>
           </article>
         </div>
       </div>
@@ -168,7 +169,7 @@ export function ImageProviderSettingsPanel() {
           <div className="field-grid">
             <label className="field-block">
               <span>Provider</span>
-              <select value={config.provider} onChange={(event) => handleProviderChange(event.target.value as ImageProviderId)} disabled={saving || testing}>
+              <select value={currentProvider} onChange={(event) => handleProviderChange(event.target.value as ImageProviderId)} disabled={saving || testing}>
                 {imageProviderOptions.map((option) => (
                   <option key={option.id} value={option.id}>
                     {option.label}
@@ -179,7 +180,10 @@ export function ImageProviderSettingsPanel() {
 
             <label className="field-block">
               <span>Image Model</span>
-              <input value={config.imageModel} onChange={(event) => setConfig((current) => ({ ...current, imageModel: event.target.value }))} disabled={saving || testing} />
+              <input value={config.imageModel ?? ""} onChange={(event) => {
+                setModelEdited(true);
+                setConfig((current) => ({ ...current, imageModel: event.target.value }));
+              }} disabled={saving || testing} />
             </label>
           </div>
 
@@ -216,7 +220,7 @@ export function ImageProviderSettingsPanel() {
           <div className="detail-meta-grid">
             <article className="detail-meta-card">
               <span className="eyebrow">当前厂商</span>
-              <strong>{getImageProviderLabel(config.provider)}</strong>
+              <strong>{getImageProviderLabel(currentProvider)}</strong>
               <p>切换厂商后，页面会自动带出推荐默认模型，但你仍然可以手动改模型名。</p>
             </article>
 
