@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
-import type { ImageProviderConfig, ImageProviderId } from "../lib/api/types";
+import type { ImageProviderConfigResponse, ImageProviderId } from "../lib/api/types";
 import { getDefaultImageModel, getImageProviderLabel, getImageProviderSetupMessage, getImageProviderTestMessage, imageProviderOptions } from "../lib/image-provider";
 import { StatusPill } from "./ui";
 
 const initialProvider: ImageProviderId = "openai";
 
-function buildEmptyConfig(): ImageProviderConfig {
+function buildEmptyConfig(): ImageProviderConfigResponse {
   return {
     provider: initialProvider,
     imageModel: getDefaultImageModel(initialProvider),
@@ -21,7 +21,7 @@ function buildEmptyConfig(): ImageProviderConfig {
 }
 
 export function ImageProviderSettingsPanel() {
-  const [config, setConfig] = useState<ImageProviderConfig>(buildEmptyConfig());
+  const [config, setConfig] = useState<ImageProviderConfigResponse>(buildEmptyConfig());
   const [apiKey, setApiKey] = useState("");
   const [modelEdited, setModelEdited] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -41,13 +41,13 @@ export function ImageProviderSettingsPanel() {
         }
         setConfig({
           provider: payload.provider ?? initialProvider,
-          imageModel: payload.imageModel || (payload.provider ? getDefaultImageModel(payload.provider) : getDefaultImageModel(initialProvider)),
+          imageModel: payload.imageModel || (payload.provider ? getDefaultImageModel(payload.provider as ImageProviderId) : getDefaultImageModel(initialProvider)),
           baseUrl: payload.baseUrl ?? "",
           hasKey: payload.hasKey,
           maskedKey: payload.maskedKey ?? null,
           updatedAt: payload.updatedAt ?? null,
         });
-        setModelEdited(Boolean(payload.imageModel && payload.provider && payload.imageModel !== getDefaultImageModel(payload.provider)));
+        setModelEdited(Boolean(payload.imageModel && payload.provider && payload.imageModel !== getDefaultImageModel(payload.provider as ImageProviderId)));
         setBackendReady(true);
       } catch (error) {
         if (disposed) {
@@ -124,7 +124,7 @@ export function ImageProviderSettingsPanel() {
     }
   }
 
-  const currentProvider = config.provider ?? initialProvider;
+  const currentProvider: ImageProviderId = (config.provider as ImageProviderId) ?? initialProvider;
   const recommendedModel = getDefaultImageModel(currentProvider);
   const maskedKeyText = config.maskedKey ?? (config.hasKey ? "已配置，等待后端返回脱敏值" : "尚未配置");
 

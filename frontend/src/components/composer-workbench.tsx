@@ -26,6 +26,7 @@ export function ComposerWorkbench({
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [imageProviderSetupRequired, setImageProviderSetupRequired] = useState(false);
+  const [noticeLink, setNoticeLink] = useState<{ href: string; label: string } | null>(null);
 
   const copyVariants = useMemo(() => (post ? buildCopyVariants(post) : []), [post]);
   const imageCandidates = useMemo(() => (post ? getCandidateAssets(post) : []), [post]);
@@ -44,7 +45,6 @@ export function ComposerWorkbench({
     setSelectedAccountId(task?.accountId ?? accounts[0]?.id ?? "");
     setReviewComment("这版已经确认完成，可以继续往下走。");
     setNotice(null);
-    setImageProviderSetupRequired(false);
   }, [accounts, copyVariants, imageCandidates, post?.id, task?.accountId]);
 
   const selectedCopy = copyVariants.find((item) => item.id === selectedCopyId) ?? copyVariants[0] ?? null;
@@ -68,14 +68,32 @@ export function ComposerWorkbench({
     setPending(true);
     setNotice(null);
     setImageProviderSetupRequired(false);
+    setNoticeLink(null);
 
     try {
+      const generateImages = async () => {
+        try {
+          return await apiClient.posts.generateImages(post.id, { operator: "frontend-operator", payload: { title: post.title, topic: post.topic } });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          const status = (error as { status?: number }).status;
+          if (status === 422 && (message === "provider_not_configured" || message === "provider_model_not_configured")) {
+            const detail = message === "provider_model_not_configured"
+              ? "图片模型未配置，请先前往模型设置页完成图片模型配置。"
+              : "图片生成服务商未配置，请先前往模型设置页完成服务商配置。";
+            throw new Error(`生图预检失败 — ${detail}`);
+          }
+          throw error;
+        }
+      };
+
       const [copyResult, imageResult] = await Promise.allSettled([
         apiClient.posts.generateCopy(post.id, { operator: "frontend-operator", payload: { topic: post.topic, title: post.title } }),
-        apiClient.posts.generateImages(post.id, { operator: "frontend-operator", payload: { title: post.title, topic: post.topic } }),
+        generateImages(),
       ]);
 
       if (copyResult.status === "fulfilled" && imageResult.status === "fulfilled") {
+        setNoticeLink(null);
         setNotice("已刷新候选内容，文案和图片任务都已重新提交，等待真实结果回写。");
         startTransition(() => router.refresh());
         return;
@@ -106,9 +124,31 @@ export function ComposerWorkbench({
       const message = getErrorMessage(error);
       setImageProviderSetupRequired(isImageProviderSetupError(message));
       setNotice(getImageProviderSetupMessage(message));
+      if (message.includes("provider_not_configured") || message.includes("服务商未配置") || message.includes("模型未配置")) {
+        setNoticeLink({ href: "/settings/models", label: "前往模型配置页" });
+      }
     } finally {
       setPending(false);
     }
+  }
+
+  function renderNotice() {
+    if (!notice) {
+      return null;
+    }
+    return (
+      <p className="feedback-text">
+        {notice}
+        {noticeLink ? (
+          <>
+            {" "}
+            <a href={noticeLink.href} className="text-link">
+              {noticeLink.label}
+            </a>
+          </>
+        ) : null}
+      </p>
+    );
   }
 
   async function handleSaveSelection() {
@@ -118,6 +158,7 @@ export function ComposerWorkbench({
 
     setPending(true);
     setNotice(null);
+    setNoticeLink(null);
 
     try {
       await apiClient.confirmations.update(post.id, {
@@ -127,9 +168,11 @@ export function ComposerWorkbench({
         assetIds: selectedAsset ? [selectedAsset.id] : post.assetIds,
         accountId: selectedAccount?.id,
       });
+      setNoticeLink(null);
       setNotice(`已保存当前确认版。${selectedAccount ? `当前归属账号已更新为 ${selectedAccount.name}。` : ""}`);
       startTransition(() => router.refresh());
     } catch (error) {
+      setNoticeLink(null);
       setNotice(error instanceof Error ? error.message : "保存最终版失败");
     } finally {
       setPending(false);
@@ -143,6 +186,7 @@ export function ComposerWorkbench({
 
     setPending(true);
     setNotice(null);
+    setNoticeLink(null);
 
     try {
       if ((action === "approve" || action === "publish") && selectedAccount?.id && selectedAccount.id !== post.accountId) {
@@ -151,16 +195,19 @@ export function ComposerWorkbench({
 
       if (action === "submit") {
         await apiClient.posts.submitReview(post.id, { comment: reviewComment, operator: "frontend-operator" });
+        setNoticeLink(null);
         setNotice("已提交人工确认，接下来可以在这里通过或退回。");
       }
 
       if (action === "approve") {
         await apiClient.posts.approve(post.id, { comment: reviewComment, operator: "frontend-operator" });
+        setNoticeLink(null);
         setNotice(`这版已经确认通过${selectedAccount ? `，准备交给 ${selectedAccount.name}` : ""}。`);
       }
 
       if (action === "reject") {
         await apiClient.posts.reject(post.id, { comment: reviewComment, operator: "frontend-operator" });
+        setNoticeLink(null);
         setNotice("这版已退回修改，可以继续调整文案、图片或账号选择。");
       }
 
@@ -168,11 +215,13 @@ export function ComposerWorkbench({
         const publishResult = await apiClient.posts.publish(post.id, { comment: reviewComment, operator: "frontend-operator" });
         const publishLabel = getPublishRecordLabel(publishResult.publishStatus);
         const failureType = getFailureTypeLabel(publishResult.failureType);
+        setNoticeLink(null);
         setNotice(`${publishLabel}${selectedAccount ? `，目标账号 ${selectedAccount.name}` : ""}。${publishResult.detail}${failureType ? ` 失败分类：${failureType}。` : ""}`);
       }
 
       startTransition(() => router.refresh());
     } catch (error) {
+      setNoticeLink(null);
       setNotice(error instanceof Error ? error.message : "执行失败");
     } finally {
       setPending(false);

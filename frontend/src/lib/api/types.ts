@@ -8,31 +8,6 @@ export type ReviewStatus = "pending" | "under_review" | "approved" | "rejected" 
 
 export type ImageProviderId = "openai" | "volcengine" | "tencent" | "alibaba" | "bfl" | "stability";
 
-export interface ImageProviderConfig {
-  provider?: ImageProviderId | null;
-  imageModel?: string | null;
-  baseUrl?: string | null;
-  hasKey: boolean;
-  maskedKey?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ImageProviderConfigPayload {
-  provider: ImageProviderId;
-  apiKey?: string;
-  imageModel?: string;
-  baseUrl?: string;
-}
-
-export interface ImageProviderTestResponse {
-  ok: boolean;
-  code?: "provider_not_configured" | "provider_model_not_configured" | string | null;
-  provider?: ImageProviderId | string | null;
-  imageModel?: string | null;
-  baseUrl?: string | null;
-  message: string;
-}
-
 export interface DashboardSummary {
   totalPosts: number;
   totalViews: number;
@@ -291,3 +266,29 @@ export interface WorkspaceDraft {
   tags: string[];
   assetIds: string[];
 }
+
+// -- image-provider settings --
+
+export interface ImageProviderConfigResponse {
+  provider: string | null;
+  imageModel: string | null;
+  baseUrl: string | null;
+  hasKey: boolean;
+  maskedKey: string | null;
+  updatedAt: string | null;
+}
+
+export interface ImageProviderConfigUpsertRequest {
+  provider: string;
+  apiKey?: string | null;
+  imageModel?: string | null;
+  baseUrl?: string | null;
+}
+
+export interface ImageProviderTestResponse {
+  provider: string;
+  imageModel: string;
+  baseUrl: string | null;
+  message: string;
+}
+

@@ -9,8 +9,8 @@ import type {
   ConfirmationUpdatePayload,
   DashboardSummary,
   GenerationTaskPayload,
-  ImageProviderConfig,
-  ImageProviderConfigPayload,
+  ImageProviderConfigResponse,
+  ImageProviderConfigUpsertRequest,
   ImageProviderTestResponse,
   MessageTaskRecord,
   PostDetail,
@@ -94,10 +94,10 @@ export const apiClient = {
     imageProviderEndpoint: endpoint("/settings/image-provider"),
     imageProviderTestEndpoint: endpoint("/settings/image-provider/test"),
     getImageProvider() {
-      return apiFetch<ImageProviderConfig>(endpoint("/settings/image-provider"));
+      return apiFetch<ImageProviderConfigResponse>(endpoint("/settings/image-provider"));
     },
-    saveImageProvider(payload: ImageProviderConfigPayload) {
-      return apiFetch<ImageProviderConfig>(endpoint("/settings/image-provider"), {
+    saveImageProvider(payload: ImageProviderConfigUpsertRequest) {
+      return apiFetch<ImageProviderConfigResponse>(endpoint("/settings/image-provider"), {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -278,6 +278,23 @@ export const apiClient = {
         return null;
       }
       return apiFetch<PostDetail>(endpoint(`/posts/${candidate.id}`));
+    },
+  },
+  imageProvider: {
+    getConfig() {
+      return apiFetch<ImageProviderConfigResponse>(endpoint("/settings/image-provider"));
+    },
+    upsertConfig(payload: ImageProviderConfigUpsertRequest) {
+      return apiFetch<ImageProviderConfigResponse>(endpoint("/settings/image-provider"), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    testConfig(payload: { provider?: string | null }) {
+      return apiFetch<ImageProviderTestResponse>(endpoint("/settings/image-provider/test"), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     },
   },
 };

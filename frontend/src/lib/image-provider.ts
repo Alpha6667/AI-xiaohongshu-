@@ -53,16 +53,16 @@ export function getImageProviderSetupMessage(message?: string) {
   return message;
 }
 
-export function getImageProviderTestMessage(result: { ok: boolean; code?: string | null; message: string }) {
-  if (result.ok) {
-    return result.message || "测试通过，当前配置已可用于服务端图片生成。";
+export function getImageProviderTestMessage(result: { provider: string; imageModel: string; baseUrl: string | null; message: string }) {
+  if (result.message === "ok" || result.message === "success") {
+    return "测试通过，当前配置已可用于服务端图片生成。";
   }
 
-  if (result.code === "provider_not_configured") {
+  if (result.message.includes("provider_not_configured") || result.message === "provider_not_configured") {
     return "当前还没有配置可用的生图厂商或 API Key，请先保存配置后再测试。";
   }
 
-  if (result.code === "provider_model_not_configured") {
+  if (result.message.includes("provider_model_not_configured")) {
     return "当前厂商还没有可用模型，请先补齐或修改 Image Model 后再测试。";
   }
 

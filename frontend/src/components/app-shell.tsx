@@ -12,6 +12,7 @@ const navItems: Array<{ href: Route; label: string }> = [
   { href: "/review", label: "内容确认台" },
   { href: "/dashboard", label: "发布中心" },
   { href: "/posts", label: "帖子与数据" },
+  { href: "/settings/models" as Route, label: "模型配置" },
 ];
 
 function matchPath(pathname: string, href: Route) {
