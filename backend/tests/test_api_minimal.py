@@ -26,6 +26,14 @@ class BackendApiMinimalTests(unittest.TestCase):
         reset_repository()
         self.client = TestClient(app)
 
+    def test_health_and_api_health_alias_consistent(self) -> None:
+        health_resp = self.client.get("/health")
+        api_health_resp = self.client.get("/api/health")
+
+        self.assertEqual(health_resp.status_code, 200)
+        self.assertEqual(api_health_resp.status_code, 200)
+        self.assertEqual(health_resp.json(), api_health_resp.json())
+
     def test_post_crud_and_detail_fields(self) -> None:
         create_resp = self.client.post(
             "/api/posts",
