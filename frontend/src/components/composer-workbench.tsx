@@ -6,6 +6,7 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "../lib/api/client";
 import type { PostDetail, PostListItem } from "../lib/api/types";
+import { getImageProviderSetupMessage, isProviderNotConfiguredMessage } from "../lib/image-provider";
 import type { AccountOverview, MessageTask } from "../lib/product";
 import { buildCopyVariants, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getCandidateAssets, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getSharedConfirmationInfo, getStatusLabel, getStatusTone } from "../lib/product";
 import { StatusPill } from "./ui";
@@ -24,6 +25,7 @@ export function ComposerWorkbench({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [imageProviderSetupRequired, setImageProviderSetupRequired] = useState(false);
 
   const copyVariants = useMemo(() => (post ? buildCopyVariants(post) : []), [post]);
   const imageCandidates = useMemo(() => (post ? getCandidateAssets(post) : []), [post]);
@@ -42,6 +44,7 @@ export function ComposerWorkbench({
     setSelectedAccountId(task?.accountId ?? accounts[0]?.id ?? "");
     setReviewComment("这版已经确认完成，可以继续往下走。");
     setNotice(null);
+    setImageProviderSetupRequired(false);
   }, [accounts, copyVariants, imageCandidates, post?.id, task?.accountId]);
 
   const selectedCopy = copyVariants.find((item) => item.id === selectedCopyId) ?? copyVariants[0] ?? null;
@@ -53,6 +56,10 @@ export function ComposerWorkbench({
   const sharedConfirmation = post ? getSharedConfirmationInfo(post, task) : null;
   const accountAvailability = selectedAccount ? getAccountAvailabilityNotice(selectedAccount) : null;
 
+  function getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "请求失败";
+  }
+
   async function handleRefreshAICandidates() {
     if (!post) {
       return;
@@ -60,16 +67,46 @@ export function ComposerWorkbench({
 
     setPending(true);
     setNotice(null);
+    setImageProviderSetupRequired(false);
 
     try {
-      await Promise.all([
+      const [copyResult, imageResult] = await Promise.allSettled([
         apiClient.posts.generateCopy(post.id, { operator: "frontend-operator", payload: { topic: post.topic, title: post.title } }),
         apiClient.posts.generateImages(post.id, { operator: "frontend-operator", payload: { title: post.title, topic: post.topic } }),
       ]);
-      setNotice(`已刷新候选内容，文案和图片任务都已重新提交，等待真实结果回写。`);
-      startTransition(() => router.refresh());
+
+      if (copyResult.status === "fulfilled" && imageResult.status === "fulfilled") {
+        setNotice("已刷新候选内容，文案和图片任务都已重新提交，等待真实结果回写。");
+        startTransition(() => router.refresh());
+        return;
+      }
+
+      const copyFailedMessage = copyResult.status === "rejected" ? getErrorMessage(copyResult.reason) : null;
+      const imageFailedMessage = imageResult.status === "rejected" ? getErrorMessage(imageResult.reason) : null;
+      const imageNeedsProviderSetup = imageFailedMessage ? isProviderNotConfiguredMessage(imageFailedMessage) : false;
+
+      if (imageNeedsProviderSetup) {
+        setImageProviderSetupRequired(true);
+      }
+
+      if (copyResult.status === "fulfilled" && imageFailedMessage) {
+        setNotice(`文案任务已重新提交，但图片生成失败：${getImageProviderSetupMessage(imageFailedMessage)}`);
+        startTransition(() => router.refresh());
+        return;
+      }
+
+      if (imageResult.status === "fulfilled" && copyFailedMessage) {
+        setNotice(`图片任务已重新提交，但文案生成失败：${copyFailedMessage}`);
+        startTransition(() => router.refresh());
+        return;
+      }
+
+      setNotice(imageFailedMessage ? getImageProviderSetupMessage(imageFailedMessage) : (copyFailedMessage ?? "刷新候选内容失败"));
+        
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "刷新候选内容失败");
+      const message = getErrorMessage(error);
+      setImageProviderSetupRequired(isProviderNotConfiguredMessage(message));
+      setNotice(getImageProviderSetupMessage(message));
     } finally {
       setPending(false);
     }
@@ -280,6 +317,7 @@ export function ComposerWorkbench({
             <article className="state-card state-card-neutral">
               <strong>图片还没生成完成</strong>
               <p>当前后端还没有返回真实素材，所以这里暂时没有可确认的配图结果。</p>
+              <p>如果是因为还没配置生图厂商或 API Key，可以先去 <Link href="/settings/models" className="text-link">AI 生成设置</Link> 完成配置。</p>
             </article>
           )}
         </section>
@@ -405,6 +443,7 @@ export function ComposerWorkbench({
           {latestPublishRecord?.errorMessage ? <p className="feedback-text">最近失败原因：{latestPublishRecord.errorMessage}</p> : null}
           {selectedAccount && !accountAvailability?.canPublish ? <p className="feedback-text">当前账号还不能真实发布，请先处理连接状态后再继续。</p> : null}
           {notice ? <p className="feedback-text">{notice}</p> : null}
+          {imageProviderSetupRequired ? <p className="feedback-text">当前图片生成依赖生图厂商配置，先去 <Link href="/settings/models" className="text-link">AI 生成设置</Link> 完成厂商、Key 和模型配置。</p> : null}
         </section>
 
         <section className="product-card">

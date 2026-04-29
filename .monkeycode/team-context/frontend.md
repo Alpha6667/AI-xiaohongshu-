@@ -130,6 +130,13 @@
 
 ## 当前问题
 
+- 2026-04-29 已新增 `/settings/models`，用于配置生图厂商、API Key、默认模型和可选 Base URL；全局导航已补“AI 生成设置”入口。
+- 前端已新增 `GET /api/settings/image-provider`、`POST /api/settings/image-provider`、`POST /api/settings/image-provider/test` 的客户端封装与类型定义，优先按文档约定接真实接口。
+- 当前分支后端尚未提供上述模型配置接口，所以设置页会明确进入“前端草稿模式”，允许先确认厂商、默认模型和交互，不会假装已经可真实出图。
+- `/review` 的“刷新候选内容”现在会单独识别图片生成未配置厂商或 Key 的失败语义；若命中 `provider_not_configured` 或等价错误，会明确提示去 `/settings/models` 完成配置，而不是继续把图片生成失败伪装成成功。
+- 厂商切换已按文档内置默认模型映射：`openai -> gpt-image-1`、`bfl -> flux.2`、`volcengine -> seedream`、`tencent -> hunyuan-image`、`alibaba -> wanx`、`stability -> stable-image`；切换厂商后页面会自动带出推荐模型，但仍允许手动改名。
+- 设置页读取配置时只展示 `maskedKey` / `hasKey`，不提供完整 Key 回显或复制完整 Key 的入口，页面文案也已明确 Key 只用于服务端请求第三方模型。
+
 - 2026-04-24 已开始第三优先级真实展示收口：`/accounts` 已切到账号连接状态、最近验证、最近同步和错误摘要主路径展示；`/review`、`/dashboard`、`/posts`、`/posts/[id]` 已开始统一消费 `connectionStatus`、`lastSyncAt`、`lastSyncStatus`、`reviewStatus`、`under_review`、`rejected`、互动计数字段。
 - `frontend/src/lib/product.ts` 现已统一补齐“同一份确认对象”说明、账号可真实发布提示、平台审核中/审核未通过语义、作品同步状态和互动数据优先级（优先用 `likeCount` / `collectCount` / `commentCount`，缺失时再回落 `latestMetrics`）。
 - 内容确认台现在会在保存确认版时真实回写 `post.accountId`，因此所选发布账号不再只是纯前端临时选择。
@@ -163,6 +170,8 @@
 
 ## 下一步
 
+- 等后端补齐 `image-provider` 配置接口后，前端可直接把 `/settings/models` 从草稿模式切到真实保存、真实读取和真实测试。
+- 如果后端把 `generate-images` 的失败语义稳定收口到 `provider_not_configured` 或明确中文 detail，前端现有确认台提示可以直接承接，不需要再重做页面结构。
 - 当前前端已经把真实页面里的账号展示和发布状态都切到后端真实结果主路径；下一步如果联调稳定，可继续删除仅用于整页演示回退的种子账号逻辑。
 - 在接口稳定前，前端暂只保留“接口请求失败时整页回退”的最小兼容，不再把种子账号或演示发布状态用于接口成功但字段为空的页面。
 - 如果后端后续补充更细的生成链路字段（如独立 copy/image task 状态），前端可以继续把 `/tasks` 和 `/posts/[id]` 的准备度从布尔值升级为更细粒度进度展示。

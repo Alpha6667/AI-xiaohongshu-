@@ -8,6 +8,7 @@ const navItems: Array<{ href: Route; label: string }> = [
   { href: "/", label: "任务总览" },
   { href: "/tasks", label: "消息任务中心" },
   { href: "/accounts", label: "多账号运营" },
+  { href: "/settings/models", label: "AI 生成设置" },
   { href: "/review", label: "内容确认台" },
   { href: "/dashboard", label: "发布中心" },
   { href: "/posts", label: "帖子与数据" },

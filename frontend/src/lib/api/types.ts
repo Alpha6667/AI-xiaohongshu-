@@ -6,6 +6,30 @@ export type AccountSyncStatus = "idle" | "syncing" | "succeeded" | "failed" | "u
 
 export type ReviewStatus = "pending" | "under_review" | "approved" | "rejected" | "unknown";
 
+export type ImageProviderId = "openai" | "volcengine" | "tencent" | "alibaba" | "bfl" | "stability";
+
+export interface ImageProviderConfig {
+  provider: ImageProviderId;
+  imageModel: string;
+  baseUrl?: string | null;
+  hasKey: boolean;
+  maskedKey?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ImageProviderConfigPayload {
+  provider: ImageProviderId;
+  apiKey?: string;
+  imageModel?: string;
+  baseUrl?: string;
+}
+
+export interface ImageProviderTestResponse {
+  ok?: boolean;
+  message: string;
+  errorCode?: string | null;
+}
+
 export interface DashboardSummary {
   totalPosts: number;
   totalViews: number;

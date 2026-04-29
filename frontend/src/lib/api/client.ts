@@ -9,6 +9,9 @@ import type {
   ConfirmationUpdatePayload,
   DashboardSummary,
   GenerationTaskPayload,
+  ImageProviderConfig,
+  ImageProviderConfigPayload,
+  ImageProviderTestResponse,
   MessageTaskRecord,
   PostDetail,
   PostListItem,
@@ -76,6 +79,24 @@ export const apiClient = {
     listEndpoint: endpoint("/tasks"),
     list() {
       return apiFetch<MessageTaskRecord[]>(endpoint("/tasks"));
+    },
+  },
+  settings: {
+    imageProviderEndpoint: endpoint("/settings/image-provider"),
+    imageProviderTestEndpoint: endpoint("/settings/image-provider/test"),
+    getImageProvider() {
+      return apiFetch<ImageProviderConfig>(endpoint("/settings/image-provider"));
+    },
+    saveImageProvider(payload: ImageProviderConfigPayload) {
+      return apiFetch<ImageProviderConfig>(endpoint("/settings/image-provider"), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    testImageProvider() {
+      return apiFetch<ImageProviderTestResponse>(endpoint("/settings/image-provider/test"), {
+        method: "POST",
+      });
     },
   },
   accounts: {
