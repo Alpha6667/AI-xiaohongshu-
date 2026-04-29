@@ -20,6 +20,7 @@ from app.models.enums import (
     TaskStatus,
 )
 from app.models.generation_task import GenerationTask
+from app.models.image_provider import ImageProviderConfig
 from app.models.inbound_message import InboundMessage
 from app.models.message_task import MessageTask
 from app.models.metrics_snapshot import MetricsSnapshot
@@ -47,6 +48,7 @@ class InMemoryRepository:
         self.accounts: dict[str, Account] = {}
         self.message_tasks: dict[str, MessageTask] = {}
         self.inbound_messages: dict[str, InboundMessage] = {}
+        self.image_provider_config: ImageProviderConfig | None = None
         self.storage_path = storage_path or (Path(__file__).resolve().parents[2] / "data" / "repository.json")
         self._load_or_seed()
 
@@ -201,6 +203,17 @@ class InMemoryRepository:
             )
             for key, value in (payload.get("inbound_messages", {}) or {}).items()
         }
+        image_provider_payload = payload.get("image_provider_config")
+        if image_provider_payload is None:
+            self.image_provider_config = None
+        else:
+            self.image_provider_config = ImageProviderConfig(
+                provider=image_provider_payload["provider"],
+                api_key=image_provider_payload.get("api_key", ""),
+                image_model=image_provider_payload.get("image_model", ""),
+                base_url=image_provider_payload.get("base_url"),
+                updated_at=image_provider_payload.get("updated_at", ""),
+            )
         self._ensure_minimum_support_data()
 
     def save(self) -> None:
@@ -218,6 +231,7 @@ class InMemoryRepository:
             "accounts": {key: asdict(value) for key, value in self.accounts.items()},
             "message_tasks": {key: asdict(value) for key, value in self.message_tasks.items()},
             "inbound_messages": {key: asdict(value) for key, value in self.inbound_messages.items()},
+            "image_provider_config": asdict(self.image_provider_config) if self.image_provider_config is not None else None,
         }
         self.storage_path.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
@@ -234,6 +248,7 @@ class InMemoryRepository:
         self.accounts.clear()
         self.message_tasks.clear()
         self.inbound_messages.clear()
+        self.image_provider_config = None
         self._seed()
         self.save()
 

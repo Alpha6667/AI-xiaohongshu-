@@ -21,6 +21,9 @@
 - `GET /api/tasks`
 - `GET /api/accounts`
 - `POST /api/integrations/qq/messages`
+- `GET /api/settings/image-provider`
+- `POST /api/settings/image-provider`
+- `POST /api/settings/image-provider/test`
 
 ## 第二轮联调固定字段
 
@@ -55,9 +58,55 @@
   - `message`
 - 真实承接任务（`post.messageTaskId` 非空）的补充行为：
   - `generate-copy` 后会把生成文案写入 `post.body`，并把任务阶段推进到 `copy_generated`（若图片已生成则推进到 `waiting_review`）。
-  - `generate-images` 后会把生成素材写入 `assetIds/assets`，并把任务阶段推进到 `images_generated`（若文案已生成则推进到 `waiting_review`）。
+  - `generate-images` 会先检查服务端 image provider 配置；未配置时返回 `422 detail=provider_not_configured`。
+  - `generate-images` 配置通过后会把生成素材写入 `assetIds/assets`，并把任务阶段推进到 `images_generated`（若文案已生成则推进到 `waiting_review`）。
   - 当文案与图片都完成时，任务阶段为 `waiting_review`，并满足 `hasCopy=true`、`hasImages=true`。
   - 重复触发生成不会重复堆叠脏数据（素材不重复追加、状态不回退到矛盾状态）。
+
+### `GET /api/settings/image-provider`
+
+- 返回当前服务端生图配置的脱敏视图：
+  - `provider`（nullable）
+  - `imageModel`（nullable）
+  - `baseUrl`（nullable）
+  - `hasKey`（boolean）
+  - `maskedKey`（nullable）
+  - `updatedAt`（nullable）
+- 不返回明文 `apiKey`。
+
+### `POST /api/settings/image-provider`
+
+- 请求体：
+  - `provider`（string）
+  - `apiKey`（string，可选；不传时沿用已存值，传空字符串表示清空）
+  - `imageModel`（string，可选）
+  - `baseUrl`（string，可选）
+- 行为约束：
+  - 当只传 `provider` 不传 `imageModel` 时，服务端自动补默认模型。
+  - 当前默认模型映射：
+    - `openai -> gpt-image-1`
+    - `bfl -> flux.2`
+    - `volcengine -> seedream`
+    - `tencent -> hunyuan-image`
+    - `alibaba -> wanx`
+    - `stability -> stable-image`
+
+### `POST /api/settings/image-provider/test`
+
+- 用于验证服务端是否已具备生图配置。
+- 成功时返回：
+  - `provider`
+  - `imageModel`
+  - `baseUrl`
+  - `message`
+- 失败时：
+  - 若未配置可用 provider / key / model，返回 `422 detail=provider_not_configured`。
+
+### 生图配置脱敏规则
+
+- `maskedKey` 规则：
+  - 长度不超过 8 时全部替换为 `*`
+  - 长度超过 8 时保留前 4 位和后 4 位，中间替换为 `*`
 
 ### `POST /api/posts/{post_id}/publish`
 

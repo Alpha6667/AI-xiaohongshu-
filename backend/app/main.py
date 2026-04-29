@@ -5,6 +5,7 @@ from app.api.routes.assets import router as assets_router
 from app.api.routes.accounts import router as accounts_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.health import router as health_router
+from app.api.routes.image_provider import router as image_provider_router
 from app.api.routes.integrations import router as integrations_router
 from app.api.routes.posts import router as posts_router
 from app.api.routes.tasks import router as tasks_router
@@ -23,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
+app.include_router(image_provider_router)
 app.include_router(posts_router)
 app.include_router(assets_router)
 app.include_router(dashboard_router)

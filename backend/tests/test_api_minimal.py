@@ -10,6 +10,17 @@ def reset_repository() -> None:
     repository.reset_to_seed()
 
 
+def configure_image_provider(client: TestClient, **overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "provider": "openai",
+        "apiKey": "sk-test-1234567890",
+    }
+    payload.update(overrides)
+    response = client.post("/api/settings/image-provider", json=payload)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
 class BackendApiMinimalTests(unittest.TestCase):
     def setUp(self) -> None:
         reset_repository()
@@ -180,6 +191,8 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(copy_payload["status"], "pending")
         self.assertEqual(copy_payload["taskType"], "generate_copy")
         self.assertIn("message", copy_payload)
+
+        configure_image_provider(self.client)
 
         image_resp = self.client.post(
             f"/api/posts/{post_id}/generate-images",
@@ -616,6 +629,8 @@ class BackendApiMinimalTests(unittest.TestCase):
         post_after_copy = self.client.get(f"/api/posts/{post_id}").json()
         self.assertIn("【自动生成文案】", post_after_copy["body"])
 
+        configure_image_provider(self.client)
+
         images_resp = self.client.post(
             f"/api/posts/{post_id}/generate-images",
             json={"operator": "qa", "payload": {"style": "clean"}},
@@ -652,6 +667,8 @@ class BackendApiMinimalTests(unittest.TestCase):
         post_id = payload["postId"]
         task_id = payload["messageTaskId"]
 
+        configure_image_provider(self.client)
+
         self.client.post(
             f"/api/posts/{post_id}/generate-copy",
             json={"operator": "qa", "payload": {}},
@@ -681,6 +698,62 @@ class BackendApiMinimalTests(unittest.TestCase):
         task_payload = next(item for item in self.client.get("/api/tasks").json() if item["id"] == task_id)
         self.assertEqual(task_payload["stage"], "waiting_review")
         self.assertEqual(task_payload["postId"], post_id)
+
+    def test_image_provider_config_masks_key_and_applies_default_model(self) -> None:
+        save_resp = self.client.post(
+            "/api/settings/image-provider",
+            json={
+                "provider": "openai",
+                "apiKey": "sk-test-1234567890",
+            },
+        )
+        self.assertEqual(save_resp.status_code, 200)
+        save_payload = save_resp.json()
+        self.assertEqual(save_payload["provider"], "openai")
+        self.assertEqual(save_payload["imageModel"], "gpt-image-1")
+        self.assertTrue(save_payload["hasKey"])
+        self.assertNotIn("apiKey", save_payload)
+        self.assertEqual(save_payload["maskedKey"], "sk-t**********7890")
+
+        get_resp = self.client.get("/api/settings/image-provider")
+        self.assertEqual(get_resp.status_code, 200)
+        self.assertEqual(get_resp.json()["maskedKey"], "sk-t**********7890")
+
+    def test_image_provider_test_returns_stable_error_without_key(self) -> None:
+        save_resp = self.client.post(
+            "/api/settings/image-provider",
+            json={
+                "provider": "openai",
+                "apiKey": "",
+            },
+        )
+        self.assertEqual(save_resp.status_code, 200)
+        self.assertFalse(save_resp.json()["hasKey"])
+
+        test_resp = self.client.post("/api/settings/image-provider/test", json={})
+        self.assertEqual(test_resp.status_code, 422)
+        self.assertEqual(test_resp.json()["detail"], "provider_not_configured")
+
+    def test_generate_images_returns_stable_error_without_provider_config(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "生图配置校验",
+                "title": "生图配置校验标题",
+                "body": "生图配置校验正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        image_resp = self.client.post(
+            f"/api/posts/{post_id}/generate-images",
+            json={"operator": "qa", "payload": {"style": "minimal"}},
+        )
+        self.assertEqual(image_resp.status_code, 422)
+        self.assertEqual(image_resp.json()["detail"], "provider_not_configured")
 
     def test_dashboard_summary_fields_stable(self) -> None:
         summary_resp = self.client.get("/api/dashboard/summary")

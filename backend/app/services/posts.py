@@ -35,6 +35,7 @@ from app.schemas.posts import (
     TaskRecordResponse,
 )
 from app.services.publisher import PreparedPublish, publisher_adapter
+from app.services.image_provider import ProviderNotConfiguredError, prepare_image_provider_for_generation
 
 
 def _get_post_or_404(post_id: str) -> Post:
@@ -336,6 +337,10 @@ def create_generation_task(post_id: str, task_type: GenerationTaskType, request:
         _apply_generated_copy(post)
         _sync_message_task_generation_state(post, copy_generated=True)
     if task_type == GenerationTaskType.IMAGE:
+        try:
+            prepare_image_provider_for_generation()
+        except ProviderNotConfiguredError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
         _apply_generated_images(post)
         _sync_message_task_generation_state(post, images_generated=True)
 
