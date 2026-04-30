@@ -24,6 +24,7 @@ from app.services.posts import (
     get_post_detail,
     list_posts,
     publish_post,
+    refresh_metrics_snapshot,
     reject_post,
     submit_review,
     update_post,
@@ -97,3 +98,8 @@ def writeback_publish_result_route(post_id: str, payload: PublishResultWriteback
 @router.post("/{post_id}/metrics-snapshots", response_model=MetricsSnapshotResponse, status_code=status.HTTP_201_CREATED)
 def append_metrics_snapshot_route(post_id: str, payload: MetricsSnapshotAppendRequest) -> MetricsSnapshotResponse:
     return append_metrics_snapshot(post_id, payload)
+
+
+@router.post("/{post_id}/refresh-metrics", response_model=MetricsSnapshotResponse, status_code=status.HTTP_201_CREATED)
+def refresh_metrics_snapshot_route(post_id: str) -> MetricsSnapshotResponse:
+    return refresh_metrics_snapshot(post_id)
