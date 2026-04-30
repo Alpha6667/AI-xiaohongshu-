@@ -36,7 +36,7 @@ from app.schemas.posts import (
     ReviewRequest,
     TaskRecordResponse,
 )
-from app.services.publisher import PreparedPublish, publisher_adapter
+from app.services.publisher import MetricsFetchError, PreparedPublish, publisher_adapter
 from app.services.image_provider import ProviderNotConfiguredError, prepare_image_provider_for_generation
 
 
@@ -476,6 +476,22 @@ def _get_latest_publish_log(post: Post) -> PublishLog:
     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Publish log not found for post")
 
 
+def _append_metrics_snapshot(post: Post, metrics: dict[str, int], *, snapshot_at: str | None = None) -> MetricsSnapshot:
+    snapshot = MetricsSnapshot(
+        id=new_id("metric"),
+        post_id=post.id,
+        views=metrics["views"],
+        likes=metrics["likes"],
+        favorites=metrics["favorites"],
+        comments=metrics["comments"],
+        follow_conversions=metrics["followConversions"],
+        snapshot_at=snapshot_at or now_iso(),
+    )
+    history = repository.metrics_snapshots.setdefault(post.id, [])
+    history.append(snapshot)
+    return snapshot
+
+
 def writeback_publish_result(post_id: str, payload: PublishResultWritebackRequest) -> PublishResponse:
     post = _get_post_or_404(post_id)
     if post.status != PostStatus.PUBLISHING:
@@ -501,6 +517,11 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
             log.platform_post_id = payload.platformPostId
         log.error_message = None
         log.failure_type = None
+        try:
+            metrics = publisher_adapter.fetch_metrics(post)
+            _append_metrics_snapshot(post, metrics)
+        except MetricsFetchError as exc:
+            log.detail = f"{log.detail} | metrics_fetch:{exc.code}"
     else:
         post.status = PostStatus.PUBLISH_FAILED
         log.error_message = payload.errorMessage or payload.detail or "Publish failed"
@@ -529,18 +550,17 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
 def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest) -> MetricsSnapshotResponse:
     post = _get_post_or_404(post_id)
     timestamp = payload.snapshotAt or now_iso()
-    snapshot = MetricsSnapshot(
-        id=new_id("metric"),
-        post_id=post.id,
-        views=payload.views,
-        likes=payload.likes,
-        favorites=payload.favorites,
-        comments=payload.comments,
-        follow_conversions=payload.followConversions,
+    snapshot = _append_metrics_snapshot(
+        post,
+        {
+            "views": payload.views,
+            "likes": payload.likes,
+            "favorites": payload.favorites,
+            "comments": payload.comments,
+            "followConversions": payload.followConversions,
+        },
         snapshot_at=timestamp,
     )
-    history = repository.metrics_snapshots.setdefault(post.id, [])
-    history.append(snapshot)
     post.like_count = snapshot.likes
     post.collect_count = snapshot.favorites
     post.comment_count = snapshot.comments
@@ -558,4 +578,27 @@ def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest)
         comments=snapshot.comments,
         followConversions=snapshot.follow_conversions,
     )
-    OpenClawPublishExecuteRequest,
+
+
+def refresh_metrics_snapshot(post_id: str) -> MetricsSnapshotResponse:
+    post = _get_post_or_404(post_id)
+    try:
+        metrics = publisher_adapter.fetch_metrics(post)
+    except MetricsFetchError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"metrics_fetch_failed:{exc.code}",
+        ) from exc
+
+    snapshot = _append_metrics_snapshot(post, metrics)
+    post.updated_at = now_iso()
+    repository.save()
+    return MetricsSnapshotResponse(
+        id=snapshot.id,
+        snapshotAt=snapshot.snapshot_at,
+        views=snapshot.views,
+        likes=snapshot.likes,
+        favorites=snapshot.favorites,
+        comments=snapshot.comments,
+        followConversions=snapshot.follow_conversions,
+    )

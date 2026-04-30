@@ -18,6 +18,7 @@
 - `POST /api/posts/{post_id}/openclaw/execute-publish`
 - `POST /api/posts/{post_id}/publish-result`
 - `POST /api/posts/{post_id}/metrics-snapshots`
+- `POST /api/posts/{post_id}/refresh-metrics`
 - `GET /api/tasks`
 - `GET /api/accounts`
 - `POST /api/integrations/qq/messages`
@@ -161,6 +162,17 @@
   - `errorMessage`（string，可选，发布失败时写回）
   - `failureType`（`retryable|non_retryable|rate_limited`，发布失败时建议携带）
 - 响应体：沿用 `publish` 响应结构，返回回写后的状态与信息。
+
+### `POST /api/posts/{post_id}/refresh-metrics`
+
+- 用于手动触发一次真实 metrics 拉取并写回新的 snapshot。
+- 行为：
+  - 后端调用统一适配层 `fetch_metrics`
+  - 拉取成功后自动追加一条 `metrics snapshot`
+  - 返回新增的 snapshot（结构同 `POST /metrics-snapshots`）
+- 失败语义：
+  - 返回 `422`
+  - `detail=metrics_fetch_failed:<error_code>`（例如 `metrics_fetch_not_configured`）
 
 ### 发布适配层约定
 
