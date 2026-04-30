@@ -162,6 +162,9 @@ export const apiClient = {
     generateImagesEndpoint(postId: string) {
       return endpoint(`/posts/${postId}/generate-images`);
     },
+    refreshMetricsEndpoint(postId: string) {
+      return endpoint(`/posts/${postId}/refresh-metrics`);
+    },
     submitReviewEndpoint(postId: string) {
       return endpoint(`/posts/${postId}/submit-review`);
     },
@@ -196,6 +199,11 @@ export const apiClient = {
       return apiFetch<TaskRecordResponse>(endpoint(`/posts/${postId}/generate-images`), {
         method: "POST",
         body: JSON.stringify(payload),
+      });
+    },
+    refreshMetrics(postId: string) {
+      return apiFetch<PostDetail>(endpoint(`/posts/${postId}/refresh-metrics`), {
+        method: "POST",
       });
     },
     submitReview(postId: string, payload: { comment: string; operator: string }) {

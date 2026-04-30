@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { RefreshButton } from "../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 import { adaptAccounts, buildAccountOverview, getAccountForPost, getPerformanceSuggestion, getPostInteractionSummary, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+
+export const metadata: Metadata = {
+  title: "帖子与数据 | 小红书日常发帖工作台",
+  description: "查看每条内容的发布时间、当前状态和互动数据，快速判断哪些内容值得继续跟进。",
+};
 
 async function getAccountsOrNull() {
   try {
@@ -21,13 +27,13 @@ export default async function PostsPage() {
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="帖子与数据" title="强化多账号视角后，要清楚看到哪个账号发了哪条内容、表现怎么样" description="这页保留，但不再只看内容本身，也要能一眼看到账号归属和账号结果差异。" />
+        <SectionHeading eyebrow="帖子与数据" title="把每条内容的发布时间、当前状态和数据结果放到同一页里看清楚" description="这里不再像接口列表，而是按运营视角看清楚每条内容发给了谁、现在表现怎么样。" />
 
         <div className="dashboard-hero posts-hero">
-          <article className="dashboard-highlight">
-            <span className="eyebrow">已发布内容</span>
+            <article className="dashboard-highlight">
+            <span className="eyebrow">内容总览</span>
             <strong>{timelinePosts.length}</strong>
-            <p>这里直接看真实帖子主表，不只看已发布内容，也要同时看到平台审核中、审核未通过和同步失败的作品。</p>
+            <p>这里直接看真实帖子主表，按发布时间、当前状态和数据结果整理最近内容，不再把页面做成联调记录面板。</p>
           </article>
 
           <div className="metric-grid publish-metric-grid">
@@ -70,8 +76,7 @@ export default async function PostsPage() {
                         <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
                         <StatusPill label={getReviewStatusLabel(reviewStatus)} tone={getReviewStatusTone(reviewStatus)} />
                         <StatusPill label={account.name} />
-                        {post.messageTaskId ? <StatusPill label={`任务 ${post.messageTaskId}`} /> : null}
-                        {post.platformPostId ? <StatusPill label={`平台 ID ${post.platformPostId}`} tone="positive" /> : null}
+                        {post.platformPostId ? <StatusPill label="已回写平台标识" tone="positive" /> : null}
                       </div>
                       <span className="muted-inline">{post.topic}</span>
                     </div>
@@ -89,8 +94,9 @@ export default async function PostsPage() {
                     <span>发布时间</span>
                     <strong>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("zh-CN") : "尚未发布"}</strong>
                     <p className="muted-copy">账号归属：{account.id ? account.handle : "未分配账号"}</p>
+                    <p className="muted-copy">当前状态：{getStatusLabel(post.status)}</p>
                     <Link href={`/posts/${post.id}`} className="text-link product-link">
-                      查看这条帖子的记录
+                      查看完整记录
                     </Link>
                   </div>
                 </article>
@@ -98,8 +104,8 @@ export default async function PostsPage() {
             })
           ) : (
             <article className="product-empty-card">
-              <strong>当前还没有帖子记录</strong>
-              <p>等真实任务承接成帖子后，这里会按“账号 + 内容”维度展示状态、互动和同步结果。</p>
+              <strong>当前还没有可复盘的内容</strong>
+              <p>等真实任务承接成帖子后，这里会按“发布时间 + 状态 + 数据结果”的顺序展示每条内容的完整记录。</p>
             </article>
           )}
         </div>

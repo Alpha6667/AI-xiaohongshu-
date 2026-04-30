@@ -871,6 +871,16 @@ textarea {
   gap: 12px;
 }
 
+.refresh-metrics-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.metrics-summary-grid {
+  margin-top: 4px;
+}
+
 .message-task-card,
 .account-card,
 .message-source-card,

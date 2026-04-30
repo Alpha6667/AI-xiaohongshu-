@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
+
 import { ImageProviderSettingsPanel } from "../../../components/image-provider-settings-panel";
 import { SectionCard, SectionHeading } from "../../../components/ui";
+
+export const metadata: Metadata = {
+  title: "AI 生成设置 | 小红书日常发帖工作台",
+  description: "配置图片生成服务商、API Key 和默认模型，统一由服务端调用第三方模型能力。",
+};
 
 export default function ImageModelSettingsPage() {
   return (

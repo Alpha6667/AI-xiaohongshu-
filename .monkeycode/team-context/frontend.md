@@ -130,6 +130,12 @@
 
 ## 当前问题
 
+- 2026-04-30 已开始本轮页面收口，不扩新页面，只提升已有页面的完成度。
+- `/posts/[id]` 已新增“刷新指标数据”按钮，前端接入 `POST /api/posts/{post_id}/refresh-metrics`，成功后通过 `router.refresh()` 重新拉取详情页 SSR 数据，因此 `latestMetrics` 与 `metricsHistory` 会一起更新。
+- `refresh-metrics` 失败时，前端会优先承接后端 `detail` 字段；若命中 `metrics_fetch_failed:<error_code>`，当前已对登录失效、页面结构变化、超时、帖子未找到、网络异常、暂不可用、浏览器抓取异常等错误码给出中文提示。
+- `/posts` 与 `/posts/[id]` 正在去掉“联调面板感”：列表与详情会优先按发布时间、当前状态、平台回写和数据表现组织阅读顺序，减少直接暴露技术字段。
+- 本轮同时补齐页面级标题与描述：`/posts`、`/posts/[id]`、`/settings/models`。
+
 - 2026-04-29 已新增 `/settings/models`，用于配置生图厂商、API Key、默认模型和可选 Base URL；全局导航已补“AI 生成设置”入口。
 - 前端已新增 `GET /api/settings/image-provider`、`POST /api/settings/image-provider`、`POST /api/settings/image-provider/test` 的客户端封装与类型定义，并按后端最终契约联调。
 - `GET /api/settings/image-provider` 现在只按 `provider`、`imageModel`、`baseUrl`、`hasKey`、`maskedKey`、`updatedAt` 渲染页面状态，不依赖任何明文 key。

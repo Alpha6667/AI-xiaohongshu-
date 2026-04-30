@@ -1,11 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { RefreshButton } from "../../../components/refresh-button";
+import { RefreshMetricsButton } from "../../../components/refresh-metrics-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
 import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPostInteractionSummary, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getSharedConfirmationInfo, getStatusLabel, getStatusTone } from "../../../lib/product";
+
+export const metadata: Metadata = {
+  title: "帖子详情 | 小红书日常发帖工作台",
+  description: "查看单条内容的发送结果、平台回写和互动数据变化。",
+};
 
 async function getTasksOrNull() {
   try {
@@ -138,7 +145,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="帖子记录" title={post.title || post.topic} description="直接看这条内容从定稿、发送到数据回写的完整记录。" />
+        <SectionHeading eyebrow="帖子详情" title={post.title || post.topic} description="把这条内容的发送结果、平台回写和数据变化整理成一页完整记录。" />
 
         <div className="detail-overview">
           <div>
@@ -149,6 +156,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
           </div>
           <div className="action-row">
             <RefreshButton />
+            <RefreshMetricsButton postId={post.id} />
             <Link href="/posts" className="text-link product-link">
               返回帖子与数据
             </Link>
@@ -186,7 +194,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="发送结果" title="OpenClaw 与平台回写" description="这里看发送现在走到哪一步，以及下一步该怎么处理。" />
+              <SectionHeading eyebrow="发送结果" title="先看发布时间、当前状态和平台回写" description="这里先回答这条内容有没有发出去、平台有没有回写，以及接下来要不要继续处理。" />
               <article className={`state-card state-card-${publishFlowState.tone}`}>
                 <strong>{publishFlowState.label}</strong>
                 <p>{publishFlowState.detail}</p>
@@ -202,7 +210,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p>{getPublishSummary(post)}</p>
                 </article>
                 <article className="detail-meta-card">
-                  <span className="eyebrow">平台回写</span>
+                  <span className="eyebrow">平台帖子标识</span>
                   <strong>{latestPublishRecord?.platformPostId || post.platformPostId || "待回写"}</strong>
                   <p>{post.publishedAt ? `发布时间 ${new Date(post.publishedAt).toLocaleString("zh-CN")}` : "当前还没有平台发布时间回写。"}</p>
                 </article>
@@ -267,19 +275,29 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             </SectionCard>
 
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="数据表现" title="指标历史" description="直接看这条内容回写过来的真实快照变化。" />
+              <SectionHeading eyebrow="数据表现" title="最新指标与历史变化" description="这里直接看最新互动结果，再决定是否手动刷新这条内容的最新数据。" />
               <article className={`state-card state-card-${metricsState.tone}`}>
                 <strong>{metricsState.title}</strong>
                 <p>{metricsState.description}</p>
               </article>
-              <div className="detail-meta-grid">
+              <div className="metric-grid metrics-summary-grid">
                 <article className="detail-meta-card">
-                  <span className="eyebrow">当前互动</span>
-                  <strong>点赞 {interactionSummary.likes.toLocaleString()}</strong>
-                  <p>收藏 {interactionSummary.collects.toLocaleString()}，评论 {interactionSummary.comments.toLocaleString()}，浏览 {post.latestMetrics.views.toLocaleString()}。</p>
+                  <span className="eyebrow">浏览</span>
+                  <strong>{post.latestMetrics.views.toLocaleString()}</strong>
+                  <p>当前记录的是这条内容最近一次成功回写后的浏览量。</p>
                 </article>
                 <article className="detail-meta-card">
-                  <span className="eyebrow">最近同步</span>
+                  <span className="eyebrow">点赞</span>
+                  <strong>{interactionSummary.likes.toLocaleString()}</strong>
+                  <p>这里优先展示最新持久化互动结果，不再暴露底层原始字段。</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">收藏 / 评论</span>
+                  <strong>{interactionSummary.collects.toLocaleString()} / {interactionSummary.comments.toLocaleString()}</strong>
+                  <p>收藏和评论会跟随最新抓取一起刷新，便于快速看出内容后劲。</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">最近一次拉数</span>
                   <strong>{syncState.label}</strong>
                   <p>{syncState.detail}</p>
                 </article>
@@ -289,6 +307,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   post.metricsHistory.map((item) => (
                     <article key={item.snapshotAt} className="plain-row-card">
                       <strong>{new Date(item.snapshotAt).toLocaleString("zh-CN")}</strong>
+                      <p className="muted-copy">这次抓取回来的平台互动快照</p>
                       <div className="row-metrics compact-metrics">
                         <span>浏览 {item.views.toLocaleString()}</span>
                         <span>点赞 {item.likes.toLocaleString()}</span>
@@ -299,7 +318,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                     </article>
                   ))
                 ) : (
-                  <p className="muted-copy">当前没有可展示的历史快照，详情页已退回到无数据状态提示。</p>
+                  <p className="muted-copy">当前还没有历史快照，等第一次拉数成功后，这里会按时间顺序展示每一次指标变化。</p>
                 )}
               </div>
             </SectionCard>
