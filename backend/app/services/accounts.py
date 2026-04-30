@@ -1,8 +1,11 @@
 from datetime import UTC, datetime
 
-from app.models.enums import MessageTaskStage, PostStatus
+from fastapi import HTTPException, status
+
+from app.models.account import Account
+from app.models.enums import AccountConnectionStatus, AccountSyncStatus, MessageTaskStage, PostStatus, ReviewStatus
 from app.repositories.memory import repository
-from app.schemas.accounts import AccountResponse
+from app.schemas.accounts import AccountResponse, AccountWorksSyncResponse, WorkSyncItemResponse
 
 
 def _is_today(iso_text: str) -> bool:
@@ -18,6 +21,76 @@ def _engagement_for_post(post_id: str) -> int:
         return 0
     latest = snapshots[-1]
     return latest.likes + latest.favorites + latest.comments + latest.follow_conversions
+
+
+def _get_account_or_404(account_id: str) -> Account:
+    account = repository.accounts.get(account_id)
+    if account is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+    return account
+
+
+def _review_status_for_post(post) -> ReviewStatus:
+    if post.review_status != ReviewStatus.UNKNOWN:
+        return post.review_status
+    if post.status == PostStatus.UNDER_REVIEW:
+        return ReviewStatus.UNDER_REVIEW
+    if post.status == PostStatus.REJECTED:
+        return ReviewStatus.REJECTED
+    if post.status in {PostStatus.APPROVED, PostStatus.PUBLISHED}:
+        return ReviewStatus.APPROVED
+    if post.status in {PostStatus.DRAFT, PostStatus.IN_REVIEW}:
+        return ReviewStatus.PENDING
+    return ReviewStatus.UNKNOWN
+
+
+def _serialize_account(item: Account, *, today_task_count: int, waiting_count: int, published_count: int, total_engagement: int, best_topic: str | None) -> AccountResponse:
+    return AccountResponse(
+        id=item.id,
+        name=item.name,
+        handle=item.handle,
+        status=item.status,
+        summary=item.summary,
+        lastActiveAt=item.last_active_at,
+        todayTaskCount=today_task_count,
+        waitingCount=waiting_count,
+        publishedCount=published_count,
+        totalEngagement=total_engagement,
+        bestTopic=best_topic,
+        connectionStatus=item.connection_status,
+        reauthRequired=item.reauth_required,
+        connectedAt=item.connected_at,
+        lastValidatedAt=item.last_validated_at,
+        lastUsedAt=item.last_used_at,
+        lastAuthError=item.last_auth_error,
+        lastSyncAt=item.last_sync_at,
+        lastSyncStatus=item.last_sync_status,
+        lastSyncError=item.last_sync_error,
+    )
+
+
+def _serialize_work_sync_item(post) -> WorkSyncItemResponse:
+    snapshots = repository.metrics_snapshots.get(post.id, [])
+    latest = snapshots[-1] if snapshots else None
+    like_count = post.like_count if post.like_count is not None else (latest.likes if latest is not None else 0)
+    collect_count = post.collect_count if post.collect_count is not None else (latest.favorites if latest is not None else 0)
+    comment_count = post.comment_count if post.comment_count is not None else (latest.comments if latest is not None else 0)
+    return WorkSyncItemResponse(
+        postId=post.id,
+        title=post.title,
+        topic=post.topic,
+        platformPostId=post.platform_post_id,
+        platformUrl=post.platform_url,
+        publishedAt=post.published_at,
+        reviewStatus=_review_status_for_post(post),
+        likeCount=like_count,
+        collectCount=collect_count,
+        commentCount=comment_count,
+        lastSyncAt=post.last_sync_at,
+        lastSyncStatus=post.last_sync_status,
+        syncError=post.sync_error,
+        updatedAt=post.updated_at,
+    )
 
 
 def list_accounts() -> list[AccountResponse]:
@@ -43,20 +116,66 @@ def list_accounts() -> list[AccountResponse]:
         if post_engagements:
             best_topic = max(post_engagements, key=lambda data: data[1])[0]
 
-        responses.append(
-            AccountResponse(
-                id=item.id,
-                name=item.name,
-                handle=item.handle,
-                status=item.status,
-                summary=item.summary,
-                lastActiveAt=item.last_active_at,
-                todayTaskCount=today_task_count,
-                waitingCount=waiting_count,
-                publishedCount=published_count,
-                totalEngagement=total_engagement,
-                bestTopic=best_topic,
-            )
-        )
+        responses.append(_serialize_account(item, today_task_count=today_task_count, waiting_count=waiting_count, published_count=published_count, total_engagement=total_engagement, best_topic=best_topic))
 
     return responses
+
+
+def get_account_works_sync(account_id: str) -> AccountWorksSyncResponse:
+    account = _get_account_or_404(account_id)
+    works = sorted(
+        [post for post in repository.posts.values() if post.account_id == account.id],
+        key=lambda item: item.updated_at,
+        reverse=True,
+    )
+    return AccountWorksSyncResponse(
+        accountId=account.id,
+        connectionStatus=account.connection_status,
+        reauthRequired=account.reauth_required,
+        lastSyncAt=account.last_sync_at,
+        lastSyncStatus=account.last_sync_status,
+        lastSyncError=account.last_sync_error,
+        works=[_serialize_work_sync_item(post) for post in works],
+    )
+
+
+def trigger_account_works_sync(account_id: str) -> AccountWorksSyncResponse:
+    account = _get_account_or_404(account_id)
+    sync_time = datetime.now(UTC).isoformat()
+    account.last_used_at = sync_time
+
+    if account.connection_status in {AccountConnectionStatus.DISCONNECTED, AccountConnectionStatus.REAUTH_REQUIRED} or account.reauth_required:
+        account.last_sync_at = sync_time
+        account.last_sync_status = AccountSyncStatus.FAILED
+        account.last_sync_error = account.last_auth_error or "账号连接不可用，无法同步作品数据。"
+        for post in repository.posts.values():
+            if post.account_id == account.id:
+                post.last_sync_at = sync_time
+                post.last_sync_status = AccountSyncStatus.FAILED
+                post.sync_error = account.last_sync_error
+        repository.save()
+        return get_account_works_sync(account_id)
+
+    account.last_sync_at = sync_time
+    account.last_sync_status = AccountSyncStatus.SUCCEEDED
+    account.last_sync_error = None
+    account.last_validated_at = sync_time
+
+    for post in repository.posts.values():
+        if post.account_id != account.id:
+            continue
+        snapshots = repository.metrics_snapshots.get(post.id, [])
+        latest = snapshots[-1] if snapshots else None
+        post.like_count = latest.likes if latest is not None else (post.like_count or 0)
+        post.collect_count = latest.favorites if latest is not None else (post.collect_count or 0)
+        post.comment_count = latest.comments if latest is not None else (post.comment_count or 0)
+        post.last_sync_at = sync_time
+        post.last_sync_status = AccountSyncStatus.SUCCEEDED
+        post.sync_error = None
+        if post.platform_post_id and not post.platform_url:
+            post.platform_url = f"https://www.xiaohongshu.com/explore/{post.platform_post_id}"
+        if post.status == PostStatus.PUBLISHED:
+            post.review_status = ReviewStatus.APPROVED
+
+    repository.save()
+    return get_account_works_sync(account_id)

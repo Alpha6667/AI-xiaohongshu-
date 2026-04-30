@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, TaskStatus
+from app.models.enums import AccountSyncStatus, GenerationTaskType, PostStatus, PublishFailureType, PublishStatus, ReviewAction, ReviewStatus, TaskStatus
 
 
 class PostCreateRequest(BaseModel):
@@ -50,9 +50,12 @@ class PublishResponse(BaseModel):
     detail: str
     createdAt: str
     message: str
+    executionId: str | None = None
     platformPostId: str | None = None
+    publishedAt: str | None = None
     errorMessage: str | None = None
     failureType: PublishFailureType | None = None
+    executionLogs: list[str] = Field(default_factory=list)
 
 
 class PublishResultWritebackRequest(BaseModel):
@@ -112,9 +115,11 @@ class PublishLogResponse(BaseModel):
     status: PublishStatus
     detail: str
     createdAt: str
+    executionId: str | None = None
     platformPostId: str | None = None
     errorMessage: str | None = None
     failureType: PublishFailureType | None = None
+    executionLogs: list[str] = Field(default_factory=list)
 
 
 class MetricsSnapshotResponse(BaseModel):
@@ -138,8 +143,20 @@ class PostSummaryResponse(BaseModel):
     latestTaskIds: list[str]
     latestMetrics: PostMetricsResponse
     platformPostId: str | None
+    platformUrl: str | None
     accountId: str | None
+    accountName: str | None = None
     messageTaskId: str | None
+    reviewStatus: ReviewStatus = ReviewStatus.UNKNOWN
+    likeCount: int | None = None
+    collectCount: int | None = None
+    commentCount: int | None = None
+    lastSyncAt: str | None = None
+    lastSyncStatus: AccountSyncStatus = AccountSyncStatus.UNKNOWN
+    syncError: str | None = None
+    sourceMessage: str | None = None
+    confirmationSource: str | None = None
+    confirmationSourceLabel: str | None = None
     createdAt: str
     updatedAt: str
     publishedAt: str | None

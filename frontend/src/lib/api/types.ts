@@ -1,4 +1,37 @@
-export type PostStatus = "draft" | "in_review" | "approved" | "publishing" | "published" | "publish_failed";
+export type PostStatus = "draft" | "in_review" | "approved" | "publishing" | "under_review" | "published" | "rejected" | "publish_failed";
+
+export type AccountConnectionStatus = "connected" | "disconnected" | "reauth_required" | "validating" | "unknown";
+
+export type AccountSyncStatus = "idle" | "syncing" | "succeeded" | "failed" | "unknown";
+
+export type ReviewStatus = "pending" | "under_review" | "approved" | "rejected" | "unknown";
+
+export type ImageProviderId = "openai" | "volcengine" | "tencent" | "alibaba" | "bfl" | "stability";
+
+export interface ImageProviderConfig {
+  provider?: ImageProviderId | null;
+  imageModel?: string | null;
+  baseUrl?: string | null;
+  hasKey: boolean;
+  maskedKey?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ImageProviderConfigPayload {
+  provider: ImageProviderId;
+  apiKey?: string;
+  imageModel?: string;
+  baseUrl?: string;
+}
+
+export interface ImageProviderTestResponse {
+  ok: boolean;
+  code?: "provider_not_configured" | "provider_model_not_configured" | string | null;
+  provider?: ImageProviderId | string | null;
+  imageModel?: string | null;
+  baseUrl?: string | null;
+  message: string;
+}
 
 export interface DashboardSummary {
   totalPosts: number;
@@ -23,6 +56,42 @@ export interface AccountRecord {
   publishedCount?: number | null;
   totalEngagement?: number | null;
   bestTopic?: string | null;
+  connectionStatus?: AccountConnectionStatus | string | null;
+  reauthRequired?: boolean | null;
+  connectedAt?: string | null;
+  lastValidatedAt?: string | null;
+  lastUsedAt?: string | null;
+  lastAuthError?: string | null;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  lastSyncError?: string | null;
+}
+
+export interface AccountWorkSyncItem {
+  postId: string;
+  title: string;
+  topic: string;
+  platformPostId?: string | null;
+  platformUrl?: string | null;
+  publishedAt?: string | null;
+  reviewStatus?: ReviewStatus | string | null;
+  likeCount: number;
+  collectCount: number;
+  commentCount: number;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  syncError?: string | null;
+  updatedAt: string;
+}
+
+export interface AccountWorksSyncResponse {
+  accountId: string;
+  connectionStatus?: AccountConnectionStatus | string | null;
+  reauthRequired?: boolean | null;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  lastSyncError?: string | null;
+  works: AccountWorkSyncItem[];
 }
 
 export interface MessageTaskRecord {
@@ -101,9 +170,12 @@ export interface PublishResponse {
   detail: string;
   createdAt: string;
   message: string;
+  executionId?: string | null;
   platformPostId?: string | null;
+  publishedAt?: string | null;
   errorMessage?: string | null;
   failureType?: "retryable" | "non_retryable" | "rate_limited" | null;
+  executionLogs?: string[];
 }
 
 export interface PostMetrics {
@@ -127,9 +199,11 @@ export interface PublishRecord {
   status: "queued" | "succeeded" | "failed";
   createdAt: string;
   detail: string;
+  executionId?: string | null;
   platformPostId?: string | null;
   errorMessage?: string | null;
   failureType?: "retryable" | "non_retryable" | "rate_limited" | null;
+  executionLogs?: string[];
 }
 
 export interface MetricsHistoryItem {
@@ -154,6 +228,14 @@ export interface PostListItem {
   accountId?: string | null;
   messageTaskId?: string | null;
   platformPostId?: string | null;
+  platformUrl?: string | null;
+  reviewStatus?: ReviewStatus | string | null;
+  likeCount?: number | null;
+  collectCount?: number | null;
+  commentCount?: number | null;
+  lastSyncAt?: string | null;
+  lastSyncStatus?: AccountSyncStatus | string | null;
+  syncError?: string | null;
   latestMetrics: PostMetrics;
   createdAt: string;
   updatedAt: string;
@@ -167,6 +249,30 @@ export interface PostDetail extends PostListItem {
   reviewRecords: ReviewRecord[];
   publishRecords: PublishRecord[];
   metricsHistory: MetricsHistoryItem[];
+}
+
+export interface ConfirmationSummary extends PostListItem {
+  postId: string;
+  accountName?: string | null;
+  sourceMessage?: string | null;
+  confirmationSource?: string | null;
+  confirmationSourceLabel?: string | null;
+}
+
+export interface ConfirmationDetail extends PostDetail {
+  postId: string;
+  accountName?: string | null;
+  sourceMessage?: string | null;
+  confirmationSource?: string | null;
+  confirmationSourceLabel?: string | null;
+}
+
+export interface ConfirmationUpdatePayload {
+  title?: string;
+  body?: string;
+  tags?: string[];
+  assetIds?: string[];
+  accountId?: string;
 }
 
 export interface ReviewQueueItem {

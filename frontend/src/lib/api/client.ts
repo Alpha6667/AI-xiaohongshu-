@@ -1,10 +1,17 @@
 import type {
   AccountRecord,
+  AccountWorksSyncResponse,
   AssetSummary,
   AssetUploadPayload,
   AssetUploadResponse,
+  ConfirmationDetail,
+  ConfirmationSummary,
+  ConfirmationUpdatePayload,
   DashboardSummary,
   GenerationTaskPayload,
+  ImageProviderConfig,
+  ImageProviderConfigPayload,
+  ImageProviderTestResponse,
   MessageTaskRecord,
   PostDetail,
   PostListItem,
@@ -41,8 +48,17 @@ async function apiFetch<T>(pathname: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    const error = new Error(message || `Request failed: ${response.status}`) as Error & { status?: number };
+    const rawMessage = await response.text();
+    let message = rawMessage || `Request failed: ${response.status}`;
+    try {
+      const parsed = JSON.parse(rawMessage) as { detail?: string };
+      if (typeof parsed.detail === "string" && parsed.detail) {
+        message = parsed.detail;
+      }
+    } catch {
+      // Keep raw response text when it is not JSON.
+    }
+    const error = new Error(message) as Error & { status?: number };
     error.status = response.status;
     throw error;
   }
@@ -74,10 +90,61 @@ export const apiClient = {
       return apiFetch<MessageTaskRecord[]>(endpoint("/tasks"));
     },
   },
+  settings: {
+    imageProviderEndpoint: endpoint("/settings/image-provider"),
+    imageProviderTestEndpoint: endpoint("/settings/image-provider/test"),
+    getImageProvider() {
+      return apiFetch<ImageProviderConfig>(endpoint("/settings/image-provider"));
+    },
+    saveImageProvider(payload: ImageProviderConfigPayload) {
+      return apiFetch<ImageProviderConfig>(endpoint("/settings/image-provider"), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    testImageProvider(payload?: { provider?: string }) {
+      return apiFetch<ImageProviderTestResponse>(endpoint("/settings/image-provider/test"), {
+        method: "POST",
+        body: JSON.stringify(payload ?? {}),
+      });
+    },
+  },
   accounts: {
     listEndpoint: endpoint("/accounts"),
+    worksSyncEndpoint(accountId: string) {
+      return endpoint(`/accounts/${accountId}/works-sync`);
+    },
     list() {
       return apiFetch<AccountRecord[]>(endpoint("/accounts"));
+    },
+    getWorksSync(accountId: string) {
+      return apiFetch<AccountWorksSyncResponse>(endpoint(`/accounts/${accountId}/works-sync`));
+    },
+    triggerWorksSync(accountId: string) {
+      return apiFetch<AccountWorksSyncResponse>(endpoint(`/accounts/${accountId}/works-sync`), {
+        method: "POST",
+      });
+    },
+  },
+  confirmations: {
+    listEndpoint: endpoint("/confirmations"),
+    detailEndpoint(postId: string) {
+      return endpoint(`/confirmations/${postId}`);
+    },
+    updateEndpoint(postId: string) {
+      return endpoint(`/confirmations/${postId}`);
+    },
+    list() {
+      return apiFetch<ConfirmationSummary[]>(endpoint("/confirmations"));
+    },
+    getById(postId: string) {
+      return apiFetch<ConfirmationDetail>(endpoint(`/confirmations/${postId}`));
+    },
+    update(postId: string, payload: ConfirmationUpdatePayload) {
+      return apiFetch<ConfirmationDetail>(endpoint(`/confirmations/${postId}`), {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
     },
   },
   posts: {
@@ -94,6 +161,9 @@ export const apiClient = {
     },
     generateImagesEndpoint(postId: string) {
       return endpoint(`/posts/${postId}/generate-images`);
+    },
+    refreshMetricsEndpoint(postId: string) {
+      return endpoint(`/posts/${postId}/refresh-metrics`);
     },
     submitReviewEndpoint(postId: string) {
       return endpoint(`/posts/${postId}/submit-review`);
@@ -113,7 +183,7 @@ export const apiClient = {
     getById(postId: string) {
       return apiFetch<PostDetail>(endpoint(`/posts/${postId}`));
     },
-    update(postId: string, payload: { topic?: string; title?: string; body?: string; tags?: string[]; assetIds?: string[] }) {
+    update(postId: string, payload: { topic?: string; title?: string; body?: string; tags?: string[]; assetIds?: string[]; accountId?: string }) {
       return apiFetch<PostListItem>(endpoint(`/posts/${postId}`), {
         method: "PATCH",
         body: JSON.stringify(payload),
@@ -129,6 +199,11 @@ export const apiClient = {
       return apiFetch<TaskRecordResponse>(endpoint(`/posts/${postId}/generate-images`), {
         method: "POST",
         body: JSON.stringify(payload),
+      });
+    },
+    refreshMetrics(postId: string) {
+      return apiFetch<PostDetail>(endpoint(`/posts/${postId}/refresh-metrics`), {
+        method: "POST",
       });
     },
     submitReview(postId: string, payload: { comment: string; operator: string }) {
@@ -179,10 +254,17 @@ export const apiClient = {
   },
   review: {
     async list() {
-      const posts = await apiFetch<PostListItem[]>(endpoint("/posts"));
-      const inReviewPosts = posts.filter((post) => post.status === "in_review");
-      const details = await Promise.all(inReviewPosts.map((post) => apiFetch<PostDetail>(endpoint(`/posts/${post.id}`))));
-      return details.map(getReviewQueueItem);
+      try {
+        const confirmations = await apiFetch<ConfirmationSummary[]>(endpoint("/confirmations"));
+        const inReviewPosts = confirmations.filter((post) => post.status === "in_review");
+        const details = await Promise.all(inReviewPosts.map((post) => apiFetch<ConfirmationDetail>(endpoint(`/confirmations/${post.id}`))));
+        return details.map(getReviewQueueItem);
+      } catch {
+        const posts = await apiFetch<PostListItem[]>(endpoint("/posts"));
+        const inReviewPosts = posts.filter((post) => post.status === "in_review");
+        const details = await Promise.all(inReviewPosts.map((post) => apiFetch<PostDetail>(endpoint(`/posts/${post.id}`))));
+        return details.map(getReviewQueueItem);
+      }
     },
   },
   workspace: {

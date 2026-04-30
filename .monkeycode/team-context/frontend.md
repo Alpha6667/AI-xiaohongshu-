@@ -139,6 +139,27 @@
 
 ## 当前问题
 
+- 2026-04-30 已开始本轮页面收口，不扩新页面，只提升已有页面的完成度。
+- `/posts/[id]` 已新增“刷新指标数据”按钮，前端接入 `POST /api/posts/{post_id}/refresh-metrics`，成功后通过 `router.refresh()` 重新拉取详情页 SSR 数据，因此 `latestMetrics` 与 `metricsHistory` 会一起更新。
+- `refresh-metrics` 失败时，前端会优先承接后端 `detail` 字段；若命中 `metrics_fetch_failed:<error_code>`，当前已对登录失效、页面结构变化、超时、帖子未找到、网络异常、暂不可用、浏览器抓取异常等错误码给出中文提示。
+- `/posts` 与 `/posts/[id]` 正在去掉“联调面板感”：列表与详情会优先按发布时间、当前状态、平台回写和数据表现组织阅读顺序，减少直接暴露技术字段。
+- 本轮同时补齐页面级标题与描述：`/posts`、`/posts/[id]`、`/settings/models`。
+
+- 2026-04-29 已新增 `/settings/models`，用于配置生图厂商、API Key、默认模型和可选 Base URL；全局导航已补“AI 生成设置”入口。
+- 前端已新增 `GET /api/settings/image-provider`、`POST /api/settings/image-provider`、`POST /api/settings/image-provider/test` 的客户端封装与类型定义，并按后端最终契约联调。
+- `GET /api/settings/image-provider` 现在只按 `provider`、`imageModel`、`baseUrl`、`hasKey`、`maskedKey`、`updatedAt` 渲染页面状态，不依赖任何明文 key。
+- `POST /api/settings/image-provider` 保存时允许只传 `provider`；若前端未手动改模型名，则不传 `imageModel`，直接承接后端默认模型补齐逻辑。
+- `POST /api/settings/image-provider/test` 现在按业务响应体解析，不只看 HTTP 状态：前端会读取 `ok` 与 `code`，对 `provider_not_configured` 和 `provider_model_not_configured` 给出明确提示。
+- `/review` 的“刷新候选内容”现在只按真实 `generate-images` 错误语义识别设置缺口：命中 `provider_not_configured` 或 `provider_model_not_configured` 时，会明确提示去 `/settings/models` 完成配置，不再沿用旧的宽泛兜底判断。
+- 厂商切换已按文档内置默认模型映射：`openai -> gpt-image-1`、`bfl -> flux.2`、`volcengine -> seedream`、`tencent -> hunyuan-image`、`alibaba -> wanx`、`stability -> stable-image`；切换厂商后页面会自动带出推荐模型，但仍允许手动改名。
+- 设置页读取配置时只展示 `maskedKey` / `hasKey`，不提供完整 Key 回显或复制完整 Key 的入口，页面文案也已明确 Key 只用于服务端请求第三方模型。
+
+- 2026-04-24 已开始第三优先级真实展示收口：`/accounts` 已切到账号连接状态、最近验证、最近同步和错误摘要主路径展示；`/review`、`/dashboard`、`/posts`、`/posts/[id]` 已开始统一消费 `connectionStatus`、`lastSyncAt`、`lastSyncStatus`、`reviewStatus`、`under_review`、`rejected`、互动计数字段。
+- `frontend/src/lib/product.ts` 现已统一补齐“同一份确认对象”说明、账号可真实发布提示、平台审核中/审核未通过语义、作品同步状态和互动数据优先级（优先用 `likeCount` / `collectCount` / `commentCount`，缺失时再回落 `latestMetrics`）。
+- 内容确认台现在会在保存确认版时真实回写 `post.accountId`，因此所选发布账号不再只是纯前端临时选择。
+- `/posts` 已改为展示真实帖子主表，不再只看 `published`；列表里会同时露出平台审核中、审核未通过和同步结果。
+- 当前仍需后端继续稳定返回 `platformUrl`、账号连接字段和同步字段，前端现在已经有展示位，但部分真实样本可能仍为空。
+
 - 后端已补齐 `GET /api/tasks` 与 `GET /api/accounts` 的主要展示字段，前端这轮开始把 `title`、`stageLabel`、`nextAction`、`accountName`、`plannedAt`、`requiresHumanReview` 以及账号聚合字段作为主路径消费。
 - 当前已进一步收口账号归属展示：如果接口成功但帖子或任务没有真实 `accountId` / `accountName`，页面会明确显示“未分配账号”，不再回退到种子账号。
 - 后端真实 `stage` 使用 `pending_generation`、`waiting_review` 等枚举，前端仍需要一层轻量归一化，映射到现有页面内部的展示阶段。
@@ -166,6 +187,8 @@
 
 ## 下一步
 
+- 等后端补齐 `image-provider` 配置接口后，前端可直接把 `/settings/models` 从草稿模式切到真实保存、真实读取和真实测试。
+- 如果后端把 `generate-images` 的失败语义稳定收口到 `provider_not_configured` 或明确中文 detail，前端现有确认台提示可以直接承接，不需要再重做页面结构。
 - 当前前端已经把真实页面里的账号展示和发布状态都切到后端真实结果主路径；下一步如果联调稳定，可继续删除仅用于整页演示回退的种子账号逻辑。
 - 在接口稳定前，前端暂只保留“接口请求失败时整页回退”的最小兼容，不再把种子账号或演示发布状态用于接口成功但字段为空的页面。
 - 如果后端后续补充更细的生成链路字段（如独立 copy/image task 状态），前端可以继续把 `/tasks` 和 `/posts/[id]` 的准备度从布尔值升级为更细粒度进度展示。

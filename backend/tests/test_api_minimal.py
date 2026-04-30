@@ -133,6 +133,55 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(publish_resp.status_code, 200)
         self.assertEqual(publish_resp.json()["status"], "publishing")
 
+    def test_accounts_and_works_sync_contract(self) -> None:
+        list_resp = self.client.get("/api/accounts")
+        self.assertEqual(list_resp.status_code, 200)
+        accounts = list_resp.json()
+        self.assertGreaterEqual(len(accounts), 1)
+        first_account = accounts[0]
+        self.assertIn("connectionStatus", first_account)
+        self.assertIn("lastSyncAt", first_account)
+        self.assertIn("lastSyncStatus", first_account)
+
+        works_resp = self.client.get(f"/api/accounts/{first_account['id']}/works-sync")
+        self.assertEqual(works_resp.status_code, 200)
+        works_payload = works_resp.json()
+        self.assertEqual(works_payload["accountId"], first_account["id"])
+        self.assertIn("works", works_payload)
+
+        trigger_resp = self.client.post(f"/api/accounts/{first_account['id']}/works-sync")
+        self.assertEqual(trigger_resp.status_code, 200)
+        trigger_payload = trigger_resp.json()
+        self.assertEqual(trigger_payload["accountId"], first_account["id"])
+        self.assertIn(trigger_payload["lastSyncStatus"], {"succeeded", "failed"})
+
+    def test_confirmations_contract(self) -> None:
+        list_resp = self.client.get("/api/confirmations")
+        self.assertEqual(list_resp.status_code, 200)
+        confirmations = list_resp.json()
+        self.assertGreaterEqual(len(confirmations), 1)
+        first_confirmation = confirmations[0]
+        self.assertEqual(first_confirmation["postId"], first_confirmation["id"])
+        self.assertIn("confirmationSource", first_confirmation)
+        self.assertIn("platformUrl", first_confirmation)
+
+        detail_resp = self.client.get(f"/api/confirmations/{first_confirmation['id']}")
+        self.assertEqual(detail_resp.status_code, 200)
+        detail_payload = detail_resp.json()
+        self.assertEqual(detail_payload["postId"], first_confirmation["id"])
+        self.assertIn("assets", detail_payload)
+        self.assertIn("reviewRecords", detail_payload)
+        self.assertIn("publishRecords", detail_payload)
+
+        patch_resp = self.client.patch(
+            f"/api/confirmations/{first_confirmation['id']}",
+            json={"title": "确认对象已更新标题", "accountId": "account-yiyi"},
+        )
+        self.assertEqual(patch_resp.status_code, 200)
+        patch_payload = patch_resp.json()
+        self.assertEqual(patch_payload["title"], "确认对象已更新标题")
+        self.assertEqual(patch_payload["accountId"], "account-yiyi")
+
     def test_asset_upload_with_post_id_association(self) -> None:
         create_resp = self.client.post(
             "/api/posts",
