@@ -1,25 +1,109 @@
-node_modules/
-.next/
-dist/
-build/
-coverage/
-.venv/
-__pycache__/
-*.pyc
-.env
+# -----------------------------
+# OS / Editor
+# -----------------------------
 .DS_Store
-pnpm-lock.yaml
-package-lock.json
-yarn.lock
-backend/.pytest_cache/
-backend/.mypy_cache/
-backend/.ruff_cache/
-backend/data/repository.json
-backend/*.egg-info/
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
 
-# miner / logs
-xmrig*
+# -----------------------------
+# Logs
+# -----------------------------
 *.log
 logs/
 nohup.out
-scanner_linux
+
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.sample
+
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# -----------------------------
+# Node / Frontend
+# -----------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build caches
+*.tsbuildinfo
+.next/
+.nuxt/
+.svelte-kit/
+.parcel-cache/
+.turbo/
+.cache/
+
+# Test coverage
+coverage/
+
+# Common frontend build outputs
+dist/
+build/
+
+# -----------------------------
+# Project local runtime data
+# -----------------------------
+backend/data/
+backend/tmp/
+backend/cache/
+worker/tmp/
+worker/cache/
+
+# Uploads / generated local assets
+uploads/
+tmp/
+temp/
+
+# -----------------------------
+# Archives / binaries
+# -----------------------------
+*.tar
+*.tar.gz
+*.zip
+*.7z
+*.rar
+*.exe
+*.dll
+*.so
+*.dylib
+
+# -----------------------------
+# Database / local storage
+# -----------------------------
+*.sqlite
+*.sqlite3
+
+# -----------------------------
+# Misc
+# -----------------------------
+*.pid
+*.seed
