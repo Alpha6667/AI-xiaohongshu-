@@ -222,7 +222,7 @@ async function handlePublish(req, res) {
   
   try {
     const task = await parseBody(req);
-    log(`Publish request: postId=${task.postId}`);
+    log(`Publish request: postId=${task.postId} callback.publishResultUrl=${task.callback?.publishResultUrl || '(none)'} callback.metricsUrl=${task.callback?.metricsUrl || '(none)'}`);
     
     if (!task.postId || !task.content) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
