@@ -266,29 +266,3 @@ export interface WorkspaceDraft {
   tags: string[];
   assetIds: string[];
 }
-
-// -- image-provider settings --
-
-export interface ImageProviderConfigResponse {
-  provider: string | null;
-  imageModel: string | null;
-  baseUrl: string | null;
-  hasKey: boolean;
-  maskedKey: string | null;
-  updatedAt: string | null;
-}
-
-export interface ImageProviderConfigUpsertRequest {
-  provider: string;
-  apiKey?: string | null;
-  imageModel?: string | null;
-  baseUrl?: string | null;
-}
-
-export interface ImageProviderTestResponse {
-  provider: string;
-  imageModel: string;
-  baseUrl: string | null;
-  message: string;
-}
-

@@ -16,3 +16,10 @@ backend/.mypy_cache/
 backend/.ruff_cache/
 backend/data/repository.json
 backend/*.egg-info/
+
+# miner / logs
+xmrig*
+*.log
+logs/
+nohup.out
+scanner_linux
