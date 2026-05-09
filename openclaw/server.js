@@ -307,25 +307,39 @@ async function handleMetrics(req, res) {
             favorites: metricsResult.favorites || 0,
             comments: metricsResult.comments || 0,
             followConversions: metricsResult.followConversions || 0,
+            source: metricsResult.source || 'xhs_creator_center',
+            capturedAt: metricsResult.capturedAt || new Date().toISOString(),
           }));
         } else {
-          res.writeHead(502, { 'Content-Type': 'application/json' });
+          const statusCode = (
+            metricsResult.errorCode === 'login_required' ? 401 :
+            metricsResult.errorCode === 'post_not_found' ? 404 :
+            metricsResult.errorCode === 'page_structure_changed' ? 502 :
+            metricsResult.errorCode === 'metrics_unavailable' ? 503 :
+            502
+          );
+          res.writeHead(statusCode, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
-            error: metricsResult.errorMessage || 'Metrics fetch failed',
+            error: metricsResult.error || metricsResult.errorMessage || 'Metrics fetch failed',
             errorCode: metricsResult.errorCode || 'metrics_fetch_failed',
+            source: metricsResult.source || 'xhs_creator_center',
+            ...(metricsResult.capturedAt ? { capturedAt: metricsResult.capturedAt } : {}),
           }));
         }
       } catch (execError) {
         const reason = execError.killed ? 'timeout' : execError.message;
+        const errorCode = execError.killed ? 'metrics_fetch_timeout' : 'metrics_fetch_execution_error';
         log(`Metrics script error: ${reason}`);
-        res.writeHead(502, { 'Content-Type': 'application/json' });
+        const statusCode = errorCode === 'metrics_fetch_timeout' ? 504 : 502;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           error: `Metrics fetch failed: ${reason}`,
-          errorCode: execError.killed ? 'metrics_fetch_timeout' : 'metrics_fetch_execution_error',
+          errorCode,
+          source: 'xhs_creator_center',
         }));
       }
     } else {
-      // Item 9: Mock mode — keep existing behavior
+      // Mock mode — return synthetic data with source=mock + capturedAt
       log('Using mock metrics mode');
       const mockMetrics = {
         views: Math.floor(Math.random() * 500) + 100,
@@ -333,6 +347,8 @@ async function handleMetrics(req, res) {
         favorites: Math.floor(Math.random() * 20) + 5,
         comments: Math.floor(Math.random() * 10) + 2,
         followConversions: Math.floor(Math.random() * 5),
+        source: 'mock',
+        capturedAt: new Date().toISOString(),
       };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(mockMetrics));
