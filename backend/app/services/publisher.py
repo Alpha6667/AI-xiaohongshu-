@@ -13,6 +13,14 @@ from app.repositories.memory import new_id, now_iso, repository
 
 
 DEFAULT_BACKEND_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
+OPENCLAW_METRICS_ERROR_CODES = {
+    "login_required",
+    "post_not_found",
+    "page_structure_changed",
+    "metrics_unavailable",
+    "metrics_fetch_timeout",
+    "metrics_fetch_execution_error",
+}
 
 
 @dataclass(slots=True)
@@ -26,6 +34,12 @@ class MetricsFetchError(RuntimeError):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def _normalize_metrics_error_code(code: object) -> str:
+    if isinstance(code, str) and code in OPENCLAW_METRICS_ERROR_CODES:
+        return code
+    return "metrics_fetch_execution_error"
 
 
 class FakePublisherAdapter:
@@ -157,7 +171,7 @@ class FakePublisherAdapter:
         prepared.post.updated_at = now_iso()
         return prepared
 
-    def fetch_metrics(self, post: Post) -> dict[str, int]:
+    def fetch_metrics(self, post: Post) -> dict[str, int | str | None]:
         settings = get_settings()
         metrics_url = getattr(settings, "openclaw_metrics_webhook_url", "")
         if not metrics_url:
@@ -179,14 +193,24 @@ class FakePublisherAdapter:
             with urlopen(request, timeout=timeout_seconds) as response:
                 content = response.read().decode("utf-8")
         except HTTPError as exc:
-            raise MetricsFetchError("metrics_fetch_http_error", f"Metrics fetch http error: {exc.code}") from exc
+            try:
+                error_payload = json.loads(exc.read().decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                error_payload = {}
+            error_code = _normalize_metrics_error_code(error_payload.get("errorCode"))
+            raise MetricsFetchError(error_code, str(error_payload.get("message") or f"Metrics fetch http error: {exc.code}")) from exc
         except URLError as exc:
-            raise MetricsFetchError("metrics_fetch_network_error", f"Metrics fetch network error: {exc.reason}") from exc
+            raise MetricsFetchError("metrics_fetch_execution_error", f"Metrics fetch network error: {exc.reason}") from exc
 
         try:
             raw = json.loads(content)
         except json.JSONDecodeError as exc:
             raise MetricsFetchError("metrics_fetch_invalid_response", "Metrics fetch response is not valid JSON") from exc
+
+        error_code = raw.get("errorCode")
+        if error_code is not None:
+            normalized_code = _normalize_metrics_error_code(error_code)
+            raise MetricsFetchError(normalized_code, str(raw.get("message") or normalized_code))
 
         required_keys = ("views", "likes", "favorites", "comments", "followConversions")
         missing_keys = [key for key in required_keys if key not in raw]
@@ -200,6 +224,8 @@ class FakePublisherAdapter:
                 "favorites": int(raw["favorites"]),
                 "comments": int(raw["comments"]),
                 "followConversions": int(raw["followConversions"]),
+                "source": raw.get("source"),
+                "capturedAt": raw.get("capturedAt"),
             }
         except (TypeError, ValueError) as exc:
             raise MetricsFetchError("metrics_fetch_invalid_payload", "Metrics response contains invalid numeric fields") from exc

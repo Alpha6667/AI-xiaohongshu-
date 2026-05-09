@@ -83,6 +83,8 @@ class MetricsSnapshotAppendRequest(BaseModel):
     comments: int
     followConversions: int
     snapshotAt: str | None = None
+    source: str | None = None
+    capturedAt: str | None = None
 
 
 class AssetSummaryResponse(BaseModel):
@@ -100,6 +102,8 @@ class PostMetricsResponse(BaseModel):
     favorites: int
     comments: int
     followConversions: int
+    source: str | None = None
+    capturedAt: str | None = None
 
 
 class ReviewRecordResponse(BaseModel):
@@ -130,6 +134,8 @@ class MetricsSnapshotResponse(BaseModel):
     favorites: int
     comments: int
     followConversions: int
+    source: str | None = None
+    capturedAt: str | None = None
 
 
 class PostSummaryResponse(BaseModel):
@@ -142,6 +148,7 @@ class PostSummaryResponse(BaseModel):
     assetIds: list[str]
     latestTaskIds: list[str]
     latestMetrics: PostMetricsResponse
+    metricsSource: str | None = None
     platformPostId: str | None
     platformUrl: str | None
     accountId: str | None

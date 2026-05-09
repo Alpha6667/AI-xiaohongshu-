@@ -58,6 +58,8 @@ def _latest_metrics(post_id: str) -> PostMetricsResponse:
         favorites=snapshot.favorites,
         comments=snapshot.comments,
         followConversions=snapshot.follow_conversions,
+        source=snapshot.source,
+        capturedAt=snapshot.captured_at,
     )
 
 
@@ -126,6 +128,8 @@ def _serialize_metrics_history(post: Post) -> list[MetricsSnapshotResponse]:
             favorites=snapshot.favorites,
             comments=snapshot.comments,
             followConversions=snapshot.follow_conversions,
+            source=snapshot.source,
+            capturedAt=snapshot.captured_at,
         )
         for snapshot in repository.metrics_snapshots.get(post.id, [])
     ]
@@ -164,6 +168,7 @@ def _serialize_post(post: Post) -> PostSummaryResponse:
         assetIds=post.asset_ids,
         latestTaskIds=post.generation_task_ids[-3:],
         latestMetrics=latest_metrics,
+        metricsSource=latest_metrics.source,
         platformPostId=post.platform_post_id,
         platformUrl=post.platform_url,
         accountId=post.account_id,
@@ -476,7 +481,8 @@ def _get_latest_publish_log(post: Post) -> PublishLog:
     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Publish log not found for post")
 
 
-def _append_metrics_snapshot(post: Post, metrics: dict[str, int], *, snapshot_at: str | None = None) -> MetricsSnapshot:
+def _append_metrics_snapshot(post: Post, metrics: dict[str, int | str | None], *, snapshot_at: str | None = None) -> MetricsSnapshot:
+    captured_at = str(metrics["capturedAt"]) if metrics.get("capturedAt") is not None else None
     snapshot = MetricsSnapshot(
         id=new_id("metric"),
         post_id=post.id,
@@ -485,7 +491,9 @@ def _append_metrics_snapshot(post: Post, metrics: dict[str, int], *, snapshot_at
         favorites=metrics["favorites"],
         comments=metrics["comments"],
         follow_conversions=metrics["followConversions"],
-        snapshot_at=snapshot_at or now_iso(),
+        snapshot_at=snapshot_at or captured_at or now_iso(),
+        source=str(metrics["source"]) if metrics.get("source") is not None else None,
+        captured_at=captured_at,
     )
     history = repository.metrics_snapshots.setdefault(post.id, [])
     history.append(snapshot)
@@ -520,8 +528,16 @@ def writeback_publish_result(post_id: str, payload: PublishResultWritebackReques
         try:
             metrics = publisher_adapter.fetch_metrics(post)
             _append_metrics_snapshot(post, metrics)
+            post.like_count = int(metrics["likes"])
+            post.collect_count = int(metrics["favorites"])
+            post.comment_count = int(metrics["comments"])
+            post.last_sync_at = str(metrics.get("capturedAt") or post.updated_at)
+            post.last_sync_status = AccountSyncStatus.SUCCEEDED
+            post.sync_error = None
         except MetricsFetchError as exc:
             log.detail = f"{log.detail} | metrics_fetch:{exc.code}"
+            post.last_sync_status = AccountSyncStatus.FAILED
+            post.sync_error = exc.code
     else:
         post.status = PostStatus.PUBLISH_FAILED
         log.error_message = payload.errorMessage or payload.detail or "Publish failed"
@@ -558,13 +574,15 @@ def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest)
             "favorites": payload.favorites,
             "comments": payload.comments,
             "followConversions": payload.followConversions,
+            "source": payload.source,
+            "capturedAt": payload.capturedAt,
         },
         snapshot_at=timestamp,
     )
     post.like_count = snapshot.likes
     post.collect_count = snapshot.favorites
     post.comment_count = snapshot.comments
-    post.last_sync_at = timestamp
+    post.last_sync_at = snapshot.snapshot_at
     post.last_sync_status = AccountSyncStatus.SUCCEEDED
     post.sync_error = None
     post.updated_at = now_iso()
@@ -577,6 +595,8 @@ def append_metrics_snapshot(post_id: str, payload: MetricsSnapshotAppendRequest)
         favorites=snapshot.favorites,
         comments=snapshot.comments,
         followConversions=snapshot.follow_conversions,
+        source=snapshot.source,
+        capturedAt=snapshot.captured_at,
     )
 
 
@@ -585,12 +605,22 @@ def refresh_metrics_snapshot(post_id: str) -> MetricsSnapshotResponse:
     try:
         metrics = publisher_adapter.fetch_metrics(post)
     except MetricsFetchError as exc:
+        post.last_sync_status = AccountSyncStatus.FAILED
+        post.sync_error = exc.code
+        post.updated_at = now_iso()
+        repository.save()
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"metrics_fetch_failed:{exc.code}",
         ) from exc
 
     snapshot = _append_metrics_snapshot(post, metrics)
+    post.like_count = int(metrics["likes"])
+    post.collect_count = int(metrics["favorites"])
+    post.comment_count = int(metrics["comments"])
+    post.last_sync_at = snapshot.snapshot_at
+    post.last_sync_status = AccountSyncStatus.SUCCEEDED
+    post.sync_error = None
     post.updated_at = now_iso()
     repository.save()
     return MetricsSnapshotResponse(
@@ -601,4 +631,6 @@ def refresh_metrics_snapshot(post_id: str) -> MetricsSnapshotResponse:
         favorites=snapshot.favorites,
         comments=snapshot.comments,
         followConversions=snapshot.follow_conversions,
+        source=snapshot.source,
+        capturedAt=snapshot.captured_at,
     )

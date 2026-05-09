@@ -164,6 +164,8 @@ class InMemoryRepository:
                     comments=item["comments"],
                     follow_conversions=item["follow_conversions"],
                     snapshot_at=item["snapshot_at"],
+                    source=item.get("source"),
+                    captured_at=item.get("captured_at"),
                 )
                 for item in snapshots
             ]
@@ -464,6 +466,8 @@ class InMemoryRepository:
             comments=115,
             follow_conversions=93,
             snapshot_at=created_at,
+            source="mock",
+            captured_at=created_at,
         )
         self.metrics_snapshots[published_post.id] = [snapshot]
 

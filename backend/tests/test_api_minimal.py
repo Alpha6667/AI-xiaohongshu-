@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.repositories.memory import repository
-from app.services.publisher import MetricsFetchError
+from app.services.publisher import MetricsFetchError, _normalize_metrics_error_code
 
 
 def reset_repository() -> None:
@@ -22,6 +22,12 @@ def configure_image_provider(client: TestClient, **overrides: object) -> dict[st
     response = client.post("/api/settings/image-provider", json=payload)
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def test_metrics_error_code_normalization() -> None:
+    assert _normalize_metrics_error_code("login_required") == "login_required"
+    assert _normalize_metrics_error_code("metrics_fetch_timeout") == "metrics_fetch_timeout"
+    assert _normalize_metrics_error_code("loginrequired") == "metrics_fetch_execution_error"
 
 
 class BackendApiMinimalTests(unittest.TestCase):
@@ -441,6 +447,8 @@ class BackendApiMinimalTests(unittest.TestCase):
                 "favorites": 12,
                 "comments": 6,
                 "followConversions": 3,
+                "source": "mock",
+                "capturedAt": "2026-05-09T21:18:39.284Z",
             }
             writeback_resp = self.client.post(
                 f"/api/posts/{post_id}/publish-result",
@@ -464,12 +472,65 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(after_history[-1]["favorites"], 12)
         self.assertEqual(after_history[-1]["comments"], 6)
         self.assertEqual(after_history[-1]["followConversions"], 3)
+        self.assertEqual(after_history[-1]["source"], "mock")
+        self.assertEqual(after_history[-1]["capturedAt"], "2026-05-09T21:18:39.284Z")
         self.assertEqual(after_detail["latestMetrics"], {
             "views": after_history[-1]["views"],
             "likes": after_history[-1]["likes"],
             "favorites": after_history[-1]["favorites"],
             "comments": after_history[-1]["comments"],
             "followConversions": after_history[-1]["followConversions"],
+            "source": after_history[-1]["source"],
+            "capturedAt": after_history[-1]["capturedAt"],
+        })
+        self.assertEqual(after_detail["metricsSource"], "mock")
+        self.assertEqual(after_detail["lastSyncStatus"], "succeeded")
+        self.assertIsNone(after_detail["syncError"])
+
+    def test_publish_success_writeback_persists_real_metrics_source(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "真实指标来源",
+                "title": "真实指标来源标题",
+                "body": "真实指标来源正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        post_id = create_resp.json()["id"]
+        self.client.post(f"/api/posts/{post_id}/submit-review", json={"comment": "提交", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/approve", json={"comment": "通过", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/publish", json={"comment": "进入发布", "operator": "qa"})
+
+        with patch("app.services.posts.publisher_adapter.fetch_metrics") as fetch_mock:
+            fetch_mock.return_value = {
+                "views": 158,
+                "likes": 38,
+                "favorites": 12,
+                "comments": 8,
+                "followConversions": 2,
+                "source": "xhs_creator_center",
+                "capturedAt": "2026-05-09T21:19:39.284Z",
+            }
+            writeback_resp = self.client.post(
+                f"/api/posts/{post_id}/publish-result",
+                json={"publishStatus": "succeeded", "operator": "worker", "detail": "发布成功", "platformPostId": "xh_real_1"},
+            )
+
+        self.assertEqual(writeback_resp.status_code, 200)
+        detail = self.client.get(f"/api/posts/{post_id}").json()
+        last_snapshot = detail["metricsHistory"][-1]
+        self.assertEqual(last_snapshot["source"], "xhs_creator_center")
+        self.assertEqual(detail["metricsSource"], "xhs_creator_center")
+        self.assertEqual(detail["latestMetrics"], {
+            "views": last_snapshot["views"],
+            "likes": last_snapshot["likes"],
+            "favorites": last_snapshot["favorites"],
+            "comments": last_snapshot["comments"],
+            "followConversions": last_snapshot["followConversions"],
+            "source": last_snapshot["source"],
+            "capturedAt": last_snapshot["capturedAt"],
         })
 
     def test_openclaw_publish_payload_includes_assets_and_public_callback(self) -> None:
@@ -569,7 +630,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         before_count = len(self.client.get(f"/api/posts/{post_id}").json()["metricsHistory"])
 
         with patch("app.services.posts.publisher_adapter.fetch_metrics") as fetch_mock:
-            fetch_mock.side_effect = MetricsFetchError("metrics_fetch_network_error", "network down")
+            fetch_mock.side_effect = MetricsFetchError("login_required", "login required")
             writeback_resp = self.client.post(
                 f"/api/posts/{post_id}/publish-result",
                 json={
@@ -587,6 +648,8 @@ class BackendApiMinimalTests(unittest.TestCase):
         after_detail = self.client.get(f"/api/posts/{post_id}").json()
         self.assertEqual(after_detail["status"], "published")
         self.assertEqual(len(after_detail["metricsHistory"]), before_count)
+        self.assertEqual(after_detail["lastSyncStatus"], "failed")
+        self.assertEqual(after_detail["syncError"], "login_required")
 
     def test_openclaw_publish_adapter_state_flow(self) -> None:
         create_resp = self.client.post(

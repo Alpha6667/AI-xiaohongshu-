@@ -11,3 +11,5 @@ class MetricsSnapshot:
     comments: int
     follow_conversions: int
     snapshot_at: str
+    source: str | None = None
+    captured_at: str | None = None
