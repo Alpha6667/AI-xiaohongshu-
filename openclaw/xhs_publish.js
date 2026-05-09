@@ -2,15 +2,23 @@
 /**
  * Xiaohongshu real publish script (Node.js)
  * Captures real noteId via network response interceptor.
+ * Supports content.assets for multi-image upload:
+ *   - assets[].url: local file path or http/https URL
+ *   - HTTP/HTTPS URLs are downloaded to a temp directory first
+ *   - All images uploaded via fileChooser.setFiles()
+ *   - Content is passed via process.argv[2] as JSON
  */
 const { chromium } = require('playwright');
+const path = require('path');
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
+const { URL } = require('url');
 
 const PROFILE_DIR = process.env.XHS_PROFILE_DIR || '/root/.openclaw/xhs-profile-persist';
 const SCREENSHOT_DIR = process.env.XHS_SCREENSHOT_DIR || '/tmp/xhs-screenshots';
-const TEST_IMAGE = process.env.XHS_TEST_IMAGE || '/root/.openclaw/media/test_upload_img.png';
 const HEADLESS = process.env.XHS_HEADLESS !== 'false';
 
-const fs = require('fs');
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
 const logs = [];
@@ -34,10 +42,112 @@ function findNoteInObj(obj, depth = 0) {
   return null;
 }
 
+/**
+ * Download a remote file via http/https to a temp directory.
+ * Returns the local file path.
+ */
+function downloadFile(urlStr, destDir) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(urlStr);
+    const isHttps = parsedUrl.protocol === 'https:';
+    const httpModule = isHttps ? https : http;
+
+    // Extract filename from URL
+    const urlPath = parsedUrl.pathname;
+    let filename = path.basename(urlPath);
+    if (!filename || !filename.includes('.')) {
+      filename = `download_${Date.now()}.png`;
+    }
+    // Sanitize filename
+    filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    const destPath = path.join(destDir, filename);
+
+    const reqOptions = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'GET',
+      timeout: 30000,
+    };
+
+    const req = httpModule.request(reqOptions, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        // Follow redirect
+        resolve(downloadFile(res.headers.location, destDir));
+        return;
+      }
+      if (res.statusCode !== 200) {
+        reject(new Error(`Download failed: HTTP ${res.statusCode} for ${urlStr}`));
+        return;
+      }
+      const fileStream = fs.createWriteStream(destPath);
+      res.pipe(fileStream);
+      fileStream.on('finish', () => {
+        fileStream.close();
+        log(`Downloaded: ${urlStr} -> ${destPath}`);
+        resolve(destPath);
+      });
+      fileStream.on('error', reject);
+    });
+
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error(`Download timeout for ${urlStr}`)); });
+    req.end();
+  });
+}
+
+/**
+ * Resolve all asset URLs to local file paths.
+ * Local paths are used as-is; HTTP/HTTPS URLs are downloaded.
+ */
+async function resolveAssetFiles(assets, tempDir) {
+  const files = [];
+  for (const asset of (assets || [])) {
+    if (!asset.url) {
+      log(`Skipping asset without url: ${JSON.stringify(asset)}`);
+      continue;
+    }
+    const urlStr = asset.url;
+    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+      const localPath = await downloadFile(urlStr, tempDir);
+      files.push(localPath);
+    } else {
+      // Local path
+      if (fs.existsSync(urlStr)) {
+        files.push(urlStr);
+      } else {
+        log(`Warning: asset file not found: ${urlStr}`);
+      }
+    }
+  }
+  return files;
+}
+
 async function publish(content) {
   log('Starting publish');
   const title = content.title || '';
   const body = content.body || '';
+  const assets = content.assets || [];
+
+  // Temp directory for downloaded images
+  const tempDir = path.join(SCREENSHOT_DIR, 'assets_' + Date.now());
+  fs.mkdirSync(tempDir, { recursive: true });
+
+  // Resolve asset files — local or downloaded
+  const imageFiles = await resolveAssetFiles(assets, tempDir);
+  log(`Resolved ${imageFiles.length} image(s) from ${assets.length} asset(s)`);
+
+  // Fallback: if no assets provided, use TEST_IMAGE
+  if (imageFiles.length === 0) {
+    const testImage = process.env.XHS_TEST_IMAGE || '/root/.openclaw/media/test_upload_img.png';
+    if (fs.existsSync(testImage)) {
+      imageFiles.push(testImage);
+      log('No assets provided, using TEST_IMAGE fallback');
+    } else {
+      log('Warning: No assets and TEST_IMAGE not found, proceeding without images');
+    }
+  }
 
   let browser;
   try {
@@ -51,7 +161,7 @@ async function publish(content) {
     const pages = browser.pages();
     const page = pages.length > 0 ? pages[0] : await browser.newPage();
 
-    // Step 1: Warm up — skip strict login check during URL transition
+    // Step 1: Warm up
     log('Navigating to home page (session warmup)');
     try {
       await page.goto('https://creator.xiaohongshu.com/new/home', { waitUntil: 'load', timeout: 60000 });
@@ -62,7 +172,6 @@ async function publish(content) {
     const homeUrl = page.url();
     log(`Home URL: ${homeUrl}`);
 
-    // Only fail if URL stayed on login without any /new/home transition
     if (homeUrl.includes('/login') && !homeUrl.includes('/new/home')) {
       log('Login required (stuck on login)');
       await browser.close();
@@ -81,7 +190,7 @@ async function publish(content) {
     const pubUrl = page.url();
     log(`Publish URL: ${pubUrl}`);
 
-    // Step 3: Click "上传图文" tab (not-active one)
+    // Step 3: Click "上传图文" tab
     log('Clicking 上传图文 tab');
     const clickR = await page.evaluate(() => {
       const tabs = document.querySelectorAll('.creator-tab');
@@ -95,14 +204,21 @@ async function publish(content) {
     log(`Tab: ${clickR}`);
     await new Promise(r => setTimeout(r, 4000));
 
-    // Step 4: Upload image via filechooser
-    log('Uploading image');
+    // Step 4: Upload all images via filechooser
+    log(`Uploading ${imageFiles.length} image(s)`);
+    // Trigger file picker
     const [fileChooser] = await Promise.all([
-      page.waitForEvent('filechooser', { timeout: 10000 }),
+      page.waitForEvent('filechooser', { timeout: 10000 }).catch(() => null),
       page.evaluate(() => { const i = document.querySelector('input[type="file"]'); if (i) i.click(); })
     ]);
-    await fileChooser.setFiles(TEST_IMAGE);
-    log('Image uploaded');
+
+    if (fileChooser) {
+      // setFiles accepts single path or array
+      await fileChooser.setFiles(imageFiles.length === 1 ? imageFiles[0] : imageFiles);
+      log(`${imageFiles.length} image(s) uploaded`);
+    } else {
+      log('Warning: file chooser event not captured, trying upload anyway');
+    }
     await new Promise(r => setTimeout(r, 8000));
 
     // Step 5: Verify editor
@@ -118,7 +234,7 @@ async function publish(content) {
       return { success: false, errorMessage: 'Editor not loaded after upload', failureType: 'retryable', executionLogs: logs };
     }
 
-    // Step 6: Fill title + body (Vue-compatible via native setter)
+    // Step 6: Fill title + body
     const fillR = await page.evaluate(({title, body}) => {
       const r = {};
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -174,6 +290,13 @@ async function publish(content) {
 
     await browser.close();
 
+    // Cleanup temp directory
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch (e) {
+      log(`Temp cleanup warning: ${e.message}`);
+    }
+
     if (capturedNoteId) {
       return { success: true, platformPostId: capturedNoteId, executionLogs: logs };
     }
@@ -183,11 +306,13 @@ async function publish(content) {
   } catch (e) {
     log(`Error: ${e.message}`);
     if (browser) await browser.close().catch(() => {});
+    // Cleanup temp directory
+    try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (ex) {}
     return { success: false, errorMessage: e.message, failureType: 'retryable', executionLogs: logs };
   }
 }
 
-// CLI
+// CLI: content passed via process.argv[2] as JSON
 const content = JSON.parse(process.argv[2] || '{}');
 publish(content).then(r => {
   console.log(JSON.stringify(r));

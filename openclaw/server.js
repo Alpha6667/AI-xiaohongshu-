@@ -1,12 +1,19 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
-const { execSync, spawn } = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.OPENCLAW_PUBLISH_PORT || 18790;
-const AUTH_TOKEN = process.env.OPENCLAW_PUBLISH_AUTH_TOKEN || 'openclaw-publish-2026-prod-token';
+
+// Item 1: No default value — fail if not set
+if (!process.env.OPENCLAW_PUBLISH_AUTH_TOKEN) {
+  console.error('[FATAL] OPENCLAW_PUBLISH_AUTH_TOKEN is not set. Exiting.');
+  process.exit(1);
+}
+const AUTH_TOKEN = process.env.OPENCLAW_PUBLISH_AUTH_TOKEN;
+
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000';
 const USE_REAL_PUBLISH = process.env.USE_REAL_PUBLISH === 'true';
 
@@ -68,6 +75,37 @@ function httpRequest(url, options, body) {
   });
 }
 
+/**
+ * Run a Node.js script with spawn and receive output via pipes.
+ * Returns { stdout, stderr, code }.
+ */
+function runScript(scriptPath, args = []) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [scriptPath, ...args], {
+      cwd: path.dirname(scriptPath),
+      env: {
+        ...process.env,
+        // Item 5: Do not force-override XHS_PROFILE_DIR, only set a default
+        XHS_PROFILE_DIR: process.env.XHS_PROFILE_DIR || '/root/.openclaw/xhs-profile-persist',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 60000,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+
+    child.on('close', (code) => {
+      resolve({ stdout, stderr, code });
+    });
+
+    child.on('error', reject);
+  });
+}
+
 async function executeRealPublish(task) {
   const executionId = generateId('exec');
   const logs = ['Task received'];
@@ -75,26 +113,28 @@ async function executeRealPublish(task) {
   logs.push('Using real browser publish mode');
   
   try {
-    // 调用 Python 脚本进行真实发布
+    // Item 6: Pass the full content including assets via JSON string on CLI
     const contentJson = JSON.stringify({
       title: task.content?.title || '',
       body: task.content?.body || '',
-      tags: task.content?.tags || []
+      tags: task.content?.tags || [],
+      assets: task.content?.assets || []
     });
     
     logs.push('Starting browser automation');
     
-    // 执行 Python 脚本
-    const scriptPath = '/root/.openclaw/workspace/skills/xiaohongshu-publisher/xhs_publish.js';
-    const result = execSync(`node "${scriptPath}" '${contentJson}'`, {
-      encoding: 'utf-8',
-      timeout: 60000,
-      env: { ...process.env, XHS_PROFILE_DIR: '/root/.openclaw/xhs-profile-persist' }
-    });
+    // Items 3 & 4: Use path.join + spawn (argument array, no string injection)
+    const scriptPath = path.join(__dirname, 'xhs_publish.js');
+    const result = await runScript(scriptPath, [contentJson]);
+    
+    if (result.code !== 0) {
+      logs.push(`Script exited with code ${result.code}`);
+      throw new Error(result.stderr || `Script exited with code ${result.code}`);
+    }
     
     logs.push('Browser automation completed');
     
-    const publishResult = JSON.parse(result);
+    const publishResult = JSON.parse(result.stdout);
     logs.push(...(publishResult.executionLogs || []));
 
     const detailParts = [];
@@ -245,21 +285,18 @@ async function handleMetrics(req, res) {
     log(`Metrics request: postId=${postId} platformPostId=${platformPostId}`);
 
     if (USE_REAL_PUBLISH) {
+      // Items 3 & 4: Use path.join + spawn (argument array, no string injection)
       const scriptPath = path.join(__dirname, 'xhs_metrics.js');
       log(`Running metrics script: ${scriptPath} ${platformPostId}`);
 
       try {
-        const result = execSync(`node "${scriptPath}" "${platformPostId}"`, {
-          encoding: 'utf-8',
-          timeout: 60000,
-          env: {
-            ...process.env,
-            XHS_PROFILE_DIR: process.env.XHS_PROFILE_DIR || '/root/.openclaw/xhs-profile-persist',
-            XHS_HEADLESS: process.env.XHS_HEADLESS || 'true',
-          },
-        });
+        const result = await runScript(scriptPath, [platformPostId]);
 
-        const metricsResult = JSON.parse(result);
+        if (result.code !== 0) {
+          throw new Error(result.stderr || `Script exited with code ${result.code}`);
+        }
+
+        const metricsResult = JSON.parse(result.stdout);
         log(`Metrics result: success=${metricsResult.success} errorCode=${metricsResult.errorCode || 'none'}`);
 
         if (metricsResult.success) {
@@ -288,7 +325,7 @@ async function handleMetrics(req, res) {
         }));
       }
     } else {
-      // Mock mode: return simulated metrics
+      // Item 9: Mock mode — keep existing behavior
       log('Using mock metrics mode');
       const mockMetrics = {
         views: Math.floor(Math.random() * 500) + 100,

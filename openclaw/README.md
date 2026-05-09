@@ -24,7 +24,7 @@ openclaw/
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `OPENCLAW_PUBLISH_PORT` | `18790` | Webhook 服务监听端口 |
-| `OPENCLAW_PUBLISH_AUTH_TOKEN` | `openclaw-publish-2026-prod-token` | HTTP Bearer 鉴权 Token |
+| `OPENCLAW_PUBLISH_AUTH_TOKEN` | `<OPENCLAW_PUBLISH_AUTH_TOKEN>` | HTTP Bearer 鉴权 Token（必须设置，无默认值） |
 | `BACKEND_BASE_URL` | `http://127.0.0.1:8000` | Backend API 基础地址 |
 | `USE_REAL_PUBLISH` | `false` | `true` = 真实浏览器发布；`false` = mock 模式 |
 | `XHS_PROFILE_DIR` | `/root/.openclaw/xhs-profile-persist` | Chrome profile 路径 |
@@ -115,7 +115,7 @@ USE_REAL_PUBLISH=false node server.js &
 
 # 2. 发送测试发布请求
 curl -X POST http://localhost:18790/api/openclaw/publish \
-  -H 'Authorization: Bearer openclaw-publish-2026-prod-token' \
+  -H 'Authorization: Bearer <OPENCLAW_PUBLISH_AUTH_TOKEN>' \
   -H 'Content-Type: application/json' \
   -d '{
     "postId": "post_test_001",

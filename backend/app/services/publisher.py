@@ -49,7 +49,68 @@ class FakePublisherAdapter:
         post.publish_log_ids.append(publish_log.id)
         post.status = PostStatus.PUBLISHING
         post.updated_at = created_at
+
+        # Item 7: After entering queued state, call OpenClaw webhook
+        self._notify_openclaw(publish_log, post, operator)
+
         return PreparedPublish(post=post, publish_log=publish_log)
+
+    def _notify_openclaw(self, publish_log: PublishLog, post: Post, operator: str) -> None:
+        """Notify OpenClaw publisher via webhook when a post enters queued state."""
+        settings = get_settings()
+        webhook_base = getattr(settings, "openclaw_publish_webhook_url", "")
+        if not webhook_base:
+            import logging
+            logging.getLogger(__name__).warning(
+                "OPENCLAW_PUBLISH_WEBHOOK_URL is not configured, skipping OpenClaw webhook notification"
+            )
+            return
+
+        webhook_url = webhook_base.rstrip("/") + "/api/openclaw/publish"
+        auth_token = getattr(settings, "openclaw_publish_auth_token", "")
+
+        # Build the payload matching OpenClaw's expected format
+        payload = {
+            "postId": post.id,
+            "content": {
+                "title": post.title,
+                "body": post.body,
+                "tags": post.tags or [],
+                "assets": post.assets or [],
+            },
+            "account": {
+                "id": getattr(post, "account_id", ""),
+                "name": getattr(post, "account_name", ""),
+                "handle": getattr(post, "account_handle", ""),
+            },
+            "callback": {
+                "publishResultUrl": (
+                    f"{settings.backend_base_url.rstrip('/') if hasattr(settings, 'backend_base_url') else 'http://127.0.0.1:8000'}"
+                    f"/api/posts/{post.id}/publish-result"
+                ),
+                "authToken": auth_token,
+            },
+        }
+
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            data = json.dumps(payload).encode("utf-8")
+            req = Request(webhook_url, data=data, method="POST")
+            req.add_header("Content-Type", "application/json")
+            if auth_token:
+                req.add_header("Authorization", f"Bearer {auth_token}")
+
+            with urlopen(req, timeout=10) as resp:
+                response_body = resp.read().decode("utf-8")
+                logger.info(f"OpenClaw webhook response ({resp.status}): {response_body[:200]}")
+        except HTTPError as exc:
+            logger.warning(f"OpenClaw webhook HTTP error: {exc.code} {exc.reason}")
+        except URLError as exc:
+            logger.warning(f"OpenClaw webhook network error: {exc.reason}")
+        except Exception as exc:
+            logger.warning(f"OpenClaw webhook error: {exc}")
 
     def submit_publish(self, prepared: PreparedPublish, operator: str) -> PreparedPublish:
         prepared.publish_log.detail = f"Submitted to OpenClaw by {operator}"

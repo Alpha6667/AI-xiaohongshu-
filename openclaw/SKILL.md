@@ -94,7 +94,7 @@
 ## 鉴权
 
 使用 Authorization: Bearer <token> 方式鉴权。
-Token 通过环境变量 OPENCLAW_PUBLISH_AUTH_TOKEN 配置。
+Token 通过环境变量 `OPENCLAW_PUBLISH_AUTH_TOKEN` 配置（必须设置，无默认值）。
 
 ## 异步回写
 
