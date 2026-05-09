@@ -22,14 +22,29 @@
 }
 ```
 
-成功响应 (200):
+成功响应 (200) — 真实模式:
 ```json
 {
   "views": 1523,
   "likes": 89,
   "favorites": 34,
   "comments": 12,
-  "followConversions": 3
+  "followConversions": 3,
+  "source": "xhs_creator_center",
+  "capturedAt": "2026-05-10T13:08:29.530Z"
+}
+```
+
+成功响应 (200) — Mock 模式:
+```json
+{
+  "views": 312,
+  "likes": 27,
+  "favorites": 12,
+  "comments": 6,
+  "followConversions": 3,
+  "source": "mock",
+  "capturedAt": "2026-05-10T13:08:29.530Z"
 }
 ```
 
@@ -37,20 +52,20 @@
 ```json
 {
   "error": "描述信息",
-  "errorCode": "metrics_fetch_login_required"
+  "errorCode": "login_required",
+  "source": "xhs_creator_center",
+  "capturedAt": "2026-05-10T13:08:29.530Z"
 }
 ```
 
 失败码:
 - `auth_failed`: 鉴权失败
 - `missing_required_field`: 缺少 platformPostId
-- `metrics_fetch_login_required`: 小红书登录态失效
-- `metrics_fetch_page_structure_mismatch`: 页面结构解析失败
+- `login_required`: 小红书登录态失效
+- `post_not_found`: 作品不存在
+- `page_structure_changed`: 页面结构解析失败
+- `metrics_unavailable`: 指标数据暂不可用
 - `metrics_fetch_timeout`: 页面加载超时
-- `metrics_fetch_post_not_found`: 作品不存在 (403/404)
-- `metrics_fetch_network_error`: 网络错误
-- `metrics_fetch_not_available`: Playwright 不可用
-- `metrics_fetch_browser_error`: 浏览器启动失败
 - `metrics_fetch_execution_error`: 脚本执行异常
 
 ### POST /api/openclaw/publish
