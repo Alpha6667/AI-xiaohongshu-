@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import patch
 
@@ -463,6 +464,89 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(after_history[-1]["favorites"], 12)
         self.assertEqual(after_history[-1]["comments"], 6)
         self.assertEqual(after_history[-1]["followConversions"], 3)
+        self.assertEqual(after_detail["latestMetrics"], {
+            "views": after_history[-1]["views"],
+            "likes": after_history[-1]["likes"],
+            "favorites": after_history[-1]["favorites"],
+            "comments": after_history[-1]["comments"],
+            "followConversions": after_history[-1]["followConversions"],
+        })
+
+    def test_openclaw_publish_payload_includes_assets_and_public_callback(self) -> None:
+        upload_resp = self.client.post(
+            "/api/assets/upload",
+            json={
+                "name": "联调封面",
+                "fileName": "cover.jpg",
+                "contentType": "image/jpeg",
+                "url": "https://example.com/cover.jpg",
+            },
+        )
+        self.assertEqual(upload_resp.status_code, 201)
+        asset_id = upload_resp.json()["id"]
+
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "OpenClaw payload 资产",
+                "title": "OpenClaw payload 资产标题",
+                "body": "OpenClaw payload 资产正文",
+                "tags": ["payload"],
+                "assetIds": [asset_id, "asset_missing_for_payload"],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+
+        self.client.post(f"/api/posts/{post_id}/submit-review", json={"comment": "提交", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/approve", json={"comment": "通过", "operator": "qa"})
+
+        captured: dict[str, object] = {}
+
+        class Response:
+            status = 200
+
+            def read(self) -> bytes:
+                return b'{"status":"accepted"}'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+        def fake_urlopen(request, timeout):
+            captured["url"] = request.full_url
+            captured["timeout"] = timeout
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            return Response()
+
+        class Settings:
+            openclaw_publish_webhook_url = "http://openclaw.test:18790/api/openclaw/publish"
+            openclaw_publish_auth_token = "test-token"
+            backend_public_base_url = "http://10.1.0.2:8000"
+
+        with patch("app.services.publisher.get_settings", return_value=Settings()), patch(
+            "app.services.publisher.urlopen",
+            side_effect=fake_urlopen,
+        ):
+            publish_resp = self.client.post(
+                f"/api/posts/{post_id}/publish",
+                json={"comment": "进入发布", "operator": "qa"},
+            )
+
+        self.assertEqual(publish_resp.status_code, 200)
+        self.assertEqual(captured["url"], "http://openclaw.test:18790/api/openclaw/publish")
+        payload = captured["payload"]
+        self.assertEqual(payload["callback"]["publishResultUrl"], f"http://10.1.0.2:8000/api/posts/{post_id}/publish-result")
+        self.assertEqual(payload["content"]["assets"], [
+            {
+                "id": asset_id,
+                "name": "联调封面",
+                "url": "https://example.com/assets/cover.jpg",
+                "contentType": "image/jpeg",
+            }
+        ])
 
     def test_publish_success_writeback_metrics_fetch_failure_keeps_publish_success(self) -> None:
         create_resp = self.client.post(

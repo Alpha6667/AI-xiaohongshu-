@@ -12,6 +12,7 @@ class Settings:
     openclaw_metrics_webhook_url: str = os.getenv("OPENCLAW_METRICS_WEBHOOK_URL", "")
     openclaw_metrics_auth_token: str = os.getenv("OPENCLAW_METRICS_AUTH_TOKEN", "")
     openclaw_metrics_timeout_seconds: int = int(os.getenv("OPENCLAW_METRICS_TIMEOUT_SECONDS", "10"))
+    backend_public_base_url: str = os.getenv("BACKEND_PUBLIC_BASE_URL", "")
     # Item 8: OpenClaw publish webhook config — no defaults, mark as unconfigured when missing
     openclaw_publish_webhook_url: str = os.getenv("OPENCLAW_PUBLISH_WEBHOOK_URL", "")
     openclaw_publish_auth_token: str = os.getenv("OPENCLAW_PUBLISH_AUTH_TOKEN", "")

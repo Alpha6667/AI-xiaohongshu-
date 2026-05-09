@@ -12,6 +12,9 @@ from app.db.config import get_settings
 from app.repositories.memory import new_id, now_iso, repository
 
 
+DEFAULT_BACKEND_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
+
+
 @dataclass(slots=True)
 class PreparedPublish:
     post: Post
@@ -26,6 +29,45 @@ class MetricsFetchError(RuntimeError):
 
 
 class FakePublisherAdapter:
+    def _serialize_assets(self, post: Post) -> list[dict[str, str]]:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        assets: list[dict[str, str]] = []
+        for asset_id in post.asset_ids:
+            asset = repository.assets.get(asset_id)
+            if asset is None:
+                logger.warning("Skipping missing publish asset postId=%s assetId=%s", post.id, asset_id)
+                continue
+            assets.append(
+                {
+                    "id": asset.id,
+                    "name": asset.name,
+                    "url": asset.url,
+                    "contentType": asset.content_type,
+                }
+            )
+        return assets
+
+    def _publish_webhook_url(self, configured_url: str) -> str:
+        url = configured_url.rstrip("/")
+        if url.endswith("/api/openclaw/publish"):
+            return url
+        return f"{url}/api/openclaw/publish"
+
+    def _callback_base_url(self) -> str:
+        import logging
+
+        settings = get_settings()
+        base_url = settings.backend_public_base_url.rstrip("/")
+        if base_url:
+            return base_url
+        logging.getLogger(__name__).warning(
+            "BACKEND_PUBLIC_BASE_URL is not configured, falling back to %s for OpenClaw callbacks",
+            DEFAULT_BACKEND_PUBLIC_BASE_URL,
+        )
+        return DEFAULT_BACKEND_PUBLIC_BASE_URL
+
     def prepare_publish(self, post: Post, operator: str) -> PreparedPublish:
         if post.status != PostStatus.APPROVED:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved posts can enter publishing")
@@ -66,8 +108,9 @@ class FakePublisherAdapter:
             )
             return
 
-        webhook_url = webhook_base.rstrip("/") + "/api/openclaw/publish"
+        webhook_url = self._publish_webhook_url(webhook_base)
         auth_token = getattr(settings, "openclaw_publish_auth_token", "")
+        callback_base_url = self._callback_base_url()
 
         # Build the payload matching OpenClaw's expected format
         payload = {
@@ -76,7 +119,7 @@ class FakePublisherAdapter:
                 "title": post.title,
                 "body": post.body,
                 "tags": post.tags or [],
-                "assets": post.assets or [],
+                "assets": self._serialize_assets(post),
             },
             "account": {
                 "id": getattr(post, "account_id", ""),
@@ -84,10 +127,7 @@ class FakePublisherAdapter:
                 "handle": getattr(post, "account_handle", ""),
             },
             "callback": {
-                "publishResultUrl": (
-                    f"{settings.backend_base_url.rstrip('/') if hasattr(settings, 'backend_base_url') else 'http://127.0.0.1:8000'}"
-                    f"/api/posts/{post.id}/publish-result"
-                ),
+                "publishResultUrl": f"{callback_base_url}/api/posts/{post.id}/publish-result",
                 "authToken": auth_token,
             },
         }
