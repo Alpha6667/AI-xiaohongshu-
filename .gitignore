@@ -113,3 +113,12 @@ temp/
 # 需要跟踪的锁文件（不按归档规则忽略）
 !pnpm-lock.yaml
 !yarn.lock
+
+# -----------------------------
+# OpenClaw publish — runtime data
+# -----------------------------
+xhs-profile-persist/
+xhs-profile/
+cookies
+*.screenshot.*.png
+*.screenshot.*.jpg
