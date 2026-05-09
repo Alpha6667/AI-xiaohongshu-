@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RefreshButton } from "../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, buildAccountOverview, getAccountForPost, getPerformanceSuggestion, getPostInteractionSummary, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, buildAccountOverview, getAccountForPost, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
 
 export const metadata: Metadata = {
   title: "帖子与数据 | 小红书日常发帖工作台",
@@ -60,48 +60,64 @@ export default async function PostsPage() {
           <RefreshButton />
         </div>
 
-        <div className="post-list">
+        <div className="product-table-scroll">
           {timelinePosts.length > 0 ? (
-            timelinePosts.map((post) => {
-              const account = getAccountForPost(post, accounts, !accountRecords);
-              const metrics = getPostInteractionSummary(post);
-              const reviewStatus = getReviewStatus(post);
-              const syncState = getPostSyncState(post);
+            <table className="product-data-table posts-data-table">
+              <thead>
+                <tr>
+                  <th scope="col">内容</th>
+                  <th scope="col">账号</th>
+                  <th scope="col">状态</th>
+                  <th scope="col" className="numeric-cell">浏览</th>
+                  <th scope="col" className="numeric-cell">点赞</th>
+                  <th scope="col" className="numeric-cell">收藏</th>
+                  <th scope="col" className="numeric-cell">评论</th>
+                  <th scope="col" className="numeric-cell">关注转化</th>
+                  <th scope="col">最近拉数</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {timelinePosts.map((post) => {
+                  const account = getAccountForPost(post, accounts, !accountRecords);
+                  const reviewStatus = getReviewStatus(post);
+                  const syncState = getPostSyncState(post);
 
-              return (
-                <article key={post.id} className="post-row product-post-row multi-account-post-row">
-                  <div className="post-main">
-                    <div className="post-headline">
-                      <div className="tag-row">
-                        <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
-                        <StatusPill label={getReviewStatusLabel(reviewStatus)} tone={getReviewStatusTone(reviewStatus)} />
-                        <StatusPill label={account.name} />
-                        {post.platformPostId ? <StatusPill label="已回写平台标识" tone="positive" /> : null}
-                      </div>
-                      <span className="muted-inline">{post.topic}</span>
-                    </div>
-                    <h3>{post.title}</h3>
-                    <p>{getPerformanceSuggestion(post)}</p>
-                    <div className="row-metrics">
-                      <span>浏览 {post.latestMetrics.views.toLocaleString()}</span>
-                      <span>点赞 {metrics.likes.toLocaleString()}</span>
-                      <span>收藏 {metrics.collects.toLocaleString()}</span>
-                      <span>评论 {metrics.comments.toLocaleString()}</span>
-                    </div>
-                    <p className="muted-copy">{syncState.label}：{syncState.detail}</p>
-                  </div>
-                  <div className="post-side product-post-side">
-                    <span>发布时间</span>
-                    <strong>{post.publishedAt ? new Date(post.publishedAt).toLocaleString("zh-CN") : "尚未发布"}</strong>
-                    <p className="muted-copy">账号归属：{account.id ? account.handle : "未分配账号"}</p>
-                    <p className="muted-copy">当前状态：{getStatusLabel(post.status)}</p>
-                    <Link href={`/posts/${post.id}`} className="text-link product-link">
-                      查看完整记录
-                    </Link>
-                  </div>
-                </article>
-              );
-            })
+                  return (
+                    <tr key={post.id}>
+                      <td className="content-cell">
+                        <strong>{post.title || post.topic}</strong>
+                        <span>{post.topic}</span>
+                      </td>
+                      <td>
+                        <strong>{account.name}</strong>
+                        <span className="muted-inline">{account.id ? account.handle : "未分配账号"}</span>
+                      </td>
+                      <td>
+                        <div className="table-status-stack">
+                          <StatusPill label={getStatusLabel(post.status)} tone={getStatusTone(post.status)} />
+                          <StatusPill label={getReviewStatusLabel(reviewStatus)} tone={getReviewStatusTone(reviewStatus)} />
+                        </div>
+                      </td>
+                      <td className="numeric-cell">{post.latestMetrics.views.toLocaleString()}</td>
+                      <td className="numeric-cell">{post.latestMetrics.likes.toLocaleString()}</td>
+                      <td className="numeric-cell">{post.latestMetrics.favorites.toLocaleString()}</td>
+                      <td className="numeric-cell">{post.latestMetrics.comments.toLocaleString()}</td>
+                      <td className="numeric-cell">{post.latestMetrics.followConversions.toLocaleString()}</td>
+                      <td>
+                        <strong>{post.lastSyncAt ? new Date(post.lastSyncAt).toLocaleString("zh-CN") : syncState.label}</strong>
+                        <span className="muted-inline">{syncState.detail}</span>
+                      </td>
+                      <td>
+                        <Link href={`/posts/${post.id}`} className="text-link product-link">
+                          查看完整记录
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           ) : (
             <article className="product-empty-card">
               <strong>当前还没有可复盘的内容</strong>

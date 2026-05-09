@@ -302,21 +302,32 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p>{syncState.detail}</p>
                 </article>
               </div>
-              <div className="history-stack">
+              <div className="product-table-scroll">
                 {post.metricsHistory.length > 0 ? (
-                  post.metricsHistory.map((item) => (
-                    <article key={item.snapshotAt} className="plain-row-card">
-                      <strong>{new Date(item.snapshotAt).toLocaleString("zh-CN")}</strong>
-                      <p className="muted-copy">这次抓取回来的平台互动快照</p>
-                      <div className="row-metrics compact-metrics">
-                        <span>浏览 {item.views.toLocaleString()}</span>
-                        <span>点赞 {item.likes.toLocaleString()}</span>
-                        <span>收藏 {item.favorites.toLocaleString()}</span>
-                        <span>评论 {item.comments.toLocaleString()}</span>
-                        <span>关注转化 {item.followConversions.toLocaleString()}</span>
-                      </div>
-                    </article>
-                  ))
+                  <table className="product-data-table metrics-history-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">快照时间</th>
+                        <th scope="col" className="numeric-cell">浏览</th>
+                        <th scope="col" className="numeric-cell">点赞</th>
+                        <th scope="col" className="numeric-cell">收藏</th>
+                        <th scope="col" className="numeric-cell">评论</th>
+                        <th scope="col" className="numeric-cell">关注转化</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {post.metricsHistory.map((item) => (
+                        <tr key={item.snapshotAt}>
+                          <td>{new Date(item.snapshotAt).toLocaleString("zh-CN")}</td>
+                          <td className="numeric-cell">{item.views.toLocaleString()}</td>
+                          <td className="numeric-cell">{item.likes.toLocaleString()}</td>
+                          <td className="numeric-cell">{item.favorites.toLocaleString()}</td>
+                          <td className="numeric-cell">{item.comments.toLocaleString()}</td>
+                          <td className="numeric-cell">{item.followConversions.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   <p className="muted-copy">当前还没有历史快照，等第一次拉数成功后，这里会按时间顺序展示每一次指标变化。</p>
                 )}
