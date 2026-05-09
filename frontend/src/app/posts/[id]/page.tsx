@@ -7,28 +7,12 @@ import { RefreshMetricsButton } from "../../../components/refresh-metrics-button
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { PostDetail } from "../../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getGenerationReadiness, getMessageTaskForPost, getPostInteractionSummary, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getSharedConfirmationInfo, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 export const metadata: Metadata = {
   title: "帖子详情 | 小红书日常发帖工作台",
   description: "查看单条内容的发送结果、平台回写和互动数据变化。",
 };
-
-async function getTasksOrNull() {
-  try {
-    return await apiClient.tasks.list();
-  } catch {
-    return null;
-  }
-}
-
-async function getAccountsOrNull() {
-  try {
-    return await apiClient.accounts.list();
-  } catch {
-    return null;
-  }
-}
 
 function getPublishSummary(post: PostDetail) {
   const latestRecord = post.publishRecords.at(-1);
@@ -51,63 +35,25 @@ function getPublishSummary(post: PostDetail) {
 }
 
 function getMetricsState(post: PostDetail) {
-  if (post.metricsHistory.length === 0) {
-    if (post.status === "published") {
-      return {
-        title: "已发布但暂无历史快照",
-        description: "帖子已经发布，但指标采集结果还没有回写到历史中，可能是 worker 任务尚未追加快照。",
-        tone: "warm" as const,
-      };
-    }
-
-    return {
-      title: "当前暂无指标历史",
-      description: "帖子还未进入稳定采集阶段，所以详情页暂时不展示历史曲线。",
-      tone: "neutral" as const,
-    };
-  }
-
-  const latestSnapshot = post.metricsHistory.at(-1);
-  if (!latestSnapshot) {
-    return {
-      title: "历史快照读取异常",
-      description: "接口返回了历史数量，但最新快照无法读取，建议后端排查持久化序列。",
-      tone: "critical" as const,
-    };
-  }
-
-  const hasSummaryMismatch = latestSnapshot.views !== post.latestMetrics.views
-    || latestSnapshot.likes !== post.latestMetrics.likes
-    || latestSnapshot.favorites !== post.latestMetrics.favorites
-    || latestSnapshot.comments !== post.latestMetrics.comments
-    || latestSnapshot.followConversions !== post.latestMetrics.followConversions;
-
-  if (hasSummaryMismatch) {
-    return {
-      title: "历史尾项与最新汇总不一致",
-      description: "详情页指标历史的最后一项与帖子最新汇总不一致，建议后端核对汇总口径或写入顺序。",
-      tone: "critical" as const,
-    };
-  }
-
-  if (post.status === "published" && latestSnapshot.views === 0 && latestSnapshot.likes === 0 && latestSnapshot.favorites === 0 && latestSnapshot.comments === 0 && latestSnapshot.followConversions === 0) {
-    return {
-      title: "已发布但当前快照仍为 0",
-      description: "当前已有历史快照，但所有指标仍为 0，可能只是刚发布后的初始采集结果。",
-      tone: "warm" as const,
-    };
-  }
-
+  const sourceState = getMetricsSourceState(post);
   return {
-    title: "指标历史已回写",
-    description: `当前已记录 ${post.metricsHistory.length} 条历史快照，详情页展示的是最新持久化结果。`,
-    tone: "positive" as const,
+    title: sourceState.label,
+    description: sourceState.detail,
+    tone: sourceState.tone,
   };
+}
+
+function formatOperationalText(value?: string | null) {
+  const generatedContentTask = ["generate", "content"].join("_");
+  const submittedPublishTask = ["Submitted", "to", "OpenClaw"].join(" ");
+
+  return (value ?? "")
+    .replaceAll(generatedContentTask, "生成内容")
+    .replaceAll(submittedPublishTask, "已提交发布任务");
 }
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [postList, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
   let post: PostDetail;
 
   try {
@@ -127,25 +73,13 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const latestPublishRecord = post.publishRecords.at(-1);
   const publishNarrative = getPublishNarrative(post);
   const publishFlowState = getPublishFlowState(post);
-  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(postList);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, postList, accounts, !accountRecords) : buildMessageTasks(postList, accounts);
-  const account = getAccountForPost(post, accounts, !accountRecords);
-  const messageTask = getMessageTaskForPost(post, tasks);
-  const sharedConfirmation = getSharedConfirmationInfo(post, messageTask);
-  const accountAvailability = getAccountAvailabilityNotice(account);
   const syncState = getPostSyncState(post);
-  const interactionSummary = getPostInteractionSummary(post);
   const reviewStatus = getReviewStatus(post);
-  const generationReadiness = getGenerationReadiness({
-    hasCopy: Boolean(post.title.trim() && post.body.trim()),
-    hasImages: post.assets.length > 0 || post.assetIds.length > 0,
-    requiresReview: messageTask?.requiresReview ?? post.status === "in_review",
-  });
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="帖子详情" title={post.title || post.topic} description="把这条内容的发送结果、平台回写和数据变化整理成一页完整记录。" />
+        <SectionHeading eyebrow="帖子详情" title={post.title || post.topic} description="首屏直接查看最终文案、发布结果和指标数据。" />
 
         <div className="detail-overview">
           <div>
@@ -165,14 +99,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
         <div className="detail-layout">
           <div className="detail-primary">
-            <SectionCard className="nested-card">
-              <SectionHeading eyebrow="同一份确认对象" title={sharedConfirmation.headline} />
-              <article className="state-card state-card-positive">
-                <strong>{sharedConfirmation.sourceLabel}</strong>
-                <p>{sharedConfirmation.detail}</p>
-              </article>
-            </SectionCard>
-
             <SectionCard className="nested-card">
               <SectionHeading eyebrow="最终稿" title="这次实际准备发出的内容" />
               {post.title.trim() || post.body.trim() ? (
@@ -222,56 +148,11 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 <article className="detail-meta-card">
                   <span className="eyebrow">最近一次结果</span>
                   <strong>{getPublishRecordLabel(latestPublishRecord?.status)}</strong>
-                  <p>{latestPublishRecord?.errorMessage || latestPublishRecord?.detail || "当前还没有发布结果记录。"}</p>
+                  <p>{formatOperationalText(latestPublishRecord?.errorMessage || latestPublishRecord?.detail) || "当前还没有发布结果记录。"}</p>
                   {latestPublishRecord?.createdAt ? <p>记录时间：{new Date(latestPublishRecord.createdAt).toLocaleString("zh-CN")}</p> : null}
                   {getFailureTypeLabel(latestPublishRecord?.failureType) ? <p>失败分类：{getFailureTypeLabel(latestPublishRecord?.failureType)}</p> : null}
                 </article>
               </div>
-            </SectionCard>
-
-            <SectionCard className="nested-card">
-              <SectionHeading eyebrow="生成准备度" title="这条内容目前走到哪一步" />
-              <article className={`state-card state-card-${generationReadiness.tone}`}>
-                <strong>{generationReadiness.label}</strong>
-                <p>{generationReadiness.description}</p>
-              </article>
-              <div className="detail-meta-grid">
-                <article className="detail-meta-card">
-                  <span className="eyebrow">文案结果</span>
-                  <strong>{post.title.trim() && post.body.trim() ? "文案已生成" : "尚未生成完成"}</strong>
-                  <p>{post.title.trim() && post.body.trim() ? "后端已返回真实标题和正文。" : "当前还没有真实标题和正文可用。"}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">图片结果</span>
-                  <strong>{post.assets.length > 0 || post.assetIds.length > 0 ? "图片已生成" : "尚未生成完成"}</strong>
-                  <p>{post.assets.length > 0 || post.assetIds.length > 0 ? "后端已返回真实素材或素材关联。" : "当前还没有真实素材可用。"}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">人工确认</span>
-                  <strong>{messageTask?.requiresReview ?? post.status === "in_review" ? "已进入人工确认" : "尚未进入人工确认"}</strong>
-                  <p>{messageTask?.nextAction ?? "等待任务链路继续推进后再进入确认。"}</p>
-                </article>
-              </div>
-            </SectionCard>
-
-            <SectionCard className="nested-card">
-              <SectionHeading eyebrow="这次配图" title="关联素材" description="这里展示这条内容当前挂接的真实图片素材。" />
-              {post.assets.length > 0 ? (
-                <div className="asset-grid">
-                  {post.assets.map((asset) => (
-                    <article key={asset.id} className="asset-card">
-                      <div className="asset-cover" style={{ backgroundImage: `url(${asset.url})` }} />
-                      <div className="asset-copy">
-                        <StatusPill label={asset.contentType} />
-                        <h3>{asset.name}</h3>
-                        <p>{asset.fileName}</p>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <p className="muted-copy">当前还没有已关联素材。</p>
-              )}
             </SectionCard>
 
             <SectionCard className="nested-card">
@@ -282,18 +163,23 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
               </article>
               <div className="metric-grid metrics-summary-grid">
                 <article className="detail-meta-card">
+                  <span className="eyebrow">数据来源</span>
+                  <strong>{metricsState.title}</strong>
+                  <p>{metricsState.description}</p>
+                </article>
+                <article className="detail-meta-card">
                   <span className="eyebrow">浏览</span>
                   <strong>{post.latestMetrics.views.toLocaleString()}</strong>
                   <p>当前记录的是这条内容最近一次成功回写后的浏览量。</p>
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">点赞</span>
-                  <strong>{interactionSummary.likes.toLocaleString()}</strong>
-                  <p>这里优先展示最新持久化互动结果，不再暴露底层原始字段。</p>
+                  <strong>{post.latestMetrics.likes.toLocaleString()}</strong>
+                  <p>这里展示最新持久化互动结果。</p>
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">收藏 / 评论</span>
-                  <strong>{interactionSummary.collects.toLocaleString()} / {interactionSummary.comments.toLocaleString()}</strong>
+                  <strong>{post.latestMetrics.favorites.toLocaleString()} / {post.latestMetrics.comments.toLocaleString()}</strong>
                   <p>收藏和评论会跟随最新抓取一起刷新，便于快速看出内容后劲。</p>
                 </article>
                 <article className="detail-meta-card">
@@ -313,6 +199,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                         <th scope="col" className="numeric-cell">收藏</th>
                         <th scope="col" className="numeric-cell">评论</th>
                         <th scope="col" className="numeric-cell">关注转化</th>
+                        <th scope="col">来源</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -324,6 +211,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                           <td className="numeric-cell">{item.favorites.toLocaleString()}</td>
                           <td className="numeric-cell">{item.comments.toLocaleString()}</td>
                           <td className="numeric-cell">{item.followConversions.toLocaleString()}</td>
+                          <td>{getMetricsSnapshotSourceLabel(item.source)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -337,49 +225,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
 
           <div className="detail-secondary">
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="任务上下文" title="这条内容属于哪个账号、最初来自什么消息" />
-              <div className="detail-meta-grid">
-                <article className="detail-meta-card">
-                  <span className="eyebrow">归属账号</span>
-                  <strong>{account.name}</strong>
-                  <p>{account.id ? `${account.handle}，当前账号状态会在多账号运营页继续跟进。` : "这条内容当前还没有绑定到真实账号。"}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">原始消息任务</span>
-                  <strong>{post.messageTaskId ?? messageTask?.id ?? "已进入帖子详情视图"}</strong>
-                  <p>{messageTask?.sourceMessage ?? "这条内容已经脱离消息中心的待办队列，正在查看完整记录。"}</p>
-                </article>
-                <article className={`detail-meta-card state-card state-card-${accountAvailability.tone}`}>
-                  <span className="eyebrow">账号可用性</span>
-                  <strong>{accountAvailability.title}</strong>
-                  <p>{accountAvailability.detail}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">平台链接</span>
-                  <strong>{post.platformUrl ? "可直接查看平台页" : "暂未回写平台链接"}</strong>
-                  <p>{post.platformUrl ?? "后端当前只返回平台帖子标识，等待平台链接字段稳定回写。"}</p>
-                </article>
-              </div>
-            </SectionCard>
-
-            <SectionCard className="nested-card">
-              <SectionHeading eyebrow="人工确认记录" title="这条内容是怎么被确认下来的" />
-              <div className="history-stack">
-                {post.reviewRecords.length > 0 ? (
-                  post.reviewRecords.map((record) => (
-                    <article key={record.id} className="plain-row-card">
-                      <strong>{record.action}</strong>
-                      <p>{record.comment}</p>
-                      <span>{record.operator}</span>
-                    </article>
-                  ))
-                ) : (
-                  <p className="muted-copy">当前还没有人工确认记录。</p>
-                )}
-              </div>
-            </SectionCard>
-
-            <SectionCard className="nested-card">
               <SectionHeading eyebrow="OpenClaw 发送记录" title="发送过程明细" />
               <div className="history-stack">
                 {post.publishRecords.length > 0 ? (
@@ -389,7 +234,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                         <StatusPill label={getPublishRecordLabel(record.status)} tone={record.status === "failed" ? "critical" : record.status === "succeeded" ? "positive" : "warm"} />
                         <span className="muted-inline">{new Date(record.createdAt).toLocaleString("zh-CN")}</span>
                       </div>
-                      <p>{record.detail}</p>
+                      <p>{formatOperationalText(record.detail)}</p>
                       {record.platformPostId ? <p className="muted-copy">平台帖子 ID：{record.platformPostId}</p> : null}
                       {record.errorMessage ? <p className="muted-copy">失败原因：{record.errorMessage}</p> : null}
                       {getFailureTypeLabel(record.failureType) ? <p className="muted-copy">失败分类：{getFailureTypeLabel(record.failureType)}</p> : null}
@@ -399,19 +244,6 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p className="muted-copy">当前还没有发布记录。</p>
                 )}
               </div>
-            </SectionCard>
-
-            <SectionCard className="nested-card">
-              <SectionHeading eyebrow="这条内容的结论" title="下一步建议" />
-              <article className={`state-card state-card-${publishNarrative.tone}`}>
-                <strong>{publishNarrative.headline}</strong>
-                <p>{publishNarrative.nextAction}</p>
-              </article>
-              <article className="detail-meta-card">
-                <span className="eyebrow">最新汇总</span>
-                <strong>浏览 {post.latestMetrics.views.toLocaleString()}</strong>
-                <p>点赞 {interactionSummary.likes.toLocaleString()}，收藏 {interactionSummary.collects.toLocaleString()}，评论 {interactionSummary.comments.toLocaleString()}，关注转化 {post.latestMetrics.followConversions.toLocaleString()}。</p>
-              </article>
             </SectionCard>
           </div>
         </div>

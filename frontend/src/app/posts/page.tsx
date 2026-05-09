@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RefreshButton } from "../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, buildAccountOverview, getAccountForPost, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, buildAccountOverview, getAccountForPost, getMetricsSourceState, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, isOperationalPost, sortByUpdatedDesc } from "../../lib/product";
 
 export const metadata: Metadata = {
   title: "帖子与数据 | 小红书日常发帖工作台",
@@ -22,18 +22,19 @@ async function getAccountsOrNull() {
 export default async function PostsPage() {
   const [posts, summary, accountRecords] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary(), getAccountsOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const timelinePosts = sortByUpdatedDesc(posts);
+  const timelinePosts = sortByUpdatedDesc(posts).filter(isOperationalPost).slice(0, 30);
+  const hiddenDebugCount = posts.length - timelinePosts.length;
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="帖子与数据" title="把每条内容的发布时间、当前状态和数据结果放到同一页里看清楚" description="这里不再像接口列表，而是按运营视角看清楚每条内容发给了谁、现在表现怎么样。" />
+        <SectionHeading eyebrow="帖子与数据" title="最近可复盘内容" description="默认展示已发布、发布中和发布失败的最近 30 条内容，调试数据已收起。" />
 
         <div className="dashboard-hero posts-hero">
             <article className="dashboard-highlight">
             <span className="eyebrow">内容总览</span>
             <strong>{timelinePosts.length}</strong>
-            <p>这里直接看真实帖子主表，按发布时间、当前状态和数据结果整理最近内容，不再把页面做成联调记录面板。</p>
+            <p>默认保留运营复盘需要的内容和指标，开发、测试、指令类记录进入调试数据范围。</p>
           </article>
 
           <div className="metric-grid publish-metric-grid">
@@ -58,6 +59,7 @@ export default async function PostsPage() {
 
         <div className="action-row">
           <RefreshButton />
+          {hiddenDebugCount > 0 ? <span className="muted-inline">已隐藏调试数据 {hiddenDebugCount} 条</span> : null}
         </div>
 
         <div className="product-table-scroll">
@@ -73,6 +75,7 @@ export default async function PostsPage() {
                   <th scope="col" className="numeric-cell">收藏</th>
                   <th scope="col" className="numeric-cell">评论</th>
                   <th scope="col" className="numeric-cell">关注转化</th>
+                  <th scope="col">数据来源</th>
                   <th scope="col">最近拉数</th>
                   <th scope="col">操作</th>
                 </tr>
@@ -82,6 +85,7 @@ export default async function PostsPage() {
                   const account = getAccountForPost(post, accounts, !accountRecords);
                   const reviewStatus = getReviewStatus(post);
                   const syncState = getPostSyncState(post);
+                  const metricsSourceState = getMetricsSourceState(post);
 
                   return (
                     <tr key={post.id}>
@@ -104,6 +108,10 @@ export default async function PostsPage() {
                       <td className="numeric-cell">{post.latestMetrics.favorites.toLocaleString()}</td>
                       <td className="numeric-cell">{post.latestMetrics.comments.toLocaleString()}</td>
                       <td className="numeric-cell">{post.latestMetrics.followConversions.toLocaleString()}</td>
+                      <td>
+                        <StatusPill label={metricsSourceState.label} tone={metricsSourceState.tone} />
+                        {metricsSourceState.label === "抓取失败" ? <span className="muted-inline">{metricsSourceState.detail}</span> : null}
+                      </td>
                       <td>
                         <strong>{post.lastSyncAt ? new Date(post.lastSyncAt).toLocaleString("zh-CN") : syncState.label}</strong>
                         <span className="muted-inline">{syncState.detail}</span>

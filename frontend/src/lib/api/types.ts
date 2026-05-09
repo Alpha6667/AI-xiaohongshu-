@@ -182,6 +182,8 @@ export interface PostMetrics {
   favorites: number;
   comments: number;
   followConversions: number;
+  source?: string | null;
+  capturedAt?: string | null;
 }
 
 export interface ReviewRecord {
@@ -211,6 +213,8 @@ export interface MetricsHistoryItem {
   favorites: number;
   comments: number;
   followConversions: number;
+  source?: string | null;
+  capturedAt?: string | null;
 }
 
 export interface PostListItem {
@@ -234,6 +238,7 @@ export interface PostListItem {
   lastSyncAt?: string | null;
   lastSyncStatus?: AccountSyncStatus | string | null;
   syncError?: string | null;
+  metricsSource?: string | null;
   latestMetrics: PostMetrics;
   createdAt: string;
   updatedAt: string;

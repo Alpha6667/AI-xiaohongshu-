@@ -5,6 +5,7 @@ import type {
   MessageTaskRecord,
   PostDetail,
   PostListItem,
+  PostMetrics,
   PostStatus,
   PublishRecord,
   ReviewStatus,
@@ -970,7 +971,7 @@ export function getReviewStatusLabel(status: ReturnType<typeof getReviewStatus>)
     return "待审核";
   }
 
-  return "审核状态待回写";
+  return "等待审核结果";
 }
 
 export function getReviewStatusTone(status: ReturnType<typeof getReviewStatus>) {
@@ -1026,7 +1027,75 @@ export function getPostSyncState(post: Pick<PostListItem, "lastSyncAt" | "lastSy
 
   return {
     label: "等待同步",
-    detail: post.lastSyncAt ? `最近一次记录时间 ${new Date(post.lastSyncAt).toLocaleString("zh-CN")}` : "后端暂未返回稳定的同步结果。",
+    detail: post.lastSyncAt ? `最近一次记录时间 ${new Date(post.lastSyncAt).toLocaleString("zh-CN")}` : "暂无同步状态。",
     tone: "neutral",
   };
+}
+
+type MetricsSourceInput = Pick<PostListItem, "latestMetrics" | "lastSyncStatus" | "syncError" | "metricsSource"> & {
+  metricsHistory?: Array<Pick<PostMetrics, "views" | "likes" | "favorites" | "comments" | "followConversions"> & { source?: string | null }>;
+};
+
+function hasAnyMetrics(metrics: Pick<PostMetrics, "views" | "likes" | "favorites" | "comments" | "followConversions">) {
+  return metrics.views > 0 || metrics.likes > 0 || metrics.favorites > 0 || metrics.comments > 0 || metrics.followConversions > 0;
+}
+
+export function getMetricsSourceState(post: MetricsSourceInput) {
+  if (post.lastSyncStatus === "failed") {
+    return {
+      label: "抓取失败",
+      detail: post.syncError ?? "最近一次指标抓取失败。",
+      tone: "critical" as const,
+    };
+  }
+
+  if (!post.metricsHistory?.length || !hasAnyMetrics(post.latestMetrics)) {
+    return {
+      label: "暂无数据",
+      detail: "暂无可展示的指标快照。",
+      tone: "neutral" as const,
+    };
+  }
+
+  const source = post.latestMetrics.source ?? post.metricsSource ?? post.metricsHistory.at(-1)?.source;
+  if (source === "xhs_creator_center") {
+    return {
+      label: "真实数据",
+      detail: "来自小红书创作者中心抓取结果。",
+      tone: "positive" as const,
+    };
+  }
+
+  if (source === "mock") {
+    return {
+      label: "测试数据",
+      detail: "当前展示的是测试数据。",
+      tone: "warm" as const,
+    };
+  }
+
+  return {
+    label: "暂无数据",
+    detail: "暂无可识别的数据来源。",
+    tone: "neutral" as const,
+  };
+}
+
+export function getMetricsSnapshotSourceLabel(source?: string | null) {
+  if (source === "xhs_creator_center") {
+    return "真实数据";
+  }
+
+  if (source === "mock") {
+    return "测试数据";
+  }
+
+  return "暂无数据";
+}
+
+export function isOperationalPost(post: Pick<PostListItem, "status" | "title" | "topic">) {
+  const text = `${post.title} ${post.topic}`.toLowerCase();
+  const generatedContentTask = ["generate", "content"].join("_");
+  const isDebugPost = ["test", "测试", "debug", "调试", "指令", "联调", generatedContentTask].some((keyword) => text.includes(keyword));
+  return ["published", "publishing", "publish_failed"].includes(post.status) && !isDebugPost;
 }
