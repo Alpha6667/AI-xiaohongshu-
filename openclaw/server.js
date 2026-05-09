@@ -323,7 +323,7 @@ async function handleMetrics(req, res) {
             error: metricsResult.error || metricsResult.errorMessage || 'Metrics fetch failed',
             errorCode: metricsResult.errorCode || 'metrics_fetch_failed',
             source: metricsResult.source || 'xhs_creator_center',
-            ...(metricsResult.capturedAt ? { capturedAt: metricsResult.capturedAt } : {}),
+            capturedAt: metricsResult.capturedAt || new Date().toISOString(),
           }));
         }
       } catch (execError) {

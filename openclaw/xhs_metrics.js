@@ -71,6 +71,7 @@ async function fetchMetrics(platformPostId) {
         error: 'Login required',
         errorCode: 'login_required',
         source: 'xhs_creator_center',
+        capturedAt: nowISO(),
         executionLogs: logs,
       };
     }
@@ -172,6 +173,7 @@ async function fetchMetrics(platformPostId) {
         error: 'Page structure has changed, DOM selectors no longer match',
         errorCode: 'page_structure_changed',
         source: 'xhs_creator_center',
+        capturedAt: nowISO(),
         executionLogs: logs,
       };
     }
@@ -227,6 +229,7 @@ async function fetchMetrics(platformPostId) {
         error: 'Page structure has changed, DOM selectors no longer match',
         errorCode: 'page_structure_changed',
         source: 'xhs_creator_center',
+        capturedAt: nowISO(),
         executionLogs: logs,
       };
     }
@@ -238,6 +241,7 @@ async function fetchMetrics(platformPostId) {
       error: 'Page structure has changed, DOM selectors no longer match',
       errorCode: 'page_structure_changed',
       source: 'xhs_creator_center',
+        capturedAt: nowISO(),
       executionLogs: logs,
     };
   } catch (e) {
@@ -251,6 +255,7 @@ async function fetchMetrics(platformPostId) {
         error: `Metrics fetch timed out: ${e.message}`,
         errorCode: 'metrics_fetch_timeout',
         source: 'xhs_creator_center',
+        capturedAt: nowISO(),
         executionLogs: logs,
       };
     }
