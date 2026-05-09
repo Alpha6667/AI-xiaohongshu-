@@ -112,5 +112,4 @@ temp/
 
 # 需要跟踪的锁文件（不按归档规则忽略）
 !pnpm-lock.yaml
-!package-lock.json
 !yarn.lock
