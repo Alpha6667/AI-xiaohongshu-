@@ -183,9 +183,24 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p>收藏和评论会跟随最新抓取一起刷新，便于快速看出内容后劲。</p>
                 </article>
                 <article className="detail-meta-card">
+                  <span className="eyebrow">关注转化</span>
+                  <strong>{post.latestMetrics.followConversions.toLocaleString()}</strong>
+                  <p>当前记录的是这条内容带来的关注转化数。</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">抓取时间</span>
+                  <strong>{post.latestMetrics.capturedAt ? new Date(post.latestMetrics.capturedAt).toLocaleString("zh-CN") : "暂无抓取时间"}</strong>
+                  <p>对应 `latestMetrics.capturedAt`。</p>
+                </article>
+                <article className="detail-meta-card">
                   <span className="eyebrow">最近一次拉数</span>
                   <strong>{syncState.label}</strong>
                   <p>{syncState.detail}</p>
+                </article>
+                <article className="detail-meta-card">
+                  <span className="eyebrow">同步错误</span>
+                  <strong>{post.syncError ?? "无"}</strong>
+                  <p>失败时展示后端返回的错误码或错误信息。</p>
                 </article>
               </div>
               <div className="product-table-scroll">
@@ -200,6 +215,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                         <th scope="col" className="numeric-cell">评论</th>
                         <th scope="col" className="numeric-cell">关注转化</th>
                         <th scope="col">来源</th>
+                        <th scope="col">抓取时间</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -212,6 +228,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                           <td className="numeric-cell">{item.comments.toLocaleString()}</td>
                           <td className="numeric-cell">{item.followConversions.toLocaleString()}</td>
                           <td>{getMetricsSnapshotSourceLabel(item.source)}</td>
+                          <td>{item.capturedAt ? new Date(item.capturedAt).toLocaleString("zh-CN") : "暂无抓取时间"}</td>
                         </tr>
                       ))}
                     </tbody>

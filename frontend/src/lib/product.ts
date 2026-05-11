@@ -1049,7 +1049,7 @@ export function getMetricsSourceState(post: MetricsSourceInput) {
     };
   }
 
-  if (!post.metricsHistory?.length || !hasAnyMetrics(post.latestMetrics)) {
+  if ((post.metricsHistory && post.metricsHistory.length === 0) || !hasAnyMetrics(post.latestMetrics)) {
     return {
       label: "暂无数据",
       detail: "暂无可展示的指标快照。",
@@ -1057,7 +1057,7 @@ export function getMetricsSourceState(post: MetricsSourceInput) {
     };
   }
 
-  const source = post.latestMetrics.source ?? post.metricsSource ?? post.metricsHistory.at(-1)?.source;
+  const source = post.latestMetrics.source ?? post.metricsSource ?? post.metricsHistory?.at(-1)?.source;
   if (source === "xhs_creator_center") {
     return {
       label: "真实数据",
