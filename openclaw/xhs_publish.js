@@ -130,6 +130,17 @@ async function publish(content) {
   const body = content.body || '';
   const assets = content.assets || [];
 
+  // Normalize tags and append to body as #hashtags
+  const tags = content.tags || [];
+  const normalizedTags = Array.isArray(tags)
+    ? [...new Set(tags.map((tag) => String(tag).trim().replace(/^#+/, '')).filter(Boolean))]
+    : [];
+  const tagSuffix = normalizedTags.length > 0
+    ? '\n\n' + normalizedTags.map((tag) => `#${tag}`).join(' ')
+    : '';
+  const finalBody = `${body || ''}${tagSuffix}`;
+  log(`Tags normalized: [${normalizedTags.join(', ')}] finalBody length=${finalBody.length}`);
+
   // Temp directory for downloaded images
   const tempDir = path.join(SCREENSHOT_DIR, 'assets_' + Date.now());
   fs.mkdirSync(tempDir, { recursive: true });
@@ -235,7 +246,7 @@ async function publish(content) {
     }
 
     // Step 6: Fill title + body
-    const fillR = await page.evaluate(({title, body}) => {
+    const fillR = await page.evaluate(({title, body: finalBody}) => {
       const r = {};
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
       for (const inp of document.querySelectorAll('input:not([type="file"]):not([type="hidden"]):not([type="checkbox"])')) {
@@ -257,7 +268,7 @@ async function publish(content) {
       r.title = r.title || 'not_found';
       r.body = r.body || 'not_found';
       return r;
-    }, {title, body});
+    }, {title, body: finalBody});
     log(`Fill: ${JSON.stringify(fillR)}`);
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/content_filled.png`, fullPage: true });
