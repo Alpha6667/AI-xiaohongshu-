@@ -60,6 +60,17 @@ def enum_field(enum_type, payload: dict[str, object], snake_name: str, camel_nam
     return enum_type(value)
 
 
+def normalize_metrics_source(source: object) -> str | None:
+    if source is None:
+        return None
+    normalized = str(source)
+    if normalized in {"xhscreatorcenter", "xhscreator_center"}:
+        normalized = "xhs_creator_center"
+    if normalized in {"xhs_creator_center", "mock"}:
+        return normalized
+    return None
+
+
 def post_to_payload(post: Post) -> dict[str, object]:
     payload = asdict(post)
     payload.update(
@@ -234,7 +245,7 @@ class InMemoryRepository:
                     comments=item["comments"],
                     follow_conversions=read_field(item, "follow_conversions", "followConversions"),
                     snapshot_at=read_field(item, "snapshot_at", "snapshotAt", ""),
-                    source=item.get("source"),
+                    source=normalize_metrics_source(item.get("source")),
                     captured_at=read_field(item, "captured_at", "capturedAt"),
                 )
                 for item in snapshots

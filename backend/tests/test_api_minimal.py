@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.repositories.memory import repository
-from app.services.publisher import MetricsFetchError, _normalize_metrics_error_code
+from app.services.publisher import MetricsFetchError, _normalize_metrics_error_code, _normalize_metrics_source
 
 
 def reset_repository() -> None:
@@ -28,6 +28,14 @@ def test_metrics_error_code_normalization() -> None:
     assert _normalize_metrics_error_code("login_required") == "login_required"
     assert _normalize_metrics_error_code("metrics_fetch_timeout") == "metrics_fetch_timeout"
     assert _normalize_metrics_error_code("loginrequired") == "metrics_fetch_execution_error"
+
+
+def test_metrics_source_normalization() -> None:
+    assert _normalize_metrics_source("xhs_creator_center") == "xhs_creator_center"
+    assert _normalize_metrics_source("xhscreatorcenter") == "xhs_creator_center"
+    assert _normalize_metrics_source("xhscreator_center") == "xhs_creator_center"
+    assert _normalize_metrics_source("mock") == "mock"
+    assert _normalize_metrics_source("manual") is None
 
 
 class BackendApiMinimalTests(unittest.TestCase):

@@ -21,6 +21,7 @@ OPENCLAW_METRICS_ERROR_CODES = {
     "metrics_fetch_timeout",
     "metrics_fetch_execution_error",
 }
+OPENCLAW_METRICS_SOURCES = {"xhs_creator_center", "mock"}
 
 
 @dataclass(slots=True)
@@ -40,6 +41,17 @@ def _normalize_metrics_error_code(code: object) -> str:
     if isinstance(code, str) and code in OPENCLAW_METRICS_ERROR_CODES:
         return code
     return "metrics_fetch_execution_error"
+
+
+def _normalize_metrics_source(source: object) -> str | None:
+    if source is None:
+        return None
+    normalized = str(source)
+    if normalized in {"xhscreatorcenter", "xhscreator_center"}:
+        normalized = "xhs_creator_center"
+    if normalized in OPENCLAW_METRICS_SOURCES:
+        return normalized
+    return None
 
 
 class FakePublisherAdapter:
@@ -224,7 +236,7 @@ class FakePublisherAdapter:
                 "favorites": int(raw["favorites"]),
                 "comments": int(raw["comments"]),
                 "followConversions": int(raw["followConversions"]),
-                "source": raw.get("source"),
+                "source": _normalize_metrics_source(raw.get("source")),
                 "capturedAt": raw.get("capturedAt"),
             }
         except (TypeError, ValueError) as exc:

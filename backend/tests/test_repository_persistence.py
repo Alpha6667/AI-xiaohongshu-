@@ -93,7 +93,7 @@ class RepositoryPersistenceTests(unittest.TestCase):
                             "comments": 8,
                             "followConversions": 2,
                             "snapshotAt": captured_at,
-                            "source": "xhs_creator_center",
+                            "source": "xhscreator_center",
                             "capturedAt": captured_at,
                         }
                     ]
