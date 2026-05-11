@@ -71,6 +71,7 @@ export default async function PostsPage() {
                   <th scope="col">账号</th>
                   <th scope="col">状态</th>
                   <th scope="col">平台帖子 ID</th>
+                  <th scope="col">素材</th>
                   <th scope="col" className="numeric-cell">浏览</th>
                   <th scope="col" className="numeric-cell">点赞</th>
                   <th scope="col" className="numeric-cell">收藏</th>
@@ -105,6 +106,7 @@ export default async function PostsPage() {
                         </div>
                       </td>
                       <td>{post.platformPostId ?? "待回写"}</td>
+                      <td>{post.assetIds.length > 0 ? `已关联 ${post.assetIds.length} 个素材` : "无素材"}</td>
                       <td className="numeric-cell">{post.latestMetrics.views.toLocaleString()}</td>
                       <td className="numeric-cell">{post.latestMetrics.likes.toLocaleString()}</td>
                       <td className="numeric-cell">{post.latestMetrics.favorites.toLocaleString()}</td>

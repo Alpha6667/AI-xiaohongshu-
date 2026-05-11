@@ -6,7 +6,7 @@ import { RefreshButton } from "../../../components/refresh-button";
 import { RefreshMetricsButton } from "../../../components/refresh-metrics-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
-import type { PostDetail } from "../../../lib/api/types";
+import type { AssetSummary, PostDetail } from "../../../lib/api/types";
 import { getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone } from "../../../lib/product";
 
 export const metadata: Metadata = {
@@ -50,6 +50,50 @@ function formatOperationalText(value?: string | null) {
   return (value ?? "")
     .replaceAll(generatedContentTask, "生成内容")
     .replaceAll(submittedPublishTask, "已提交发布任务");
+}
+
+function getAssetKind(asset: AssetSummary) {
+  const type = asset.type ?? asset.mediaType;
+  const mimeType = asset.mimeType ?? asset.contentType;
+
+  if (type === "image" || type === "cover" || mimeType.startsWith("image/")) {
+    return "image";
+  }
+
+  if (type === "video" || mimeType.startsWith("video/")) {
+    return "video";
+  }
+
+  return "file";
+}
+
+function MediaAssetCard({ asset, featured }: { asset: AssetSummary; featured: boolean }) {
+  const assetKind = getAssetKind(asset);
+  const mimeType = asset.mimeType ?? asset.contentType;
+  const altText = asset.fileName || asset.name || "帖子图片";
+
+  return (
+    <article className={`post-media-card ${featured ? "post-media-card-featured" : ""}`.trim()}>
+      {assetKind === "image" ? (
+        <img src={asset.url} alt={altText} className="post-media-image" />
+      ) : assetKind === "video" ? (
+        <video controls poster={asset.thumbnailUrl ?? undefined} className="post-media-video">
+          <source src={asset.url} type={mimeType || "video/mp4"} />
+          素材加载失败
+        </video>
+      ) : (
+        <a href={asset.url} className="post-media-file" target="_blank" rel="noreferrer">
+          打开素材文件
+        </a>
+      )}
+      <div className="post-media-copy">
+        <strong>{asset.name}</strong>
+        <span>{asset.fileName || asset.id}</span>
+        <span>{mimeType}</span>
+        <span className="post-media-error">素材加载失败</span>
+      </div>
+    </article>
+  );
 }
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -117,6 +161,24 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p>当前后端还没有返回真实标题和正文，所以这里暂时没有可查看的最终稿。</p>
                 </article>
               )}
+              <div className="post-media-section">
+                <div>
+                  <span className="eyebrow">发布素材</span>
+                  <h3>图片 / 视频</h3>
+                </div>
+                {post.assets.length > 0 ? (
+                  <div className={`post-media-grid ${post.assets.length === 1 ? "post-media-grid-single" : ""}`.trim()}>
+                    {post.assets.map((asset) => (
+                      <MediaAssetCard key={asset.id} asset={asset} featured={post.assets.length === 1} />
+                    ))}
+                  </div>
+                ) : (
+                  <article className="state-card state-card-neutral">
+                    <strong>当前帖子没有关联素材</strong>
+                    <p>后端返回 `post.assets` 为空，发布素材会在关联图片或视频后展示。</p>
+                  </article>
+                )}
+              </div>
             </SectionCard>
 
             <SectionCard className="nested-card">

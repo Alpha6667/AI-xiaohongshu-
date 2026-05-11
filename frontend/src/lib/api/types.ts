@@ -128,6 +128,10 @@ export interface AssetSummary {
   contentType: string;
   url: string;
   createdAt: string;
+  type?: "image" | "video" | "file" | "cover" | string | null;
+  mediaType?: "image" | "video" | "file" | string | null;
+  mimeType?: string | null;
+  thumbnailUrl?: string | null;
 }
 
 export interface AssetUploadPayload {
