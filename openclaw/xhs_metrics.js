@@ -200,10 +200,16 @@ async function fetchMetrics(platformPostId) {
       const result = {
         success: true,
         platformPostId,
+        // DOM icon order (confirmed by SVG path analysis):
+        //   nums[0] = 浏览 (eye icon)          -> views
+        //   nums[1] = 评论 (chat bubble icon)   -> comments
+        //   nums[2] = 点赞 (heart icon)         -> likes
+        //   nums[3] = 收藏 (bookmark icon)      -> favorites
+        //   nums[4] = 转发 (arrow icon)         -> followConversions
         views: parseCount(nums[0] || '0'),
         comments: parseCount(nums[1] || '0'),
-        favorites: parseCount(nums[2] || '0'),
-        likes: parseCount(nums[3] || '0'),
+        likes: parseCount(nums[2] || '0'),
+        favorites: parseCount(nums[3] || '0'),
         followConversions: parseCount(nums[4] || '0'),
         source: 'xhs_creator_center',
         capturedAt,
