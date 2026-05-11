@@ -40,6 +40,80 @@ def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:10]}"
 
 
+def read_field(payload: dict[str, object], snake_name: str, camel_name: str | None = None, default: object = None) -> object:
+    if snake_name in payload:
+        return payload[snake_name]
+    if camel_name is not None and camel_name in payload:
+        return payload[camel_name]
+    return default
+
+
+def list_field(payload: dict[str, object], snake_name: str, camel_name: str | None = None) -> list[object]:
+    value = read_field(payload, snake_name, camel_name, [])
+    return list(value or [])
+
+
+def enum_field(enum_type, payload: dict[str, object], snake_name: str, camel_name: str | None = None, default=None):
+    value = read_field(payload, snake_name, camel_name)
+    if value is None:
+        return default
+    return enum_type(value)
+
+
+def post_to_payload(post: Post) -> dict[str, object]:
+    payload = asdict(post)
+    payload.update(
+        {
+            "assetIds": list(post.asset_ids),
+            "platformPostId": post.platform_post_id,
+            "platformUrl": post.platform_url,
+            "accountId": post.account_id,
+            "messageTaskId": post.message_task_id,
+            "reviewStatus": post.review_status,
+            "likeCount": post.like_count,
+            "collectCount": post.collect_count,
+            "commentCount": post.comment_count,
+            "lastSyncAt": post.last_sync_at,
+            "lastSyncStatus": post.last_sync_status,
+            "syncError": post.sync_error,
+            "createdAt": post.created_at,
+            "updatedAt": post.updated_at,
+            "publishedAt": post.published_at,
+            "reviewRecordIds": list(post.review_record_ids),
+            "generationTaskIds": list(post.generation_task_ids),
+            "publishLogIds": list(post.publish_log_ids),
+        }
+    )
+    return payload
+
+
+def publish_log_to_payload(log: PublishLog) -> dict[str, object]:
+    payload = asdict(log)
+    payload.update(
+        {
+            "postId": log.post_id,
+            "createdAt": log.created_at,
+            "platformPostId": log.platform_post_id,
+            "errorMessage": log.error_message,
+            "failureType": log.failure_type,
+        }
+    )
+    return payload
+
+
+def metrics_snapshot_to_payload(snapshot: MetricsSnapshot) -> dict[str, object]:
+    payload = asdict(snapshot)
+    payload.update(
+        {
+            "postId": snapshot.post_id,
+            "followConversions": snapshot.follow_conversions,
+            "snapshotAt": snapshot.snapshot_at,
+            "capturedAt": snapshot.captured_at,
+        }
+    )
+    return payload
+
+
 class InMemoryRepository:
     def __init__(self, storage_path: Path | None = None) -> None:
         self.posts: dict[str, Post] = {}
@@ -73,28 +147,24 @@ class InMemoryRepository:
                 body=value["body"],
                 tags=list(value.get("tags", [])),
                 status=PostStatus(value["status"]),
-                asset_ids=list(value.get("asset_ids", [])),
-                platform_post_id=value.get("platform_post_id"),
-                platform_url=value.get("platform_url"),
-                account_id=value.get("account_id"),
-                message_task_id=value.get("message_task_id"),
-                review_status=(ReviewStatus(value["review_status"]) if value.get("review_status") is not None else ReviewStatus.UNKNOWN),
-                like_count=value.get("like_count"),
-                collect_count=value.get("collect_count"),
-                comment_count=value.get("comment_count"),
-                last_sync_at=value.get("last_sync_at"),
-                last_sync_status=(
-                    AccountSyncStatus(value["last_sync_status"])
-                    if value.get("last_sync_status") is not None
-                    else AccountSyncStatus.UNKNOWN
-                ),
-                sync_error=value.get("sync_error"),
-                created_at=value.get("created_at", ""),
-                updated_at=value.get("updated_at", ""),
-                published_at=value.get("published_at"),
-                review_record_ids=list(value.get("review_record_ids", [])),
-                generation_task_ids=list(value.get("generation_task_ids", [])),
-                publish_log_ids=list(value.get("publish_log_ids", [])),
+                asset_ids=list_field(value, "asset_ids", "assetIds"),
+                platform_post_id=read_field(value, "platform_post_id", "platformPostId"),
+                platform_url=read_field(value, "platform_url", "platformUrl"),
+                account_id=read_field(value, "account_id", "accountId"),
+                message_task_id=read_field(value, "message_task_id", "messageTaskId"),
+                review_status=enum_field(ReviewStatus, value, "review_status", "reviewStatus", ReviewStatus.UNKNOWN),
+                like_count=read_field(value, "like_count", "likeCount"),
+                collect_count=read_field(value, "collect_count", "collectCount"),
+                comment_count=read_field(value, "comment_count", "commentCount"),
+                last_sync_at=read_field(value, "last_sync_at", "lastSyncAt"),
+                last_sync_status=enum_field(AccountSyncStatus, value, "last_sync_status", "lastSyncStatus", AccountSyncStatus.UNKNOWN),
+                sync_error=read_field(value, "sync_error", "syncError"),
+                created_at=read_field(value, "created_at", "createdAt", ""),
+                updated_at=read_field(value, "updated_at", "updatedAt", ""),
+                published_at=read_field(value, "published_at", "publishedAt"),
+                review_record_ids=list_field(value, "review_record_ids", "reviewRecordIds"),
+                generation_task_ids=list_field(value, "generation_task_ids", "generationTaskIds"),
+                publish_log_ids=list_field(value, "publish_log_ids", "publishLogIds"),
             )
             for key, value in (payload.get("posts", {}) or {}).items()
         }
@@ -138,15 +208,15 @@ class InMemoryRepository:
         self.publish_logs = {
             key: PublishLog(
                 id=value["id"],
-                post_id=value["post_id"],
+                post_id=read_field(value, "post_id", "postId"),
                 status=PublishStatus(value["status"]),
                 detail=value["detail"],
-                created_at=value["created_at"],
-                platform_post_id=value.get("platform_post_id"),
-                error_message=value.get("error_message"),
+                created_at=read_field(value, "created_at", "createdAt", ""),
+                platform_post_id=read_field(value, "platform_post_id", "platformPostId"),
+                error_message=read_field(value, "error_message", "errorMessage"),
                 failure_type=(
-                    PublishFailureType(value["failure_type"])
-                    if value.get("failure_type") is not None
+                    PublishFailureType(read_field(value, "failure_type", "failureType"))
+                    if read_field(value, "failure_type", "failureType") is not None
                     else None
                 ),
             )
@@ -157,15 +227,15 @@ class InMemoryRepository:
             post_id: [
                 MetricsSnapshot(
                     id=item["id"],
-                    post_id=item["post_id"],
+                    post_id=read_field(item, "post_id", "postId"),
                     views=item["views"],
                     likes=item["likes"],
                     favorites=item["favorites"],
                     comments=item["comments"],
-                    follow_conversions=item["follow_conversions"],
-                    snapshot_at=item["snapshot_at"],
+                    follow_conversions=read_field(item, "follow_conversions", "followConversions"),
+                    snapshot_at=read_field(item, "snapshot_at", "snapshotAt", ""),
                     source=item.get("source"),
-                    captured_at=item.get("captured_at"),
+                    captured_at=read_field(item, "captured_at", "capturedAt"),
                 )
                 for item in snapshots
             ]
@@ -253,13 +323,13 @@ class InMemoryRepository:
     def save(self) -> None:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "posts": {key: asdict(value) for key, value in self.posts.items()},
+            "posts": {key: post_to_payload(value) for key, value in self.posts.items()},
             "assets": {key: asdict(value) for key, value in self.assets.items()},
             "review_records": {key: asdict(value) for key, value in self.review_records.items()},
             "generation_tasks": {key: asdict(value) for key, value in self.generation_tasks.items()},
-            "publish_logs": {key: asdict(value) for key, value in self.publish_logs.items()},
+            "publish_logs": {key: publish_log_to_payload(value) for key, value in self.publish_logs.items()},
             "metrics_snapshots": {
-                key: [asdict(snapshot) for snapshot in snapshots]
+                key: [metrics_snapshot_to_payload(snapshot) for snapshot in snapshots]
                 for key, snapshots in self.metrics_snapshots.items()
             },
             "accounts": {key: asdict(value) for key, value in self.accounts.items()},
