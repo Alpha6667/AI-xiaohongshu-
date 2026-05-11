@@ -6,13 +6,28 @@ from app.repositories.memory import new_id, now_iso, repository
 from app.schemas.assets import AssetResponse, AssetUploadRequest
 
 
+def infer_asset_type(content_type: str, asset_type: str | None = None) -> str:
+    if asset_type in {"image", "video"}:
+        return asset_type
+    if content_type.startswith("video/"):
+        return "video"
+    return "image"
+
+
 def _serialize_asset(asset: Asset) -> AssetResponse:
     return AssetResponse(
         id=asset.id,
         name=asset.name,
+        type=infer_asset_type(asset.content_type, asset.type),
         fileName=asset.file_name,
+        filename=asset.file_name,
         contentType=asset.content_type,
+        mimeType=asset.content_type,
         url=asset.url,
+        thumbnailUrl=asset.thumbnail_url,
+        width=asset.width,
+        height=asset.height,
+        durationSeconds=asset.duration_seconds,
         createdAt=asset.created_at,
     )
 
@@ -59,8 +74,13 @@ def upload_asset(payload: AssetUploadRequest) -> AssetResponse:
         name=payload.name,
         file_name=payload.fileName,
         content_type=payload.contentType,
-        url=f"https://example.com/assets/{payload.fileName}",
+        url=payload.url or f"https://example.com/assets/{payload.fileName}",
         created_at=now_iso(),
+        type=infer_asset_type(payload.contentType, payload.type),
+        thumbnail_url=payload.thumbnailUrl,
+        width=payload.width,
+        height=payload.height,
+        duration_seconds=payload.durationSeconds,
     )
     repository.assets[asset.id] = asset
 

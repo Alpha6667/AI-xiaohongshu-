@@ -90,9 +90,16 @@ class MetricsSnapshotAppendRequest(BaseModel):
 class AssetSummaryResponse(BaseModel):
     id: str
     name: str
+    type: str
     fileName: str
+    filename: str
     contentType: str
+    mimeType: str
     url: str
+    thumbnailUrl: str | None = None
+    width: int | None = None
+    height: int | None = None
+    durationSeconds: int | None = None
     createdAt: str
 
 
@@ -146,6 +153,8 @@ class PostSummaryResponse(BaseModel):
     tags: list[str]
     status: PostStatus
     assetIds: list[str]
+    coverAsset: AssetSummaryResponse | None = None
+    assetCount: int = 0
     latestTaskIds: list[str]
     latestMetrics: PostMetricsResponse
     metricsSource: str | None = None

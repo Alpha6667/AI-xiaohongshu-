@@ -125,6 +125,21 @@ def metrics_snapshot_to_payload(snapshot: MetricsSnapshot) -> dict[str, object]:
     return payload
 
 
+def asset_to_payload(asset: Asset) -> dict[str, object]:
+    payload = asdict(asset)
+    payload.update(
+        {
+            "fileName": asset.file_name,
+            "contentType": asset.content_type,
+            "mimeType": asset.content_type,
+            "thumbnailUrl": asset.thumbnail_url,
+            "createdAt": asset.created_at,
+            "durationSeconds": asset.duration_seconds,
+        }
+    )
+    return payload
+
+
 class InMemoryRepository:
     def __init__(self, storage_path: Path | None = None) -> None:
         self.posts: dict[str, Post] = {}
@@ -184,10 +199,15 @@ class InMemoryRepository:
             key: Asset(
                 id=value["id"],
                 name=value["name"],
-                file_name=value["file_name"],
-                content_type=value["content_type"],
+                file_name=read_field(value, "file_name", "fileName", ""),
+                content_type=read_field(value, "content_type", "contentType", read_field(value, "mime_type", "mimeType", "application/octet-stream")),
                 url=value["url"],
-                created_at=value["created_at"],
+                created_at=read_field(value, "created_at", "createdAt", ""),
+                type=read_field(value, "type"),
+                thumbnail_url=read_field(value, "thumbnail_url", "thumbnailUrl"),
+                width=read_field(value, "width"),
+                height=read_field(value, "height"),
+                duration_seconds=read_field(value, "duration_seconds", "durationSeconds"),
             )
             for key, value in (payload.get("assets", {}) or {}).items()
         }
@@ -335,7 +355,7 @@ class InMemoryRepository:
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "posts": {key: post_to_payload(value) for key, value in self.posts.items()},
-            "assets": {key: asdict(value) for key, value in self.assets.items()},
+            "assets": {key: asset_to_payload(value) for key, value in self.assets.items()},
             "review_records": {key: asdict(value) for key, value in self.review_records.items()},
             "generation_tasks": {key: asdict(value) for key, value in self.generation_tasks.items()},
             "publish_logs": {key: publish_log_to_payload(value) for key, value in self.publish_logs.items()},

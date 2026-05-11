@@ -232,15 +232,64 @@ class BackendApiMinimalTests(unittest.TestCase):
         )
         self.assertEqual(upload_resp.status_code, 201)
         asset_id = upload_resp.json()["id"]
+        self.assertEqual(upload_resp.json()["type"], "image")
+        self.assertEqual(upload_resp.json()["filename"], "cover.jpg")
+        self.assertEqual(upload_resp.json()["mimeType"], "image/jpeg")
 
         detail_resp = self.client.get(f"/api/posts/{post_id}")
         self.assertEqual(detail_resp.status_code, 200)
         self.assertIn(asset_id, detail_resp.json()["assetIds"])
         self.assertTrue(any(item["id"] == asset_id for item in detail_resp.json()["assets"]))
+        self.assertEqual(detail_resp.json()["assetCount"], 1)
+        self.assertEqual(detail_resp.json()["coverAsset"]["id"], asset_id)
 
         post_asset_list_resp = self.client.get(f"/api/assets?postId={post_id}")
         self.assertEqual(post_asset_list_resp.status_code, 200)
         self.assertTrue(any(item["id"] == asset_id for item in post_asset_list_resp.json()))
+
+    def test_post_detail_returns_video_asset_contract(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "视频素材契约",
+                "title": "视频素材契约标题",
+                "body": "视频素材契约正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        post_id = create_resp.json()["id"]
+        upload_resp = self.client.post(
+            "/api/assets/upload",
+            json={
+                "name": "发布视频",
+                "type": "video",
+                "fileName": "video.mp4",
+                "contentType": "video/mp4",
+                "url": "https://example.com/video.mp4",
+                "thumbnailUrl": "https://example.com/video-cover.jpg",
+                "width": 1080,
+                "height": 1920,
+                "durationSeconds": 15,
+                "postId": post_id,
+            },
+        )
+        self.assertEqual(upload_resp.status_code, 201)
+        asset_payload = upload_resp.json()
+        self.assertEqual(asset_payload["type"], "video")
+        self.assertEqual(asset_payload["filename"], "video.mp4")
+        self.assertEqual(asset_payload["mimeType"], "video/mp4")
+        self.assertEqual(asset_payload["thumbnailUrl"], "https://example.com/video-cover.jpg")
+        self.assertEqual(asset_payload["durationSeconds"], 15)
+
+        detail = self.client.get(f"/api/posts/{post_id}").json()
+        video_asset = detail["assets"][0]
+        self.assertEqual(video_asset["type"], "video")
+        self.assertEqual(video_asset["url"], "https://example.com/video.mp4")
+        self.assertEqual(video_asset["thumbnailUrl"], "https://example.com/video-cover.jpg")
+        self.assertEqual(video_asset["width"], 1080)
+        self.assertEqual(video_asset["height"], 1920)
+        self.assertEqual(video_asset["durationSeconds"], 15)
 
     def test_generate_and_publish_contract_stable(self) -> None:
         create_resp = self.client.post(
@@ -612,7 +661,11 @@ class BackendApiMinimalTests(unittest.TestCase):
             {
                 "id": asset_id,
                 "name": "联调封面",
-                "url": "https://example.com/assets/cover.jpg",
+                "type": "image",
+                "url": "https://example.com/cover.jpg",
+                "localPath": None,
+                "filename": "cover.jpg",
+                "mimeType": "image/jpeg",
                 "contentType": "image/jpeg",
             }
         ])

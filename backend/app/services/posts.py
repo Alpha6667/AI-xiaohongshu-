@@ -38,6 +38,7 @@ from app.schemas.posts import (
 )
 from app.services.publisher import MetricsFetchError, PreparedPublish, publisher_adapter
 from app.services.image_provider import ProviderNotConfiguredError, prepare_image_provider_for_generation
+from app.services.assets import infer_asset_type
 
 
 def _get_post_or_404(post_id: str) -> Post:
@@ -145,9 +146,16 @@ def _serialize_assets(post: Post) -> list[AssetSummaryResponse]:
             AssetSummaryResponse(
                 id=asset.id,
                 name=asset.name,
+                type=infer_asset_type(asset.content_type, asset.type),
                 fileName=asset.file_name,
+                filename=asset.file_name,
                 contentType=asset.content_type,
+                mimeType=asset.content_type,
                 url=asset.url,
+                thumbnailUrl=asset.thumbnail_url,
+                width=asset.width,
+                height=asset.height,
+                durationSeconds=asset.duration_seconds,
                 createdAt=asset.created_at,
             )
         )
@@ -158,6 +166,7 @@ def _serialize_post(post: Post) -> PostSummaryResponse:
     latest_metrics = _latest_metrics(post.id)
     like_count, collect_count, comment_count = _latest_interaction_counts(post)
     message_task = _get_message_task_by_post(post)
+    assets = _serialize_assets(post)
     return PostSummaryResponse(
         id=post.id,
         topic=post.topic,
@@ -166,6 +175,8 @@ def _serialize_post(post: Post) -> PostSummaryResponse:
         tags=post.tags,
         status=post.status,
         assetIds=post.asset_ids,
+        coverAsset=assets[0] if assets else None,
+        assetCount=len(assets),
         latestTaskIds=post.generation_task_ids[-3:],
         latestMetrics=latest_metrics,
         metricsSource=latest_metrics.source,

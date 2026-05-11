@@ -10,6 +10,7 @@ from app.models.post import Post
 from app.models.publish_log import PublishLog
 from app.db.config import get_settings
 from app.repositories.memory import new_id, now_iso, repository
+from app.services.assets import infer_asset_type
 
 
 DEFAULT_BACKEND_PUBLIC_BASE_URL = "http://127.0.0.1:8000"
@@ -69,7 +70,11 @@ class FakePublisherAdapter:
                 {
                     "id": asset.id,
                     "name": asset.name,
+                    "type": infer_asset_type(asset.content_type, asset.type),
                     "url": asset.url,
+                    "localPath": asset.url if not asset.url.startswith(("http://", "https://")) else None,
+                    "filename": asset.file_name,
+                    "mimeType": asset.content_type,
                     "contentType": asset.content_type,
                 }
             )
