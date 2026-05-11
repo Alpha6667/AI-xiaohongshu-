@@ -290,7 +290,12 @@ async function handleMetrics(req, res) {
       log(`Running metrics script: ${scriptPath} ${platformPostId}`);
 
       try {
-        const result = await runScript(scriptPath, [platformPostId]);
+        let result = await runScript(scriptPath, [platformPostId]);
+
+        if (result.code !== 0) {
+          log(`Metrics script exited with code ${result.code}, retrying once...`);
+          result = await runScript(scriptPath, [platformPostId]);
+        }
 
         if (result.code !== 0) {
           throw new Error(result.stderr || `Script exited with code ${result.code}`);
