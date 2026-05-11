@@ -178,9 +178,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p>这里展示最新持久化互动结果。</p>
                 </article>
                 <article className="detail-meta-card">
-                  <span className="eyebrow">赞和收藏 / 评论</span>
+                  <span className="eyebrow">收藏 / 评论</span>
                   <strong>{post.latestMetrics.favorites.toLocaleString()} / {post.latestMetrics.comments.toLocaleString()}</strong>
-                  <p>赞和收藏是小红书 Creator 中心返回的赞藏合并口径，会跟随最新抓取一起刷新。</p>
+                  <p>收藏和评论会跟随最新抓取一起刷新，便于快速看出内容后劲。</p>
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">关注转化</span>
@@ -211,7 +211,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                         <th scope="col">快照时间</th>
                         <th scope="col" className="numeric-cell">浏览</th>
                         <th scope="col" className="numeric-cell">点赞</th>
-                        <th scope="col" className="numeric-cell">赞和收藏</th>
+                        <th scope="col" className="numeric-cell">收藏</th>
                         <th scope="col" className="numeric-cell">评论</th>
                         <th scope="col" className="numeric-cell">关注转化</th>
                         <th scope="col">来源</th>

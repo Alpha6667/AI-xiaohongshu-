@@ -43,7 +43,7 @@ export default async function PostsPage() {
               <strong>{summary.totalLikes.toLocaleString()}</strong>
             </article>
             <article className="metric-tile">
-              <span>总赞和收藏</span>
+              <span>总收藏</span>
               <strong>{summary.totalFavorites.toLocaleString()}</strong>
             </article>
             <article className="metric-tile">
@@ -73,7 +73,7 @@ export default async function PostsPage() {
                   <th scope="col">平台帖子 ID</th>
                   <th scope="col" className="numeric-cell">浏览</th>
                   <th scope="col" className="numeric-cell">点赞</th>
-                  <th scope="col" className="numeric-cell">赞和收藏</th>
+                  <th scope="col" className="numeric-cell">收藏</th>
                   <th scope="col" className="numeric-cell">评论</th>
                   <th scope="col" className="numeric-cell">关注转化</th>
                   <th scope="col">数据来源</th>
