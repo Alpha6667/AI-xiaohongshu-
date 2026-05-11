@@ -109,16 +109,20 @@ async function resolveAssetFiles(assets, tempDir) {
       continue;
     }
     const urlStr = asset.url;
-    if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
-      const localPath = await downloadFile(urlStr, tempDir);
-      files.push(localPath);
-    } else {
-      // Local path
-      if (fs.existsSync(urlStr)) {
-        files.push(urlStr);
+    try {
+      if (urlStr.startsWith('http://') || urlStr.startsWith('https://')) {
+        const localPath = await downloadFile(urlStr, tempDir);
+        files.push(localPath);
       } else {
-        log(`Warning: asset file not found: ${urlStr}`);
+        // Local path
+        if (fs.existsSync(urlStr)) {
+          files.push(urlStr);
+        } else {
+          log(`Warning: asset file not found: ${urlStr}`);
+        }
       }
+    } catch (dlError) {
+      throw Object.assign(dlError, { errorCode: 'media_download_failed', assetUrl: urlStr });
     }
   }
   return files;
@@ -340,7 +344,12 @@ async function publish(content) {
     if (browser) await browser.close().catch(() => {});
     // Cleanup temp directory
     try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (ex) {}
-    return { success: false, errorMessage: e.message, failureType: 'retryable', executionLogs: logs };
+    // Classify error for appropriate errorCode
+    const errorCode = e.errorCode
+      || (e.message && e.message.includes('fileChooser') ? 'media_upload_failed' : null)
+      || 'publish_execution_error';
+    const failureType = errorCode === 'media_download_failed' || errorCode === 'media_upload_failed' ? 'non_retryable' : 'retryable';
+    return { success: false, errorMessage: e.message, errorCode, failureType, executionLogs: logs };
   }
 }
 
