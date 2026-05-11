@@ -89,7 +89,7 @@ function runScript(scriptPath, args = []) {
         XHS_PROFILE_DIR: process.env.XHS_PROFILE_DIR || '/root/.openclaw/xhs-profile-persist',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 60000,
+      timeout: 120000,
     });
 
     let stdout = '';
@@ -309,6 +309,7 @@ async function handleMetrics(req, res) {
             followConversions: metricsResult.followConversions || 0,
             source: metricsResult.source || 'xhs_creator_center',
             capturedAt: metricsResult.capturedAt || new Date().toISOString(),
+            matchedBy: metricsResult.matchedBy,
           }));
         } else {
           const statusCode = (

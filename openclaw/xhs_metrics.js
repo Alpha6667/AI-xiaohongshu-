@@ -2,20 +2,19 @@
 /**
  * Xiaohongshu metrics fetcher (Node.js)
  *
- * Navigates to creator note manager, finds the note by platformPostId,
- * and extracts interactive metrics from the DOM.
+ * Strategy:
+ *   1. Navigate to creator note-manager list page
+ *   2. Collect all note cards with nums from DOM
+ *   3. Click each card to enter detail page, extract noteId from URL (id=XXX)
+ *   4. Match by platformPostId
+ *   5. Fallback: click-based matching vs first_card
  *
  * Error codes:
- *   login_required       — session expired, user needs to re-login
- *   post_not_found       — note with given platformPostId not found in manager
- *   page_structure_changed — DOM selectors no longer match (upstream UI change)
- *   metrics_unavailable  — note found but metrics DOM block not yet populated
- *   metrics_fetch_timeout  — browser/network timed out
- *   metrics_fetch_execution_error — unexpected script crash
+ *   login_required, post_not_found, page_structure_changed,
+ *   metrics_unavailable, metrics_fetch_timeout, metrics_fetch_execution_error
  *
  * Returns JSON with { success, platformPostId, views, likes, favorites,
- *   comments, followConversions, source, capturedAt }
- * On failure: { success, error, errorCode, source, executionLogs }
+ *   comments, followConversions, source, capturedAt, matchedBy, warning }
  */
 const { chromium } = require('playwright');
 
@@ -66,18 +65,11 @@ async function fetchMetrics(platformPostId) {
     if (page.url().includes('/login')) {
       log('Login required');
       await browser.close();
-      return {
-        success: false,
-        error: 'Login required',
-        errorCode: 'login_required',
-        source: 'xhs_creator_center',
-        capturedAt: nowISO(),
-        executionLogs: logs,
-      };
+      return { success: false, error: 'Login required', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
     log('Session OK');
 
-    // ---- Navigate to note manager ----
+    // ---- Step 1: Gather card data from note-manager list ----
     log('Navigating to note manager');
     await page.goto('https://creator.xiaohongshu.com/new/note-manager', {
       waitUntil: 'load',
@@ -86,224 +78,158 @@ async function fetchMetrics(platformPostId) {
     await new Promise((r) => setTimeout(r, 8000));
     log(`Note manager: ${page.url()}`);
 
-    // Screenshot for debugging
     await page.screenshot({ path: `${SCREENSHOT_DIR}/metrics_${platformPostId}.png` });
 
-    // ---- Extract metrics via evaluate ----
-    const metrics = await page.evaluate((pid) => {
-      /**
-       * Attempt multiple known DOM selectors for the creator note-manager cards.
-       * The creator center has undergone multiple UI revisions, so we probe
-       * several selector patterns:
-       *
-       *   Pattern A (older): .info > .title + .icon > span
-       *   Pattern B (newer): [class*="note-item"]  with [class*="stat"]
-       *   Pattern C (fallback): tr / td table layout
-       */
-      const finderPatterns = [
-        // Pattern A — .info selector
-        () => {
-          const cards = document.querySelectorAll('.info');
-          const results = [];
-          for (const info of cards) {
-            const titleEl = info.querySelector('.title');
-            const title = titleEl ? titleEl.textContent.trim() : '';
-            const iconSpans = info.querySelectorAll('.icon span');
-            const nums = Array.from(iconSpans).map((s) => s.textContent.trim());
-            const card = info.closest('[data-id], [data-note-id]');
-            const dataId = card
-              ? card.getAttribute('data-id') ||
-                card.getAttribute('data-note-id') ||
-                ''
-              : '';
-            results.push({ title: title.substring(0, 60), nums, dataId });
-          }
-          return results;
-        },
-
-        // Pattern B — generic stat items
-        () => {
-          const statItems = document.querySelectorAll(
-            '[class*="stat-item"], [class*="statItem"]'
-          );
-          const results = [];
-          for (const item of statItems) {
-            const text = item.textContent.trim();
-            results.push({ text });
-          }
-          return results;
-        },
-      ];
-
-      // Try each pattern, collect all data
-      const allResults = [];
-      for (const fn of finderPatterns) {
-        try {
-          const r = fn();
-          if (r.length > 0) allResults.push(...r);
-        } catch (_) {
-          /* skip selector that throws */
-        }
+    // ---- Step 2: Collect all cards ----
+    const cardsOnList = await page.evaluate(() => {
+      const results = [];
+      const infoDivs = document.querySelectorAll('.info');
+      for (const info of infoDivs) {
+        const titleEl = info.querySelector('.title');
+        const title = titleEl ? titleEl.textContent.trim() : '';
+        const timeEl = info.querySelector('.time');
+        const time = timeEl ? timeEl.textContent.trim() : '';
+        const iconSpans = info.querySelectorAll('.icon span');
+        const nums = Array.from(iconSpans).map((s) => s.textContent.trim());
+        results.push({ title: title.substring(0, 60), time: time.substring(0, 60), nums, dataId: '' });
       }
+      return results;
+    });
 
-      // Try to match by data-id
-      for (const r of allResults) {
-        if (r.dataId && r.dataId.includes(pid)) {
-          return { source: 'data_id', metrics: r, all: allResults };
-        }
-      }
+    log(`Collected ${cardsOnList.length} cards from list`);
 
-      // Fallback: first card (most recent)
-      if (allResults.length > 0) {
-        return { source: 'first_card', metrics: allResults[0], all: allResults };
-      }
-
-      return { source: 'none', metrics: null, all: allResults };
-    }, platformPostId);
-
-    log(
-      `Note cards found: ${metrics.all.length}, source: ${metrics.source}`
-    );
-
-    if (!metrics.metrics) {
-      log('No note cards found at all — page structure may have changed');
+    if (cardsOnList.length === 0) {
       await browser.close();
-      return {
-        success: false,
-        error: 'Page structure has changed, DOM selectors no longer match',
-        errorCode: 'page_structure_changed',
-        source: 'xhs_creator_center',
-        capturedAt: nowISO(),
-        executionLogs: logs,
-      };
+      return { success: false, error: 'No note cards found', errorCode: 'page_structure_changed', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
 
-    // Pattern A: .info cards with .nums
-    if (metrics.metrics.nums) {
-      if (metrics.metrics.nums.length < 4) {
-        log(
-          `Found note but metrics array too short (${metrics.metrics.nums.length}), likely not yet populated`
-        );
-        await browser.close();
-        return {
-          success: false,
-          error: 'Metrics data not yet available for this note',
-          errorCode: 'metrics_unavailable',
-          source: 'xhs_creator_center',
-          capturedAt: nowISO(),
-          executionLogs: logs,
-        };
+    // ---- Step 3: Click cards one by one to find noteId match ----
+    // Clicks each card, extracts noteId from URL, stops on first match.
+    log('Searching for matching card by noteId...');
+    let matchResult = null;
+
+    for (let i = 0; i < cardsOnList.length; i++) {
+      const card = cardsOnList[i];
+
+      // Relocate the ith info element in current DOM
+      const infoDivs = await page.$$('.info');
+      if (i >= infoDivs.length) {
+        log(`  Card #${i} not found, skipping`);
+        continue;
       }
 
-      const nums = metrics.metrics.nums;
+      log(`  Trying card #${i}: "${card.title}"`);
+
+      try {
+        await infoDivs[i].scrollIntoViewIfNeeded();
+        const navPromise = page.waitForNavigation({ timeout: 20000 }).catch(() => {});
+        await infoDivs[i].click();
+        await navPromise;
+        await new Promise((r) => setTimeout(r, 3000));
+
+        const currentUrl = page.url();
+        const noteId = new URL(currentUrl).searchParams.get('id') || '';
+        log(`    noteId=${noteId}`);
+
+        if (noteId === platformPostId) {
+          log(`    *** MATCH FOUND: card #${i}`);
+          matchResult = {
+            matchedBy: 'platformPostId',
+            cardIndex: i,
+            card,
+            noteId,
+          };
+          // No need to go back to list — we already have our data
+          break;
+        }
+
+        // Return to note-manager for the next card
+        await page.goto('https://creator.xiaohongshu.com/new/note-manager', { waitUntil: 'load', timeout: TIMEOUT_MS }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 3000));
+
+      } catch (e) {
+        log(`    Card #${i} click failed: ${e.message}`);
+        await page.goto('https://creator.xiaohongshu.com/new/note-manager', { waitUntil: 'load', timeout: TIMEOUT_MS }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+
+    // ---- Step 4: Handle match result ----
+    if (matchResult) {
+      const nums = matchResult.card.nums;
+      if (!nums || nums.length < 4) {
+        await browser.close();
+        return { success: false, error: 'Metrics data incomplete', errorCode: 'metrics_unavailable', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+      }
+
       const capturedAt = nowISO();
       const result = {
         success: true,
         platformPostId,
-        // DOM icon order (confirmed by SVG path analysis):
-        //   nums[0] = 浏览 (eye icon)          -> views
-        //   nums[1] = 评论 (chat bubble icon)   -> comments
-        //   nums[2] = 点赞 (heart icon)         -> likes
-        //   nums[3] = 收藏 (bookmark icon)      -> favorites
-        //   nums[4] = 转发 (arrow icon)         -> followConversions
         views: parseCount(nums[0] || '0'),
-        comments: parseCount(nums[1] || '0'),
-        likes: parseCount(nums[2] || '0'),
-        favorites: parseCount(nums[3] || '0'),
+        likes: parseCount(nums[1] || '0'),
+        favorites: parseCount(nums[2] || '0'),
+        comments: parseCount(nums[3] || '0'),
         followConversions: parseCount(nums[4] || '0'),
         source: 'xhs_creator_center',
         capturedAt,
+        matchedBy: matchResult.matchedBy,
+        matchedTitle: matchResult.card.title || '',
         executionLogs: logs,
       };
 
-      log(
-        `Metrics: views=${result.views} likes=${result.likes} favorites=${result.favorites} comments=${result.comments} follow=${result.followConversions}`
-      );
+      log(`Precision match via ${matchResult.matchedBy}: card #${matchResult.cardIndex}`);
+      log(`Metrics: views=${result.views} likes=${result.likes} fav=${result.favorites} cmt=${result.comments} follow=${result.followConversions}`);
 
       await browser.close();
       return result;
     }
 
-    // Pattern B / Fallback — flat stat items, try to map by order
-    if (metrics.metrics.text) {
-      log('Fell back to generic stat-item selectors');
-      // If we can get named metrics from this pattern, great;
-      // otherwise signal metrics_unavailable
+    // ---- Step 5: Fallback — first_card with warning ----
+    log(`WARNING: No card matched platformPostId ${platformPostId}, falling back to first_card`);
+    const firstCard = cardsOnList[0];
+    if (!firstCard || !firstCard.nums || firstCard.nums.length < 4) {
       await browser.close();
-      return {
-        success: false,
-        error: 'Page structure has changed, DOM selectors no longer match',
-        errorCode: 'page_structure_changed',
-        source: 'xhs_creator_center',
-        capturedAt: nowISO(),
-        executionLogs: logs,
-      };
+      return { success: false, error: 'No matching card found and fallback card has incomplete data', errorCode: 'post_not_found', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
 
-    // Unknown pattern
-    await browser.close();
-    return {
-      success: false,
-      error: 'Page structure has changed, DOM selectors no longer match',
-      errorCode: 'page_structure_changed',
+    const nums = firstCard.nums;
+    const capturedAt = nowISO();
+    const result = {
+      success: true,
+      platformPostId,
+      views: parseCount(nums[0] || '0'),
+      likes: parseCount(nums[1] || '0'),
+      favorites: parseCount(nums[2] || '0'),
+      comments: parseCount(nums[3] || '0'),
+      followConversions: parseCount(nums[4] || '0'),
       source: 'xhs_creator_center',
-        capturedAt: nowISO(),
+      capturedAt,
+      matchedBy: 'first_card',
+      warning: '由于页面未暴露data-id属性，无法按platformPostId精准定位笔记；可能匹配到同名多版本中的其他帖子',
+      matchedTitle: firstCard.title || '',
       executionLogs: logs,
     };
+
+    log(`Fallback first_card: title="${firstCard.title}" nums=${JSON.stringify(nums)}`);
+    log(`Metrics: views=${result.views} likes=${result.likes} fav=${result.favorites} cmt=${result.comments} follow=${result.followConversions}`);
+
+    await browser.close();
+    return result;
+
   } catch (e) {
     log(`Error: ${e.message}`);
-
-    // Classify timeout vs generic error
-    if (e.message && e.message.includes('timeout')) {
-      if (browser) await browser.close().catch(() => {});
-      return {
-        success: false,
-        error: `Metrics fetch timed out: ${e.message}`,
-        errorCode: 'metrics_fetch_timeout',
-        source: 'xhs_creator_center',
-        capturedAt: nowISO(),
-        executionLogs: logs,
-      };
-    }
-
     if (browser) await browser.close().catch(() => {});
-    return {
-      success: false,
-      error: e.message,
-      errorCode: 'metrics_fetch_execution_error',
-      source: 'xhs_creator_center',
-      executionLogs: logs,
-    };
+    const errorCode = (e.message && e.message.includes('timeout')) ? 'metrics_fetch_timeout' : 'metrics_fetch_execution_error';
+    return { success: false, error: e.message, errorCode, source: 'xhs_creator_center', executionLogs: logs };
   }
 }
 
-// ---- CLI entry point ----
 const pid = process.argv[2];
 if (!pid) {
-  console.log(
-    JSON.stringify({
-      success: false,
-      error: 'platformPostId argument is required',
-      errorCode: 'missing_argument',
-      source: 'xhs_creator_center',
-    })
-  );
+  console.log(JSON.stringify({ success: false, error: 'platformPostId argument is required', errorCode: 'missing_argument', source: 'xhs_creator_center' }));
   process.exit(1);
 }
 fetchMetrics(pid)
-  .then((r) => {
-    console.log(JSON.stringify(r));
-    process.exit(0);
-  })
-  .catch((e) => {
-    console.log(
-      JSON.stringify({
-        success: false,
-        error: e.message,
-        errorCode: 'metrics_fetch_execution_error',
-        source: 'xhs_creator_center',
-        executionLogs: logs,
-      })
-    );
-    process.exit(1);
-  });
+  .then((r) => { console.log(JSON.stringify(r)); process.exit(0); })
+  .catch((e) => { console.log(JSON.stringify({ success: false, error: e.message, errorCode: 'metrics_fetch_execution_error', source: 'xhs_creator_center', executionLogs: logs })); process.exit(1); });
