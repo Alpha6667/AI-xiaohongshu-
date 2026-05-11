@@ -38,7 +38,7 @@ from app.schemas.posts import (
 )
 from app.services.publisher import MetricsFetchError, PreparedPublish, publisher_adapter
 from app.services.image_provider import ProviderNotConfiguredError, prepare_image_provider_for_generation
-from app.services.assets import infer_asset_type
+from app.services.assets import get_asset_content_url, infer_asset_type
 
 
 def _get_post_or_404(post_id: str) -> Post:
@@ -151,8 +151,8 @@ def _serialize_assets(post: Post) -> list[AssetSummaryResponse]:
                 filename=asset.file_name,
                 contentType=asset.content_type,
                 mimeType=asset.content_type,
-                url=asset.url,
-                thumbnailUrl=asset.thumbnail_url,
+                url=get_asset_content_url(asset),
+                thumbnailUrl=asset.thumbnail_url if asset.thumbnail_url and asset.thumbnail_url.startswith(("http://", "https://", "/api/")) else None,
                 width=asset.width,
                 height=asset.height,
                 durationSeconds=asset.duration_seconds,

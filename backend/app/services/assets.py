@@ -1,4 +1,7 @@
+from pathlib import Path
+
 from fastapi import HTTPException, status
+from fastapi.responses import FileResponse
 
 from app.models.asset import Asset
 from app.models.enums import PostStatus
@@ -14,6 +17,10 @@ def infer_asset_type(content_type: str, asset_type: str | None = None) -> str:
     return "image"
 
 
+def get_asset_content_url(asset: Asset) -> str:
+    return f"/api/assets/{asset.id}/content"
+
+
 def _serialize_asset(asset: Asset) -> AssetResponse:
     return AssetResponse(
         id=asset.id,
@@ -23,8 +30,8 @@ def _serialize_asset(asset: Asset) -> AssetResponse:
         filename=asset.file_name,
         contentType=asset.content_type,
         mimeType=asset.content_type,
-        url=asset.url,
-        thumbnailUrl=asset.thumbnail_url,
+        url=get_asset_content_url(asset),
+        thumbnailUrl=asset.thumbnail_url if asset.thumbnail_url and asset.thumbnail_url.startswith(("http://", "https://", "/api/")) else None,
         width=asset.width,
         height=asset.height,
         durationSeconds=asset.duration_seconds,
@@ -56,6 +63,24 @@ def list_assets(post_id: str | None = None, ids: str | None = None) -> list[Asse
 
     assets.sort(key=lambda item: item.created_at, reverse=True)
     return [_serialize_asset(asset) for asset in assets]
+
+
+def get_asset_content(asset_id: str) -> FileResponse:
+    asset = repository.assets.get(asset_id)
+    if asset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
+    if asset.url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Remote asset content is not served by backend")
+
+    file_path = Path(asset.url)
+    if not file_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset file not found")
+
+    return FileResponse(
+        path=file_path,
+        media_type=asset.content_type,
+        filename=asset.file_name,
+    )
 
 
 def upload_asset(payload: AssetUploadRequest) -> AssetResponse:

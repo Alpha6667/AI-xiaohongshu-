@@ -1,5 +1,7 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -235,6 +237,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(upload_resp.json()["type"], "image")
         self.assertEqual(upload_resp.json()["filename"], "cover.jpg")
         self.assertEqual(upload_resp.json()["mimeType"], "image/jpeg")
+        self.assertEqual(upload_resp.json()["url"], f"/api/assets/{asset_id}/content")
 
         detail_resp = self.client.get(f"/api/posts/{post_id}")
         self.assertEqual(detail_resp.status_code, 200)
@@ -246,6 +249,36 @@ class BackendApiMinimalTests(unittest.TestCase):
         post_asset_list_resp = self.client.get(f"/api/assets?postId={post_id}")
         self.assertEqual(post_asset_list_resp.status_code, 200)
         self.assertTrue(any(item["id"] == asset_id for item in post_asset_list_resp.json()))
+
+    def test_asset_content_serves_only_registered_local_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            image_path = Path(temp_dir) / "cover.jpg"
+            image_path.write_bytes(b"fake-image")
+            create_resp = self.client.post(
+                "/api/posts",
+                json={"topic": "本地素材", "title": "本地素材标题", "body": "本地素材正文", "tags": [], "assetIds": []},
+            )
+            post_id = create_resp.json()["id"]
+            upload_resp = self.client.post(
+                "/api/assets/upload",
+                json={
+                    "name": "本地图片",
+                    "fileName": "cover.jpg",
+                    "contentType": "image/jpeg",
+                    "url": str(image_path),
+                    "postId": post_id,
+                },
+            )
+            asset_id = upload_resp.json()["id"]
+            self.assertEqual(upload_resp.json()["url"], f"/api/assets/{asset_id}/content")
+
+            content_resp = self.client.get(f"/api/assets/{asset_id}/content")
+            self.assertEqual(content_resp.status_code, 200)
+            self.assertEqual(content_resp.headers["content-type"], "image/jpeg")
+            self.assertEqual(content_resp.content, b"fake-image")
+
+            missing_resp = self.client.get("/api/assets/asset_missing/content")
+            self.assertEqual(missing_resp.status_code, 404)
 
     def test_post_detail_returns_video_asset_contract(self) -> None:
         create_resp = self.client.post(
@@ -285,7 +318,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         detail = self.client.get(f"/api/posts/{post_id}").json()
         video_asset = detail["assets"][0]
         self.assertEqual(video_asset["type"], "video")
-        self.assertEqual(video_asset["url"], "https://example.com/video.mp4")
+        self.assertEqual(video_asset["url"], f"/api/assets/{asset_payload['id']}/content")
         self.assertEqual(video_asset["thumbnailUrl"], "https://example.com/video-cover.jpg")
         self.assertEqual(video_asset["width"], 1080)
         self.assertEqual(video_asset["height"], 1920)

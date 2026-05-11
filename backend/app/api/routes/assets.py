@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Query, status
+from fastapi.responses import FileResponse
 
 from app.schemas.assets import AssetResponse, AssetUploadRequest
-from app.services.assets import list_assets, upload_asset
+from app.services.assets import get_asset_content, list_assets, upload_asset
 
 
 router = APIRouter(prefix="/api/assets", tags=["assets"])
@@ -13,6 +14,11 @@ def list_assets_route(
     ids: str | None = Query(default=None, description="Comma-separated asset IDs"),
 ) -> list[AssetResponse]:
     return list_assets(post_id=postId, ids=ids)
+
+
+@router.get("/{asset_id}/content", response_class=FileResponse)
+def get_asset_content_route(asset_id: str) -> FileResponse:
+    return get_asset_content(asset_id)
 
 
 @router.post("/upload", response_model=AssetResponse, status_code=status.HTTP_201_CREATED)
