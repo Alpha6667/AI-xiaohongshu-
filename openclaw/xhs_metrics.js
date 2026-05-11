@@ -166,10 +166,16 @@ async function fetchMetrics(platformPostId) {
       const result = {
         success: true,
         platformPostId,
+        // SVG path confirmed order:
+        //   nums[0] = 浏览 (eye)     -> views
+        //   nums[1] = 评论 (bubble)   -> comments
+        //   nums[2] = 点赞 (heart)    -> likes
+        //   nums[3] = 收藏 (bookmark) -> favorites
+        //   nums[4] = 转发 (arrow)    -> followConversions
         views: parseCount(nums[0] || '0'),
-        likes: parseCount(nums[1] || '0'),
-        favorites: parseCount(nums[2] || '0'),
-        comments: parseCount(nums[3] || '0'),
+        comments: parseCount(nums[1] || '0'),
+        likes: parseCount(nums[2] || '0'),
+        favorites: parseCount(nums[3] || '0'),
         followConversions: parseCount(nums[4] || '0'),
         source: 'xhs_creator_center',
         capturedAt,
@@ -198,10 +204,11 @@ async function fetchMetrics(platformPostId) {
     const result = {
       success: true,
       platformPostId,
+      // SVG path confirmed order (same as precision match above)
       views: parseCount(nums[0] || '0'),
-      likes: parseCount(nums[1] || '0'),
-      favorites: parseCount(nums[2] || '0'),
-      comments: parseCount(nums[3] || '0'),
+      comments: parseCount(nums[1] || '0'),
+      likes: parseCount(nums[2] || '0'),
+      favorites: parseCount(nums[3] || '0'),
       followConversions: parseCount(nums[4] || '0'),
       source: 'xhs_creator_center',
       capturedAt,
