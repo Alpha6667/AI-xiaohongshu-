@@ -134,7 +134,7 @@ async function fetchMetrics(platformPostId) {
         if (noteId === platformPostId) {
           log(`    *** MATCH FOUND: card #${i}`);
           matchResult = {
-            matchedBy: 'platformPostId',
+            matchedBy: 'note_id',
             cardIndex: i,
             card,
             noteId,
