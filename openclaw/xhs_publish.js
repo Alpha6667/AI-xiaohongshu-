@@ -124,11 +124,32 @@ async function resolveAssetFiles(assets, tempDir) {
   return files;
 }
 
+/** Classify assets by contentType. Returns { images: [...], videos: [...] } */
+function classifyAssets(assets) {
+  const images = [];
+  const videos = [];
+  for (const a of (assets || [])) {
+    const ct = (a.contentType || a.mimeType || '').toLowerCase();
+    if (ct.startsWith('video/')) videos.push(a);
+    else images.push(a);
+  }
+  return { images, videos };
+}
+
 async function publish(content) {
   log('Starting publish');
   const title = content.title || '';
   const body = content.body || '';
   const assets = content.assets || [];
+
+  // Guard: reject video and mixed media (Phase 2 will add video support)
+  const { images, videos } = classifyAssets(content.assets || []);
+  if (videos.length > 0 && images.length > 0) {
+    return { success: false, errorMessage: 'Mixed image and video assets are not supported', errorCode: 'unsupported_mixed_media', executionLogs: logs };
+  }
+  if (videos.length > 0) {
+    return { success: false, errorMessage: 'Video publishing is not yet supported', errorCode: 'unsupported_media_type', executionLogs: logs };
+  }
 
   // Normalize tags and append to body as #hashtags
   const tags = content.tags || [];
