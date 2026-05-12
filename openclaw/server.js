@@ -7,6 +7,11 @@ const path = require('path');
 
 const PORT = process.env.OPENCLAW_PUBLISH_PORT || 18790;
 
+// 持久化模块
+const { addEvent, readState, setPlatformPostId, markFailed, markCompleted, isSubmitClicked } = require('./publisher/publish_state');
+const { acquireLock, releaseLock, cleanZombieLocks } = require('./publisher/publish_lock');
+const { preflightCheck, initPublishState } = require('./publisher/xhs_preflight');
+
 // Item 1: No default value — fail if not set
 if (!process.env.OPENCLAW_PUBLISH_AUTH_TOKEN) {
   console.error('[FATAL] OPENCLAW_PUBLISH_AUTH_TOKEN is not set. Exiting.');
@@ -109,8 +114,53 @@ function runScript(scriptPath, args = []) {
 async function executeRealPublish(task) {
   const executionId = generateId('exec');
   const logs = ['Task received'];
+  const postId = task.postId;
   
   logs.push('Using real browser publish mode');
+
+  // === Preflight + Lock + State Init ===
+  // Step 1: Preflight check
+  const check = preflightCheck(task);
+  if (!check.passed) {
+    logs.push(`Preflight rejected: ${check.reason}`);
+    return {
+      publishStatus: 'rejected',
+      operator: 'openclaw-publisher-real',
+      detail: check.reason,
+      platformPostId: check.platformPostId || null,
+      executionLogs: logs
+    };
+  }
+  logs.push('Preflight check passed');
+
+  // Step 2: Initialize publish state (creates state file)
+  const init = initPublishState(task);
+  if (!init.ok) {
+    logs.push(`State init failed: ${init.reason}`);
+    return {
+      publishStatus: 'failed',
+      operator: 'openclaw-publisher-real',
+      detail: init.reason,
+      executionLogs: logs
+    };
+  }
+  logs.push('Publish state initialized');
+
+  // Step 3: Acquire lock
+  const lock = acquireLock(postId);
+  if (!lock.acquired) {
+    logs.push(`Lock acquisition failed: ${lock.reason}`);
+    markFailed(postId, lock.reason);
+    releaseLock(postId);
+    return {
+      publishStatus: 'rejected',
+      operator: 'openclaw-publisher-real',
+      detail: lock.reason,
+      executionLogs: logs
+    };
+  }
+  addEvent(postId, 'lock_acquired', `Lock acquired by pid ${process.pid}`, 'publishing');
+  logs.push('Lock acquired');
   
   try {
     // Item 6: Pass the full content including assets via JSON string on CLI
@@ -122,6 +172,7 @@ async function executeRealPublish(task) {
     });
     
     logs.push('Starting browser automation');
+    addEvent(postId, 'browser_started', 'Browser launch initiated');
     
     // Items 3 & 4: Use path.join + spawn (argument array, no string injection)
     const scriptPath = path.join(__dirname, 'xhs_publish.js');
@@ -136,6 +187,23 @@ async function executeRealPublish(task) {
     
     const publishResult = JSON.parse(result.stdout);
     logs.push(...(publishResult.executionLogs || []));
+
+    // === Persistence: Record publish result ===
+    if (publishResult.success) {
+      // submit_clicked event
+      addEvent(postId, 'submit_clicked', 'Publish button was clicked', 'submit_clicked');
+
+      if (publishResult.platformPostId) {
+        setPlatformPostId(postId, publishResult.platformPostId);
+        addEvent(postId, 'platform_id_detected', `Platform post id: ${publishResult.platformPostId}`);
+      }
+
+      // Mark completed (will be overridden to callback_pending if writeback fails later)
+      markCompleted(postId, publishResult.platformPostId || null);
+    } else {
+      // Publish failed
+      markFailed(postId, publishResult.errorMessage || 'Unknown publish failure');
+    }
 
     const detailParts = [];
     if (publishResult.success) {
@@ -162,15 +230,43 @@ async function executeRealPublish(task) {
     
   } catch (error) {
     logs.push(`Error: ${error.message}`);
+
+    // === If we got an error but already have state (e.g. during browser automation) ===
+    if (postId) {
+      const currentState = readState(postId);
+      if (currentState) {
+        // platformPostId might have been set before the error
+        const existingPlatformId = currentState.platformPostId;
+        if (existingPlatformId) {
+          // Was the publish actually submitted? If we have a platformPostId but callback failed
+          if (currentState.submitClicked) {
+            // Mark as callback_pending — only callback retry, no re-publish
+            addEvent(postId, 'failed', `Callback pending: ${error.message}`, 'callback_pending');
+            setPlatformPostId(postId, existingPlatformId);
+          } else {
+            markFailed(postId, error.message);
+          }
+        } else {
+          markFailed(postId, error.message);
+        }
+      }
+    }
     
     return {
       publishStatus: 'failed',
       operator: 'openclaw-publisher-real',
       detail: `Publish failed: ${error.message}`,
+      platformPostId: postId ? (readState(postId) || {}).platformPostId : null,
       errorMessage: error.message,
       failureType: 'retryable',
       executionLogs: logs
     };
+  } finally {
+    // Always release lock when done (success or failure)
+    if (postId) {
+      releaseLock(postId);
+      logs.push('Lock released');
+    }
   }
 }
 
@@ -186,6 +282,7 @@ async function executeMockPublish(task) {
   await new Promise(r => setTimeout(r, 400));
   logs.push('Published');
   
+  // Mock 模式下不创建持久化状态
   return {
     publishStatus: 'succeeded',
     operator: 'openclaw-publisher-mock',
@@ -252,7 +349,38 @@ async function handlePublish(req, res) {
         }
 
         const result = USE_REAL_PUBLISH ? await executeRealPublish(task) : await executeMockPublish(task);
-        await writebackResult(task, result);
+
+        // === Writeback error → callback_pending handling ===
+        if (result.publishStatus === 'succeeded' || result.publishStatus === 'failed') {
+          try {
+            await writebackResult(task, result);
+            // If writeback succeeded and we have state with platformPostId, mark callback as confirmed
+            if (USE_REAL_PUBLISH && task.postId) {
+              const state = readState(task.postId);
+              if (state && state.platformPostId) {
+                if (state.status !== 'failed') {
+                  addEvent(task.postId, 'callback_sent', 'Writeback sent to backend');
+                  addEvent(task.postId, 'callback_confirmed', 'Writeback confirmed');
+                }
+              }
+            }
+          } catch (writebackError) {
+            log(`Writeback failed: ${writebackError.message}`);
+            if (USE_REAL_PUBLISH && task.postId) {
+              const state = readState(task.postId);
+              const platformPostId = result.platformPostId || (state ? state.platformPostId : null);
+              if (platformPostId) {
+                // 有 platformPostId 但 callback 失败 → callback_pending
+                log(`Setting state to callback_pending for postId=${task.postId} platformPostId=${platformPostId}`);
+                addEvent(task.postId, 'callback_sent', `Writeback attempt failed: ${writebackError.message}`);
+                addEvent(task.postId, 'failed', `Callback failed, platformPostId preserved: ${platformPostId}`, 'callback_pending');
+              }
+            }
+          }
+        } else {
+          // rejected 状态仍然回传
+          try { await writebackResult(task, result); } catch (e) { log('Writeback error for rejected: ' + e.message); }
+        }
       } catch (error) {
         log(`Execution failed: ${error.message}`);
       }
@@ -368,11 +496,15 @@ async function handleMetrics(req, res) {
 }
 
 function handleHealth(req, res) {
+  const zombies = cleanZombieLocks();
+  if (zombies > 0) {
+    log(`Cleaned ${zombies} zombie lock(s)`);
+  }
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     status: 'healthy',
     service: 'openclaw-xiaohongshu-publisher',
-    version: '2.0.0',
+    version: '2.1.0',
     realPublish: USE_REAL_PUBLISH
   }));
 }
