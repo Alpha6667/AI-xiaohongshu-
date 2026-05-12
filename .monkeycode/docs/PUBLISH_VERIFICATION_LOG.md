@@ -71,3 +71,103 @@
 5. **lock 超过 30 分钟自动清理** — 防止僵尸锁
 6. **submitClicked=true 后禁止再次点击发布按钮**
 7. **不保存 token、Cookie、Chrome profile 到状态文件**
+
+## 2026-05-12 前端 UI 改版验收
+
+前端改版提交：
+
+```text
+effb44be2c32ba4f4692db24d4eb6e9c8809d369
+```
+
+远程分支：
+
+```text
+260509-chore-add-final-archive
+```
+
+构建结果：
+
+```text
+pnpm --dir frontend build 通过
+```
+
+验收结果：
+
+1. 首页通过：今日任务数、已生成、待确认和最近发布进展清晰展示。
+2. 消息任务中心通过：任务以紧凑卡片展示，包含消息原文、系统任务类型、内容准备度、消息时间和操作链接。
+3. 多账号运营通过：账号概览展示已连接、需重新登录、同步中、同步失败；账号卡片展示连接状态、同步状态、今日任务、待处理、已发布和最近互动。
+4. 发布中心通过：`/posts` 表格可以区分已发布、发送中、发送失败，展示分类、标题、账号、状态、`platformPostId`、素材、5 项指标、数据来源、最近拉数和操作。
+5. 帖子详情页通过：首屏展示标题、发布状态、主题、最终稿正文、标签、发布素材、发送结果、`platformPostId`、metrics 快照、数据来源和 OpenClaw 发送记录。
+6. 真实发布链路通过：`post_9100f36d13` 保持 `status=published`，`platformPostId=6a026a40000000003600289d`。
+7. `source` 展示通过：数据来源为 `xhs_creator_center`。
+8. 图片和素材数据层通过：`asset.url=/api/assets/asset_3876dcbec3/content`，外网访问返回 `200 image/png`，大小约 1.8MB。
+
+当前已知问题：
+
+1. `refresh-metrics` 当前返回 `422`，同步错误为 `page_structure_changed`。
+2. 该问题与本轮前端 UI 改版无关，归属 OpenClaw metrics DOM 解析修复。
+3. 帖子详情页仍可能因 SSR 缓存显示旧的“素材加载失败”文本，但 API 已返回正确素材 URL。
+4. 构建过程提示未安装 ESLint，Next build 已完成编译、类型检查、页面生成和构建产物输出。
+
+## 2026-05-12 后端素材接口确认
+
+后端素材接口修复提交：
+
+```text
+e565754 fix: serve local asset content via API
+```
+
+远程分支确认：
+
+```text
+260509-chore-add-final-archive 包含 e565754
+REMOTE_CONTAINS_E565754=0
+```
+
+当前远端分支最新 HEAD：
+
+```text
+effb44b
+```
+
+确认结果：
+
+1. 后端素材接口修复已经在远端历史中。
+2. 本地冲突已清理，并快进到远端最新分支。
+3. 实际本地冲突文件是前端文件：`frontend/src/app/posts/[id]/page.tsx`、`frontend/src/styles/globals.css`。
+4. 后端文件当前没有冲突，也没有本地差异：`backend/app/services/assets.py`、`backend/app/services/posts.py`、`backend/tests/test_api_minimal.py`。
+5. 前端 UI 文件没有被后端处理流程修改或提交。
+
+后端能力确认：
+
+1. `GET /api/assets/{assetId}/content` 可返回 repository 登记过的本地素材内容。
+2. `GET /api/posts/{postId}` 返回 `assets[*].url=/api/assets/{assetId}/content`。
+3. `GET /api/assets` 返回浏览器可访问 URL。
+4. 前端 API 不暴露 `/root/.openclaw/...` 本地路径。
+5. 远程 URL 不由后端代理，返回 `403`。
+6. 本地文件缺失返回 `404`。
+7. 发布 payload 给 OpenClaw 仍使用原始素材路径，真实上传链路保持不变。
+
+测试结果：
+
+```text
+python3 -m pytest tests/test_api_minimal.py
+31 passed in 1.07s
+
+python3 -m pytest tests/test_repository_persistence.py
+4 passed in 0.50s
+```
+
+提交安全确认：
+
+1. 工作区干净。
+2. 未提交 `.env`、token、Cookies、Chrome profile、截图、生产 `repository.json` 或 `.monkeycode/MEMORY.md`。
+
+## 后续验收清单
+
+1. OpenClaw 修复 `page_structure_changed` 后，重新验证 `refresh-metrics`。
+2. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
+3. 验证真实发布按钮不会对已发布帖子二次触发。
+4. 验证无真实 `platformPostId` 时不会展示为已发布。
+5. 视频发布进入第二阶段前，继续返回防御性错误码。

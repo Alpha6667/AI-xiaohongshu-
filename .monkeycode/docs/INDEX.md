@@ -31,8 +31,13 @@
 - `IMAGE_MODEL_PROVIDER_BACKEND_TASK.md`：生图模型厂商配置与服务端接入边界任务单
 - `SERVER_MINIMAL_DEPLOYMENT.md`：部署到自有服务器的最小上线方案
 - `OPENCLAW_SERVER_DEPLOY_HANDOFF.md`：发给 OpenClaw 的服务器部署交接文案
+- `REAL_PUBLISH_RUNBOOK.md`：真实发布、安全约束和失败恢复流程
+- `XHS_LOGIN_STATE_RUNBOOK.md`：小红书登录态保护、健康检查和恢复流程
+- `PUBLISH_VERIFICATION_LOG.md`：真实发布、metrics、素材展示验收记录
+- `FRONTEND_UI_REFRESH_BRIEF.md`：前端信息架构清爽化改版任务书
 
 ## 协作说明
 
 - 需求和设计文档位于 `.monkeycode/specs/`
 - 团队同步文档位于 `.monkeycode/team-context/`
+- 三方协作规则位于 `TEAM_COLLABORATION_RULES.md`
