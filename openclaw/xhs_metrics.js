@@ -4,14 +4,13 @@
  *
  * Strategy:
  *   1. Navigate to creator note-manager list page
- *   2. Wait for captcha wall; if redirected away, treat as login failure
- *   3. Collect all note cards with nums from DOM
- *   4. Click each card to enter detail page, extract noteId from URL (id=XXX)
- *   5. Match by platformPostId
- *   6. Fallback: click-based matching vs first_card
+ *   2. Collect all note cards with nums from DOM
+ *   3. Click each card to enter detail page, extract noteId from URL (id=XXX)
+ *   4. Match by platformPostId
+ *   5. Fallback: click-based matching vs first_card
  *
  * Error codes:
- *   login_required, post_not_found, page_structure_changed,
+ *   login_required, post_not_found, post_needs_manual_verification,
  *   metrics_unavailable, metrics_fetch_timeout, metrics_fetch_execution_error
  *
  * Returns JSON with { success, platformPostId, views, likes, favorites,
@@ -48,17 +47,8 @@ async function fetchMetrics(platformPostId) {
   try {
     browser = await chromium.launchPersistentContext(PROFILE_DIR, {
       headless: HEADLESS,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-blink-features=AutomationControlled',
-      ],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
       viewport: { width: 1280, height: 900 },
-      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-      locale: 'zh-CN',
-      timezoneId: 'Asia/Shanghai',
     });
     log('Browser started');
 
@@ -66,58 +56,43 @@ async function fetchMetrics(platformPostId) {
     const page = pages.length > 0 ? pages[0] : await browser.newPage();
 
     // ---- Warm-up / login check ----
-    log('Warming up session on new/home');
+    log('Warming up session');
     await page.goto('https://creator.xiaohongshu.com/new/home', {
       waitUntil: 'load',
       timeout: TIMEOUT_MS,
     });
-    await new Promise((r) => setTimeout(r, 5000));
-    // Check if redirected to login
+    await new Promise((r) => setTimeout(r, 3000));
+
+    // Check for login redirect
     if (page.url().includes('/login')) {
       log('Login required');
       await browser.close();
       return { success: false, error: 'Login required', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
-    // Check if captcha appeared on home page
+
+    // Check for captcha / manual verification redirect
     if (page.url().includes('captcha') || page.url().includes('verify')) {
-      log('Captcha on new/home');
+      log('Manual verification required (captcha)');
       await browser.close();
-      return { success: false, error: 'Captcha verification needed on home page', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+      return { success: false, error: 'Xiaohongshu requires manual human verification. Open creator.xiaohongshu.com/new/home in a regular browser, complete the captcha, then retry.', errorCode: 'post_needs_manual_verification', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
+
     log('Session OK');
 
-    // ---- Helper: navigate to note-manager and detect captcha/login ----
-    async function navigateToNoteManager(retryCount) {
-      retryCount = retryCount || 0;
-      log('Navigating to note manager');
-      await page.goto('https://creator.xiaohongshu.com/new/note-manager', {
-        waitUntil: 'load',
-        timeout: TIMEOUT_MS,
-      });
-      await new Promise((r) => setTimeout(r, 8000));
-      const currentUrl = page.url();
-      log(`Note manager url: ${currentUrl}`);
-
-      // Detect captcha / login redirect
-      if (currentUrl.includes('login') || currentUrl.includes('captcha') || currentUrl.includes('verify')) {
-        log('Detected captcha or login redirect');
-        if (retryCount < 1) {
-          log('Retrying note-manager navigation...');
-          // Brief wait before retry — captcha may be transient
-          await new Promise((r) => setTimeout(r, 5000));
-          return navigateToNoteManager(retryCount + 1);
-        }
-        // Set errorCode=login_required since the session can't reach the notes page
-        return { isCaptcha: true, error: 'Login required or captcha verification needed', errorCode: 'login_required' };
-      }
-      return { isCaptcha: false };
-    }
-
     // ---- Step 1: Gather card data from note-manager list ----
-    const navResult = await navigateToNoteManager();
-    if (navResult.isCaptcha) {
+    log('Navigating to note manager');
+    await page.goto('https://creator.xiaohongshu.com/new/note-manager', {
+      waitUntil: 'load',
+      timeout: TIMEOUT_MS,
+    });
+    await new Promise((r) => setTimeout(r, 8000));
+    log(`Note manager: ${page.url()}`);
+
+    // Check for captcha / verification on note-manager
+    if (page.url().includes('captcha') || page.url().includes('verify') || page.url().includes('/login')) {
+      log('Manual verification required (captcha on note-manager)');
       await browser.close();
-      return { success: false, error: navResult.error, errorCode: navResult.errorCode, source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+      return { success: false, error: 'Xiaohongshu requires manual human verification. Open creator.xiaohongshu.com/new/home in a regular browser, complete the captcha, then retry.', errorCode: 'post_needs_manual_verification', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/metrics_${platformPostId}.png` });
@@ -142,7 +117,7 @@ async function fetchMetrics(platformPostId) {
 
     if (cardsOnList.length === 0) {
       await browser.close();
-      return { success: false, error: 'No note cards found - captcha redirected login page not detected but DOM shows no cards', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+      return { success: false, error: 'No note cards found. The page may require manual verification in a regular browser.', errorCode: 'post_needs_manual_verification', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
 
     // ---- Step 3: Click cards one by one to find noteId match ----
@@ -170,6 +145,11 @@ async function fetchMetrics(platformPostId) {
         await new Promise((r) => setTimeout(r, 3000));
 
         const currentUrl = page.url();
+        // If detail page redirects to captcha/login, stop searching
+        if (currentUrl.includes('captcha') || currentUrl.includes('verify') || currentUrl.includes('/login')) {
+          log('Captcha on detail page, stopping card search');
+          break;
+        }
         const noteId = new URL(currentUrl).searchParams.get('id') || '';
         log(`    noteId=${noteId}`);
 
@@ -186,16 +166,22 @@ async function fetchMetrics(platformPostId) {
         }
 
         // Return to note-manager for the next card
-        const backResult = await navigateToNoteManager();
-        if (backResult.isCaptcha) {
-          // Return what we have (or failure)
+        await page.goto('https://creator.xiaohongshu.com/new/note-manager', { waitUntil: 'load', timeout: TIMEOUT_MS }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 3000));
+        // If captcha appeared on return, stop searching
+        const returnUrl = page.url();
+        if (returnUrl.includes('captcha') || returnUrl.includes('verify') || returnUrl.includes('/login')) {
+          log('Captcha on return to note-manager, stopping card search');
           break;
         }
 
       } catch (e) {
         log(`    Card #${i} click failed: ${e.message}`);
-        const backResult = await navigateToNoteManager();
-        if (backResult.isCaptcha) {
+        await page.goto('https://creator.xiaohongshu.com/new/note-manager', { waitUntil: 'load', timeout: TIMEOUT_MS }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 3000));
+        const returnUrl = page.url();
+        if (returnUrl.includes('captcha') || returnUrl.includes('verify') || returnUrl.includes('/login')) {
+          log('Captcha on return to note-manager after error, stopping card search');
           break;
         }
       }
