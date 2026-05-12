@@ -123,7 +123,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="帖子详情" title={post.title || post.topic} description="首屏直接查看最终文案、发布结果和指标数据。" />
+        <SectionHeading eyebrow="帖子详情" title={post.title || post.topic} description="首屏保留素材、文案、标签和发布状态，metrics 继续保留在下方。" />
 
         <div className="detail-overview">
           <div>
@@ -144,24 +144,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         <div className="detail-layout">
           <div className="detail-primary">
             <SectionCard className="nested-card">
-              <SectionHeading eyebrow="最终稿" title="这次实际准备发出的内容" />
-              {post.title.trim() || post.body.trim() ? (
-                <>
-                  <strong>{post.title || "当前标题尚未生成"}</strong>
-                  <p className="body-copy">{post.body}</p>
-                  <div className="tag-row">
-                    {post.tags.map((tag) => (
-                      <StatusPill key={tag} label={`#${tag}`} />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <article className="state-card state-card-neutral">
-                  <strong>文案还没生成完成</strong>
-                  <p>当前后端还没有返回真实标题和正文，所以这里暂时没有可查看的最终稿。</p>
-                </article>
-              )}
-              <div className="post-media-section">
+              <SectionHeading eyebrow="最终稿" title="素材、文案和标签" />
+              <div className="post-media-section compact-media-first">
                 <div>
                   <span className="eyebrow">发布素材</span>
                   <h3>图片 / 视频</h3>
@@ -179,6 +163,22 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   </article>
                 )}
               </div>
+              {post.title.trim() || post.body.trim() ? (
+                <>
+                  <strong>{post.title || "当前标题尚未生成"}</strong>
+                  <p className="body-copy">{post.body}</p>
+                  <div className="tag-row">
+                    {post.tags.map((tag) => (
+                      <StatusPill key={tag} label={`#${tag}`} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <article className="state-card state-card-neutral">
+                  <strong>文案还没生成完成</strong>
+                  <p>当前后端还没有返回真实标题和正文，所以这里暂时没有可查看的最终稿。</p>
+                </article>
+              )}
             </SectionCard>
 
             <SectionCard className="nested-card">

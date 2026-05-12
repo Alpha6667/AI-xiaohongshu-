@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { SectionCard, SectionHeading, StatusPill } from "../components/ui";
+import { CompactStatus, SectionCard, SectionHeading, StatusPill } from "../components/ui";
 import { apiClient } from "../lib/api/client";
 import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountForPost, getAccountStatusLabel, getAccountStatusTone, getFailureTypeLabel, getPublishNarrative, getTaskOverview, sortByPublishedDesc } from "../lib/product";
 
@@ -30,55 +30,43 @@ export default async function HomePage() {
   const publishNarrative = latestPublishDetail ? getPublishNarrative(latestPublishDetail) : null;
   const recentPublished = sortByPublishedDesc(posts.filter((post) => post.status === "published")).slice(0, 4);
   const busyAccounts = accounts.filter((account) => account.todayTaskCount > 0).slice(0, 3);
+  const failedPosts = posts.filter((post) => post.status === "publish_failed" || post.status === "rejected");
+  const urgentTasks = tasks.filter((task) => task.requiresReview || task.stage === "failed" || task.stage === "ready_to_confirm").slice(0, 4);
+  const disconnectedAccounts = accounts.filter((account) => account.reauthRequired || account.connectionStatus === "reauth_required" || account.lastSyncStatus === "failed");
 
   return (
     <div className="page-stack">
-      <section className="product-hero">
+      <section className="product-hero compact-hero">
         <SectionCard className="hero-card product-hero-main">
-          <span className="eyebrow">任务总览</span>
-          <h2>先看今天从 OpenClaw 进来的消息任务，再决定哪些账号先处理、哪些内容先确认。</h2>
-          <p>首页不再从单账号看板开始，而是先回答三个问题：今天进来了哪些聊天任务、哪些任务已经生成内容、哪些账号马上要发。</p>
-
-          <div className="quick-metrics">
-            <div>
-              <span>今日消息任务</span>
-              <strong>{overview.total}</strong>
-            </div>
-            <div>
-              <span>已生成候选</span>
-              <strong>{overview.ready}</strong>
-            </div>
-            <div>
-              <span>待你确认</span>
-              <strong>{overview.waitingReview}</strong>
-            </div>
+          <span className="eyebrow">今天最该处理</span>
+          <h2>{failedPosts.length > 0 ? "先处理发布失败" : overview.waitingReview > 0 ? "先确认待发布内容" : disconnectedAccounts.length > 0 ? "先恢复异常账号" : "今天链路正常"}</h2>
+          <div className="compact-status-row">
+            <CompactStatus label="待确认" value={overview.waitingReview} tone={overview.waitingReview > 0 ? "warm" : "positive"} />
+            <CompactStatus label="发布失败" value={failedPosts.length} tone={failedPosts.length > 0 ? "critical" : "positive"} />
+            <CompactStatus label="账号异常" value={disconnectedAccounts.length} tone={disconnectedAccounts.length > 0 ? "critical" : "positive"} />
           </div>
         </SectionCard>
 
         <SectionCard className="product-hero-side">
-          <span className="eyebrow">今天的链路</span>
-          <div className="flow-line product-flow-line">
-            <span>1. OpenClaw 收到聊天消息</span>
-            <span>2. 系统生成后台任务</span>
-            <span>3. 补齐候选文案和图片</span>
-            <span>4. 人工确认内容和账号</span>
-            <span>5. OpenClaw 执行并回写</span>
-            <span>6. 回后台看帖子和数据</span>
+          <SectionHeading eyebrow="快速入口" title="按优先级处理" description="异常和待处理内容排在首页首屏，正常复盘放到后面。" />
+          <div className="compact-action-list">
+            <Link href="/dashboard" className="compact-action-item">发布中心</Link>
+            <Link href="/tasks" className="compact-action-item">消息任务</Link>
+            <Link href="/accounts" className="compact-action-item">账号状态</Link>
           </div>
         </SectionCard>
       </section>
 
       <section className="product-grid product-grid-two">
         <SectionCard className="product-card">
-          <SectionHeading eyebrow="今天进来的任务" title="消息任务先看最需要你出手的几条" description="优先展示从聊天入口转进来的任务，而不是按帖子字段平铺。" />
+          <SectionHeading eyebrow="待处理任务" title="需要你出手的内容" description="只展示待确认或异常任务，完整列表进入消息任务中心。" />
           <div className="list-column compact-list-column">
-            {tasks.slice(0, 3).map((task) => (
+            {(urgentTasks.length > 0 ? urgentTasks : tasks.slice(0, 3)).map((task) => (
               <article key={task.id} className="plain-row-card product-row-card">
                 <div className="post-headline">
                   <strong>{task.topic}</strong>
                   <StatusPill label={task.stageLabel} tone={task.stageTone} />
                 </div>
-                <p>{task.sourceMessage}</p>
                 <div className="row-metrics">
                   <span>账号 {task.accountName}</span>
                   <span>文案 {task.hasCopy ? "已就绪" : "待生成"}</span>
@@ -93,9 +81,9 @@ export default async function HomePage() {
         </SectionCard>
 
         <SectionCard className="product-card">
-          <SectionHeading eyebrow="哪些账号今天有任务" title="多账号安排要先看清谁在线、谁待处理" description="首页只先给你最小决策信息，详细排班再进多账号运营页。" />
+          <SectionHeading eyebrow="账号风险" title="先看异常账号" description="优先列出登录失效、同步失败或需要处理的账号。" />
           <div className="list-column compact-list-column">
-            {busyAccounts.map((account) => (
+            {(disconnectedAccounts.length > 0 ? disconnectedAccounts : busyAccounts).map((account) => (
               <article key={account.id} className="plain-row-card product-row-card">
                 <div className="post-headline">
                   <strong>{account.name}</strong>

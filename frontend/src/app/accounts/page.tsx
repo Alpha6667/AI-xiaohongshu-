@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AccountSyncButton } from "../../components/account-sync-button";
 import { RefreshButton } from "../../components/refresh-button";
-import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
+import { CollapsibleDetails, CompactStatus, SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 import type { AccountWorksSyncResponse } from "../../lib/api/types";
 import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone } from "../../lib/product";
@@ -42,11 +42,13 @@ export default async function AccountsPage() {
       worksSyncByAccountId.set(item.accountId, item);
     }
   });
+  const abnormalAccounts = accounts.filter((account) => account.reauthRequired || account.connectionStatus === "reauth_required" || account.lastSyncStatus === "failed");
+  const sortedAccounts = [...accounts].sort((left, right) => Number(abnormalAccounts.includes(right)) - Number(abnormalAccounts.includes(left)) || right.waitingCount - left.waitingCount);
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="多账号运营" title="直接看哪些账号已连接、哪些需要重新登录、哪些同步异常" description="这里优先展示真实账号可用性，而不是只看运营卡片。" />
+        <SectionHeading eyebrow="多账号运营" title="账号异常和可用性" description="异常账号优先，正常账号收起次要明细。" />
 
         {accountRecords ? null : (
           <article className="state-card state-card-warm">
@@ -62,31 +64,11 @@ export default async function AccountsPage() {
           </article>
         ) : null}
 
-        <div className="dashboard-hero publish-center-hero">
-          <article className="dashboard-highlight">
-            <span className="eyebrow">账号概览</span>
-            <strong>{accounts.length}</strong>
-            <p>重点先看哪些账号已连接可真实发布，哪些账号登录失效需要处理，哪些账号最近拉数失败。</p>
-          </article>
-
-          <div className="metric-grid publish-metric-grid">
-            <article className="metric-tile">
-              <span>已连接</span>
-              <strong>{accounts.filter((account) => account.connectionStatus === "connected" && !account.reauthRequired).length}</strong>
-            </article>
-            <article className="metric-tile">
-              <span>需重新登录</span>
-              <strong>{accounts.filter((account) => account.connectionStatus === "reauth_required" || account.reauthRequired).length}</strong>
-            </article>
-            <article className="metric-tile">
-              <span>同步中</span>
-              <strong>{accounts.filter((account) => account.lastSyncStatus === "syncing").length}</strong>
-            </article>
-            <article className="metric-tile">
-              <span>同步失败</span>
-              <strong>{accounts.filter((account) => account.lastSyncStatus === "failed").length}</strong>
-            </article>
-          </div>
+        <div className="compact-status-row">
+          <CompactStatus label="账号总数" value={accounts.length} />
+          <CompactStatus label="已连接" value={accounts.filter((account) => account.connectionStatus === "connected" && !account.reauthRequired).length} tone="positive" />
+          <CompactStatus label="需登录" value={accounts.filter((account) => account.connectionStatus === "reauth_required" || account.reauthRequired).length} tone={abnormalAccounts.length > 0 ? "critical" : "positive"} />
+          <CompactStatus label="同步失败" value={accounts.filter((account) => account.lastSyncStatus === "failed").length} tone={accounts.some((account) => account.lastSyncStatus === "failed") ? "critical" : "positive"} />
         </div>
 
         <div className="action-row">
@@ -95,7 +77,7 @@ export default async function AccountsPage() {
       </SectionCard>
 
       <section className="product-grid product-grid-two">
-        {accounts.map((account) => {
+        {sortedAccounts.map((account) => {
           const accountTasks = tasks.filter((task) => task.accountId === account.id);
           const availability = getAccountAvailabilityNotice(account);
           const worksSync = worksSyncByAccountId.get(account.id) ?? null;
@@ -114,50 +96,32 @@ export default async function AccountsPage() {
                 </div>
               </div>
 
-              <p>{account.summary}</p>
-
               <article className={`state-card state-card-${availability.tone}`}>
                 <strong>{availability.title}</strong>
                 <p>{availability.detail}</p>
               </article>
 
-              <div className="product-stat-grid account-stat-grid">
-                <article className="metric-tile">
-                  <span>今日任务</span>
-                  <strong>{account.todayTaskCount}</strong>
-                </article>
-                <article className="metric-tile">
-                  <span>待处理</span>
-                  <strong>{account.waitingCount}</strong>
-                </article>
-                <article className="metric-tile">
-                  <span>已发布</span>
-                  <strong>{account.publishedCount}</strong>
-                </article>
-                <article className="metric-tile">
-                  <span>最近互动</span>
-                  <strong>{account.totalEngagement.toLocaleString()}</strong>
-                </article>
+              <div className="compact-status-row">
+                <CompactStatus label="今日任务" value={account.todayTaskCount} />
+                <CompactStatus label="待处理" value={account.waitingCount} tone={account.waitingCount > 0 ? "warm" : "positive"} />
+                <CompactStatus label="已发布" value={account.publishedCount} tone="positive" />
+                <CompactStatus label="互动" value={account.totalEngagement.toLocaleString()} />
               </div>
 
-              <article className="detail-meta-card">
-                <span className="eyebrow">今天最值得继续的主题</span>
-                <strong>{account.bestTopic}</strong>
-                <p>最近活跃时间 {new Date(account.lastActiveAt).toLocaleString("zh-CN")}</p>
-              </article>
-
-              <div className="detail-meta-grid">
-                <article className="detail-meta-card">
-                  <span className="eyebrow">最近一次验证</span>
-                  <strong>{account.lastValidatedAt ? new Date(account.lastValidatedAt).toLocaleString("zh-CN") : "暂无记录"}</strong>
-                  <p>{account.connectedAt ? `连接建立于 ${new Date(account.connectedAt).toLocaleString("zh-CN")}` : "后端暂未返回连接建立时间。"}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">最近一次同步</span>
-                  <strong>{account.lastSyncAt ? new Date(account.lastSyncAt).toLocaleString("zh-CN") : "暂无记录"}</strong>
-                  <p>{account.lastSyncError ?? "当前没有同步错误摘要。"}</p>
-                </article>
-              </div>
+              <CollapsibleDetails summary="账号明细">
+                <div className="detail-meta-grid">
+                  <article className="detail-meta-card">
+                    <span className="eyebrow">推荐主题</span>
+                    <strong>{account.bestTopic}</strong>
+                    <p>最近活跃 {new Date(account.lastActiveAt).toLocaleString("zh-CN")}</p>
+                  </article>
+                  <article className="detail-meta-card">
+                    <span className="eyebrow">最近同步</span>
+                    <strong>{account.lastSyncAt ? new Date(account.lastSyncAt).toLocaleString("zh-CN") : "暂无记录"}</strong>
+                    <p>{account.lastSyncError ?? "当前没有同步错误摘要。"}</p>
+                  </article>
+                </div>
+              </CollapsibleDetails>
 
               <div className="action-row">
                 <AccountSyncButton accountId={account.id} />

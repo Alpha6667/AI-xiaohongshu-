@@ -1,5 +1,5 @@
 import { RefreshButton } from "../../components/refresh-button";
-import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
+import { CollapsibleDetails, CompactStatus, SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 import { adaptAccounts, buildAccountOverview, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
 
@@ -32,39 +32,19 @@ function getPublishSteps(post: { status: string; publishRecords: Array<{ status:
 export default async function DashboardPage() {
   const [summary, posts, accountRecords] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list(), getAccountsOrNull()]);
   const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "under_review" || post.status === "published" || post.status === "rejected" || post.status === "publish_failed")).slice(0, 6);
+  const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "under_review" || post.status === "published" || post.status === "rejected" || post.status === "publish_failed")).sort((left, right) => Number(right.status === "publish_failed" || right.status === "rejected") - Number(left.status === "publish_failed" || left.status === "rejected")).slice(0, 6);
   const details = await Promise.all(centerPosts.map((post) => apiClient.posts.getById(post.id)));
 
   return (
     <div className="page-stack">
       <SectionCard>
-        <SectionHeading eyebrow="发布中心" title="重点看 OpenClaw 是否已执行、是否上传成功、是否进入审核、下一步该怎么处理" description="这页继续保留，但要从多账号任务视角告诉你：哪条内容在哪个账号上执行、卡在哪一步、失败后怎么办。" />
+        <SectionHeading eyebrow="发布中心" title="失败、发布中、已发布分开看" description="发布中心按异常优先排序，长说明收进状态卡和小问号。" />
 
-        <div className="dashboard-hero publish-center-hero">
-          <article className="dashboard-highlight">
-            <span className="eyebrow">今日执行概览</span>
-            <strong>{centerPosts.length}</strong>
-            <p>当前已经进入确认完成、执行中或已回写阶段的任务数量。优先看下面哪些任务还需要你判断是否重试、换账号或回确认台改稿。</p>
-          </article>
-
-          <div className="metric-grid publish-metric-grid">
-            <article className="metric-tile">
-              <span>已回写发布</span>
-              <strong>{summary.publishedCount}</strong>
-            </article>
-            <article className="metric-tile">
-              <span>发送中</span>
-              <strong>{posts.filter((post) => post.status === "publishing").length}</strong>
-            </article>
-            <article className="metric-tile">
-              <span>平台审核中</span>
-              <strong>{posts.filter((post) => post.status === "under_review").length}</strong>
-            </article>
-            <article className="metric-tile">
-              <span>发送失败</span>
-              <strong>{posts.filter((post) => post.status === "publish_failed" || post.status === "rejected").length}</strong>
-            </article>
-          </div>
+        <div className="compact-status-row">
+          <CompactStatus label="发送失败" value={posts.filter((post) => post.status === "publish_failed" || post.status === "rejected").length} tone={posts.some((post) => post.status === "publish_failed" || post.status === "rejected") ? "critical" : "positive"} />
+          <CompactStatus label="发送中" value={posts.filter((post) => post.status === "publishing").length} tone="warm" />
+          <CompactStatus label="审核中" value={posts.filter((post) => post.status === "under_review").length} tone="warm" />
+          <CompactStatus label="已发布" value={summary.publishedCount} tone="positive" />
         </div>
 
         <div className="action-row">
@@ -98,12 +78,8 @@ export default async function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="publish-steps">
-                  {steps.map((step) => (
-                    <article key={step.label} className={`publish-step${step.done ? " publish-step-done" : ""}${step.active ? " publish-step-active" : ""}${step.failed ? " publish-step-failed" : ""}`}>
-                      <strong>{step.label}</strong>
-                    </article>
-                  ))}
+                <div className="compact-publish-steps">
+                  {steps.map((step) => <span key={step.label} className={`${step.failed ? "status-critical" : step.active ? "status-warm" : step.done ? "status-positive" : "status-neutral"}`}>{step.label}</span>)}
                 </div>
 
                 <div className="publish-card-body">
@@ -115,11 +91,6 @@ export default async function DashboardPage() {
                   <article className={`state-card state-card-${publishFlowState.tone}`}>
                     <strong>{publishFlowState.label}</strong>
                     <p>{publishFlowState.detail}</p>
-                  </article>
-
-                  <article className={`state-card state-card-${availability.tone}`}>
-                    <strong>{availability.title}</strong>
-                    <p>{availability.detail}</p>
                   </article>
 
                   <div className="detail-meta-grid">
@@ -144,6 +115,12 @@ export default async function DashboardPage() {
                       <p>{narrative.nextAction}</p>
                     </article>
                   </div>
+                  <CollapsibleDetails summary="账号可用性和执行明细">
+                    <article className={`state-card state-card-${availability.tone}`}>
+                      <strong>{availability.title}</strong>
+                      <p>{availability.detail}</p>
+                    </article>
+                  </CollapsibleDetails>
                 </div>
               </SectionCard>
             );
