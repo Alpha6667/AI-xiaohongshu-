@@ -2,6 +2,12 @@
 
 ## 核心文档
 
+- `HANDOFF_MASTER_2026-05-12.md`：2026-05-12 项目总交接文档，后续新模型优先读取
+- `HANDOFF_FRONTEND_2026-05-12.md`：前端交接文档
+- `HANDOFF_BACKEND_2026-05-12.md`：后端交接文档
+- `HANDOFF_OPENCLAW_2026-05-12.md`：OpenClaw 交接文档
+- `HANDOFF_TECH_LEAD_2026-05-12.md`：技术负责人交接文档
+- `NEXT_OPTIMIZATION_PLAN_2026-05-12.md`：下一步优化计划
 - `ARCHITECTURE.md`：系统架构概览
 - `API_CONTRACT.md`：前后端接口契约草案
 - `NEXT_PHASE_EXECUTION_PLAN.md`：下一阶段推进顺序与前后端分工
