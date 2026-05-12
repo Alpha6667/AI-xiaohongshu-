@@ -21,6 +21,7 @@ OPENCLAW_METRICS_ERROR_CODES = {
     "metrics_unavailable",
     "metrics_fetch_timeout",
     "metrics_fetch_execution_error",
+    "post_needs_manual_verification",
 }
 OPENCLAW_METRICS_SOURCES = {"xhs_creator_center", "mock"}
 

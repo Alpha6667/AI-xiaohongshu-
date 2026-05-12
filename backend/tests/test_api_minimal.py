@@ -29,6 +29,7 @@ def configure_image_provider(client: TestClient, **overrides: object) -> dict[st
 def test_metrics_error_code_normalization() -> None:
     assert _normalize_metrics_error_code("login_required") == "login_required"
     assert _normalize_metrics_error_code("metrics_fetch_timeout") == "metrics_fetch_timeout"
+    assert _normalize_metrics_error_code("post_needs_manual_verification") == "post_needs_manual_verification"
     assert _normalize_metrics_error_code("loginrequired") == "metrics_fetch_execution_error"
 
 
@@ -724,7 +725,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         before_count = len(self.client.get(f"/api/posts/{post_id}").json()["metricsHistory"])
 
         with patch("app.services.posts.publisher_adapter.fetch_metrics") as fetch_mock:
-            fetch_mock.side_effect = MetricsFetchError("login_required", "login required")
+            fetch_mock.side_effect = MetricsFetchError("post_needs_manual_verification", "manual verification required")
             writeback_resp = self.client.post(
                 f"/api/posts/{post_id}/publish-result",
                 json={
@@ -743,7 +744,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(after_detail["status"], "published")
         self.assertEqual(len(after_detail["metricsHistory"]), before_count)
         self.assertEqual(after_detail["lastSyncStatus"], "failed")
-        self.assertEqual(after_detail["syncError"], "login_required")
+        self.assertEqual(after_detail["syncError"], "post_needs_manual_verification")
 
     def test_openclaw_publish_adapter_state_flow(self) -> None:
         create_resp = self.client.post(
