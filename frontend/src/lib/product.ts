@@ -94,6 +94,10 @@ export interface PostSyncState {
   tone: "neutral" | "warm" | "positive" | "critical";
 }
 
+const syncErrorLabels: Record<string, string> = {
+  post_needs_manual_verification: "需要在小红书官方页面完成人工验证后再刷新数据",
+};
+
 const unassignedAccount: AccountOverview = {
   id: "",
   name: "未分配账号",
@@ -189,6 +193,14 @@ function coerceSyncStatus(rawValue: AccountRecord["lastSyncStatus"]): AccountSyn
   }
 
   return "unknown";
+}
+
+export function getSyncErrorLabel(syncError?: string | null) {
+  if (!syncError) {
+    return null;
+  }
+
+  return syncErrorLabels[syncError] ?? syncError;
 }
 
 export function getReviewStatus(post: Pick<PostListItem, "status"> & { reviewStatus?: ReviewStatus | string | null }) {
@@ -1004,7 +1016,7 @@ export function getPostSyncState(post: Pick<PostListItem, "lastSyncAt" | "lastSy
   if (syncStatus === "failed") {
     return {
       label: "同步失败",
-      detail: post.syncError ?? "最近一次同步失败，等待账号恢复后重新拉取作品数据。",
+      detail: getSyncErrorLabel(post.syncError) ?? "最近一次同步失败，等待账号恢复后重新拉取作品数据。",
       tone: "critical",
     };
   }
@@ -1044,7 +1056,7 @@ export function getMetricsSourceState(post: MetricsSourceInput) {
   if (post.lastSyncStatus === "failed") {
     return {
       label: "抓取失败",
-      detail: post.syncError ?? "最近一次指标抓取失败。",
+      detail: getSyncErrorLabel(post.syncError) ?? "最近一次指标抓取失败。",
       tone: "critical" as const,
     };
   }

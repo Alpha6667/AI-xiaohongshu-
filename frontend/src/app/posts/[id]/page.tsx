@@ -7,7 +7,7 @@ import { RefreshMetricsButton } from "../../../components/refresh-metrics-button
 import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { AssetSummary, PostDetail } from "../../../lib/api/types";
-import { getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone } from "../../../lib/product";
+import { getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, getSyncErrorLabel } from "../../../lib/product";
 
 export const metadata: Metadata = {
   title: "帖子详情 | 小红书日常发帖工作台",
@@ -261,7 +261,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 </article>
                 <article className="detail-meta-card">
                   <span className="eyebrow">同步错误</span>
-                  <strong>{post.syncError ?? "无"}</strong>
+                  <strong>{getSyncErrorLabel(post.syncError) ?? "无"}</strong>
                   <p>失败时展示后端返回的错误码或错误信息。</p>
                 </article>
               </div>

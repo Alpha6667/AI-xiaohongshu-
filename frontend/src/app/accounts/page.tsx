@@ -5,7 +5,7 @@ import { RefreshButton } from "../../components/refresh-button";
 import { CollapsibleDetails, CompactStatus, SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 import type { AccountWorksSyncResponse } from "../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone, getSyncErrorLabel } from "../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -137,7 +137,7 @@ export default async function AccountsPage() {
                       </div>
                       <strong>{work.title}</strong>
                       <p>{work.likeCount} 赞 / {work.collectCount} 藏 / {work.commentCount} 评</p>
-                      <p>{work.syncError ?? (work.platformUrl ? `已同步真实作品：${work.platformUrl}` : "当前还没有回写真实作品链接。")}</p>
+                      <p>{getSyncErrorLabel(work.syncError) ?? (work.platformUrl ? `已同步真实作品：${work.platformUrl}` : "当前还没有回写真实作品链接。")}</p>
                     </article>
                   ))}
                 </div>

@@ -16,6 +16,10 @@ function getMetricsRefreshMessage(message: string) {
     return "刷新数据失败：当前抓取账号还没恢复登录态，请先处理登录状态后再重试。";
   }
 
+  if (errorCode === "post_needs_manual_verification") {
+    return "刷新数据失败：需要在小红书官方页面完成人工验证后再刷新数据。";
+  }
+
   if (errorCode === "metrics_fetch_page_structure_mismatch") {
     return "刷新数据失败：页面结构暂未命中，当前还拿不到这条内容的互动数据。";
   }
