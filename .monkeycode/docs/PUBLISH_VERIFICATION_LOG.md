@@ -152,6 +152,69 @@ captcha 场景返回结构：
 2. 禁止使用反检测参数、自定义 UA 或自动化通过验证的流程。
 3. 只允许检测并安全失败，提示用户在官方页面完成人工验证后再重试。
 
+## 2026-05-12 后端与前端人工验证状态收口
+
+后端提交：
+
+```text
+b5ec642 fix: accept manual verification metrics error
+```
+
+前端提交：
+
+```text
+d9677dcf0faed0f305318a6e6c313ea96ee5f14f
+```
+
+后端完成内容：
+
+1. `post_needs_manual_verification` 已加入 OpenClaw metrics `errorCode` allowlist。
+2. 该错误码不会被归一化成 `metrics_fetch_execution_error`。
+3. `refresh-metrics` 失败时后端会保存并返回 `lastSyncStatus=failed`。
+4. `refresh-metrics` 失败时后端会保存并返回 `syncError=post_needs_manual_verification`。
+
+后端测试结果：
+
+```text
+python3 -m pytest tests/test_api_minimal.py
+31 passed in 1.05s
+
+python3 -m pytest tests/test_repository_persistence.py
+4 passed in 0.48s
+```
+
+前端完成内容：
+
+1. 同步状态展示支持 `post_needs_manual_verification`。
+2. 数据来源失败说明支持 `post_needs_manual_verification`。
+3. 帖子详情同步错误支持 `post_needs_manual_verification`。
+4. 账号作品同步列表支持 `post_needs_manual_verification`。
+5. 刷新按钮失败提示支持人工验证文案。
+
+前端展示文案：
+
+```text
+需要在小红书官方页面完成人工验证后再刷新数据
+```
+
+刷新按钮失败提示：
+
+```text
+刷新数据失败：需要在小红书官方页面完成人工验证后再刷新数据。
+```
+
+前端测试结果：
+
+```text
+pnpm --dir frontend build
+Compiled successfully
+Generating static pages (12/12)
+Finalizing page optimization
+Collecting build traces
+```
+
+说明：构建过程中仍提示未安装 ESLint，这是当前工程现状；Next build 已完成编译、类型检查、页面生成和构建产物输出。
+
 ## 2026-05-12 后端素材接口确认
 
 后端素材接口修复提交：
@@ -209,8 +272,7 @@ python3 -m pytest tests/test_repository_persistence.py
 ## 后续验收清单
 
 1. 用户在官方浏览器页面完成人工验证后，重新验证 `refresh-metrics`。
-2. 后端和前端确认 `post_needs_manual_verification` 可以保存和展示为需要人工处理的同步失败状态。
-3. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
-4. 验证真实发布按钮不会对已发布帖子二次触发。
-5. 验证无真实 `platformPostId` 时不会展示为已发布。
-6. 视频发布进入第二阶段前，继续返回防御性错误码。
+2. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
+3. 验证真实发布按钮不会对已发布帖子二次触发。
+4. 验证无真实 `platformPostId` 时不会展示为已发布。
+5. 视频发布进入第二阶段前，继续返回防御性错误码。
