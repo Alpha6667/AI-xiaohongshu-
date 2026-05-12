@@ -234,10 +234,13 @@ OpenClaw metrics 失败时，错误码统一使用 snake_case。
 login_required
 post_not_found
 page_structure_changed
+post_needs_manual_verification
 metrics_unavailable
 metrics_fetch_timeout
 metrics_fetch_execution_error
 ```
+
+`post_needs_manual_verification` 表示小红书创作者中心跳转到 captcha 或人工验证页面。OpenClaw 必须立即停止 metrics 抓取，并提示用户通过官方浏览器页面完成人工验证后再重试。禁止通过脚本、浏览器参数或自动化逻辑绕过验证码或平台风控。
 
 后端需要保存错误码和错误信息。
 

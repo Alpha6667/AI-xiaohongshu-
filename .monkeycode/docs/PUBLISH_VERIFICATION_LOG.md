@@ -105,10 +105,52 @@ pnpm --dir frontend build 通过
 
 当前已知问题：
 
-1. `refresh-metrics` 当前返回 `422`，同步错误为 `page_structure_changed`。
-2. 该问题与本轮前端 UI 改版无关，归属 OpenClaw metrics DOM 解析修复。
+1. `refresh-metrics` 曾返回 `422`，同步错误为 `page_structure_changed`。
+2. OpenClaw 后续确认根因是小红书创作者中心跳转到 captcha 或人工验证页，并已将错误归类修正为 `post_needs_manual_verification`。
+3. 该问题与本轮前端 UI 改版无关，归属登录态或平台人工验证状态。
 3. 帖子详情页仍可能因 SSR 缓存显示旧的“素材加载失败”文本，但 API 已返回正确素材 URL。
 4. 构建过程提示未安装 ESLint，Next build 已完成编译、类型检查、页面生成和构建产物输出。
+
+## 2026-05-12 OpenClaw metrics 人工验证识别修复
+
+OpenClaw 修复提交：
+
+```text
+ed73c8cb23280b0d0515854d7dbabc95883c3216
+```
+
+远程分支：
+
+```text
+260509-chore-add-final-archive
+```
+
+修复结论：
+
+1. `page_structure_changed` 本次是误判，真实原因是小红书创作者中心跳转到 captcha 或人工验证页。
+2. OpenClaw 已移除此前临时尝试中的反检测参数、自定义 user agent、headful/xvfb 和自动重试逻辑。
+3. OpenClaw 只保留 captcha 检测、安全停止和错误码修正。
+4. 检测点覆盖预热页、note-manager 入口、卡片详情页、返回列表后。
+5. 检测到 captcha 后立即停止 metrics 抓取，不继续发起更多请求。
+
+captcha 场景返回结构：
+
+```json
+{
+  "success": false,
+  "error": "Xiaohongshu requires manual human verification. Open creator.xiaohongshu.com/new/home in a regular browser, complete the captcha, then retry.",
+  "errorCode": "post_needs_manual_verification",
+  "source": "xhs_creator_center",
+  "capturedAt": "2026-05-12T01:XX:XX.000Z",
+  "executionLogs": []
+}
+```
+
+安全约束：
+
+1. 禁止自动绕过 captcha、人机验证或平台风控。
+2. 禁止使用反检测参数、自定义 UA 或自动化通过验证的流程。
+3. 只允许检测并安全失败，提示用户在官方页面完成人工验证后再重试。
 
 ## 2026-05-12 后端素材接口确认
 
@@ -166,8 +208,9 @@ python3 -m pytest tests/test_repository_persistence.py
 
 ## 后续验收清单
 
-1. OpenClaw 修复 `page_structure_changed` 后，重新验证 `refresh-metrics`。
-2. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
-3. 验证真实发布按钮不会对已发布帖子二次触发。
-4. 验证无真实 `platformPostId` 时不会展示为已发布。
-5. 视频发布进入第二阶段前，继续返回防御性错误码。
+1. 用户在官方浏览器页面完成人工验证后，重新验证 `refresh-metrics`。
+2. 后端和前端确认 `post_needs_manual_verification` 可以保存和展示为需要人工处理的同步失败状态。
+3. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
+4. 验证真实发布按钮不会对已发布帖子二次触发。
+5. 验证无真实 `platformPostId` 时不会展示为已发布。
+6. 视频发布进入第二阶段前，继续返回防御性错误码。
