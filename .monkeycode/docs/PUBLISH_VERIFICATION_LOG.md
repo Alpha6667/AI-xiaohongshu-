@@ -215,6 +215,43 @@ Collecting build traces
 
 说明：构建过程中仍提示未安装 ESLint，这是当前工程现状；Next build 已完成编译、类型检查、页面生成和构建产物输出。
 
+## 2026-05-12 refresh-metrics 人工验证后复验通过
+
+复验前同步状态：
+
+```text
+HEAD = 122c146 docs: record manual verification UI support
+```
+
+确认历史中包含：
+
+```text
+122c146 docs: record manual verification UI support
+d9677dc fix: show manual verification metrics state
+b5ec642 fix: accept manual verification metrics error
+a80b389 docs: record manual verification metrics state
+ed73c8c fix: accurate captcha detection for metrics without bypass attempts
+```
+
+复验结果：
+
+1. 人工验证期间，OpenClaw 正确返回 `post_needs_manual_verification`。
+2. 人工验证期间，后端正确保存 `lastSyncStatus=failed` 和 `syncError=post_needs_manual_verification`。
+3. 人工验证通过后，`refresh-metrics` 恢复成功。
+4. 后端返回 `lastSyncStatus=succeeded`。
+5. 后端返回 `syncError=null`。
+6. metrics 数值正常更新，浏览量从 1 更新到 3，点赞和收藏等指标正常。
+7. `source=xhs_creator_center`。
+8. `metricsHistory` 从 3 条追加到 4 条。
+9. OpenClaw 服务器 `git status` 干净。
+
+本次复验证明：
+
+1. OpenClaw captcha 检测和安全停止链路有效。
+2. 后端错误码保存和成功恢复链路有效。
+3. 前端人工验证提示链路已具备数据支持。
+4. 用户完成官方人工验证后，真实 metrics 抓取可恢复。
+
 ## 2026-05-12 后端素材接口确认
 
 后端素材接口修复提交：
@@ -271,8 +308,7 @@ python3 -m pytest tests/test_repository_persistence.py
 
 ## 后续验收清单
 
-1. 用户在官方浏览器页面完成人工验证后，重新验证 `refresh-metrics`。
-2. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
-3. 验证真实发布按钮不会对已发布帖子二次触发。
-4. 验证无真实 `platformPostId` 时不会展示为已发布。
-5. 视频发布进入第二阶段前，继续返回防御性错误码。
+1. 清理或刷新前端 SSR 缓存后，确认帖子详情页不再显示旧的“素材加载失败”文本。
+2. 验证真实发布按钮不会对已发布帖子二次触发。
+3. 验证无真实 `platformPostId` 时不会展示为已发布。
+4. 视频发布进入第二阶段前，继续返回防御性错误码。
