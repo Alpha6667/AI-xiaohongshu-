@@ -21,6 +21,14 @@ d9677dcf0faed0f305318a6e6c313ea96ee5f14f fix: show manual verification metrics s
 6. 帖子详情页首屏展示标题、正文、标签、素材、发布状态、`platformPostId` 和 metrics。
 7. `post_needs_manual_verification` 映射为用户可读文案。
 
+## 制作过程中遇到的问题与解决方案
+
+1. 页面信息密度过高，状态文案和说明内容重复出现。解决方案：将首页、任务中心、账号页、发布中心和详情页统一改成“关键状态、关键数据、下一步动作”优先展示，说明性内容收进 `HelpTip` 或详情区。
+2. `/posts` 和 `/posts/[id]` 需要同时展示真实数据来源、同步状态、metrics 快照和素材信息。解决方案：把状态判断集中到 `frontend/src/lib/product.ts`，页面只消费标准化后的 label、detail 和 tone。
+3. 本地素材路径无法被浏览器直接访问。解决方案：前端只展示后端返回的 `asset.url`，当前约定为 `/api/assets/{assetId}/content`，不拼接或暴露服务器本地路径。
+4. `post_needs_manual_verification` 原始错误码对用户不可读。解决方案：在 `getSyncErrorLabel` 中做最小文案映射，并复用到同步状态、数据来源失败说明、帖子详情同步错误、账号作品同步列表和刷新按钮失败提示。
+5. 临时干净 worktree 缺少 `node_modules` 导致 `next` 命令不可用。解决方案：复用已有 `/workspace/frontend/node_modules` 作为临时 symlink 运行构建，该 symlink 保持未跟踪且未提交。
+
 ## 关键文件
 
 ```text
@@ -35,6 +43,15 @@ frontend/src/app/posts/page.tsx
 frontend/src/app/posts/[id]/page.tsx
 frontend/src/styles/globals.css
 ```
+
+关键文件说明：
+
+1. `frontend/src/lib/product.ts`：集中处理发布状态、审核状态、同步状态、数据来源、人工验证错误文案和运营筛选逻辑。
+2. `frontend/src/components/refresh-metrics-button.tsx`：刷新 metrics 的用户反馈入口，包含 `post_needs_manual_verification` 的按钮级失败提示。
+3. `frontend/src/app/posts/page.tsx`：发布中心列表，展示发布状态、素材、5 项 metrics、数据来源和最近同步状态。
+4. `frontend/src/app/posts/[id]/page.tsx`：帖子详情页，展示正文、标签、素材、发布回写、metrics 快照、历史记录和同步错误。
+5. `frontend/src/app/accounts/page.tsx`：账号运营页，展示账号同步状态和作品同步错误文案。
+6. `frontend/src/styles/globals.css`：承载紧凑布局、状态卡、表格、素材预览、tooltip 和移动端样式。
 
 ## 已验收页面
 
@@ -75,12 +92,38 @@ pnpm --dir frontend build
 
 构建过程中仍提示项目未安装 ESLint，这是当前工程现状；Next build 已完成编译、类型检查、页面生成和构建产物输出。
 
+## 测试命令
+
+```bash
+pnpm --dir frontend build
+```
+
+已知构建输出特征：
+
+1. `Compiled successfully`。
+2. `Generating static pages (12/12)`。
+3. `Finalizing page optimization`。
+4. `Collecting build traces`。
+5. 构建期间可能打印 `ESLint must be installed in order to run during builds`，但当前已知环境下 Next build 仍完成构建。
+
+建议人工验收路径：
+
+```text
+/posts
+/posts/post_9100f36d13
+/accounts
+```
+
 ## 当前注意事项
 
 1. 生产页面看不到更新时，优先确认服务器是否拉取最新交付分支、重新 build 并重启前端服务。
 2. 若详情页仍显示旧的“素材加载失败”，优先清理 SSR/浏览器缓存并确认 `/api/assets/{assetId}/content` 可访问。
 3. 不要修改后端素材接口和 OpenClaw 发布逻辑。
 4. 继续保持页面简洁，长说明通过 `HelpTip` 展示。
+5. 前端只展示后端返回的 `status`、`platformPostId`、`latestMetrics`、`metricsHistory`、`lastSyncStatus` 和 `syncError`，不要在页面层伪造发布状态或 metrics。
+6. `source=xhs_creator_center` 展示为真实数据，`source=mock` 展示为测试数据，历史错误 source 只能作为排查线索。
+7. 后续新增错误码时，优先在 `frontend/src/lib/product.ts` 增加集中映射，再由各页面复用。
+8. 不要提交 `frontend/node_modules`、`.next`、`.env` 或任何含 token/Cookie/profile 的文件。
 
 ## 下一步前端优化建议
 
