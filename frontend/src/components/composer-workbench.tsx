@@ -132,6 +132,7 @@ export function ComposerWorkbench({
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function renderNotice() {
     if (!notice) {
       return null;
