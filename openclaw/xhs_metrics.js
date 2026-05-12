@@ -4,10 +4,11 @@
  *
  * Strategy:
  *   1. Navigate to creator note-manager list page
- *   2. Collect all note cards with nums from DOM
- *   3. Click each card to enter detail page, extract noteId from URL (id=XXX)
- *   4. Match by platformPostId
- *   5. Fallback: click-based matching vs first_card
+ *   2. Wait for captcha wall; if redirected away, treat as login failure
+ *   3. Collect all note cards with nums from DOM
+ *   4. Click each card to enter detail page, extract noteId from URL (id=XXX)
+ *   5. Match by platformPostId
+ *   6. Fallback: click-based matching vs first_card
  *
  * Error codes:
  *   login_required, post_not_found, page_structure_changed,
@@ -47,8 +48,17 @@ async function fetchMetrics(platformPostId) {
   try {
     browser = await chromium.launchPersistentContext(PROFILE_DIR, {
       headless: HEADLESS,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-blink-features=AutomationControlled',
+      ],
       viewport: { width: 1280, height: 900 },
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      locale: 'zh-CN',
+      timezoneId: 'Asia/Shanghai',
     });
     log('Browser started');
 
@@ -56,27 +66,59 @@ async function fetchMetrics(platformPostId) {
     const page = pages.length > 0 ? pages[0] : await browser.newPage();
 
     // ---- Warm-up / login check ----
-    log('Warming up session');
+    log('Warming up session on new/home');
     await page.goto('https://creator.xiaohongshu.com/new/home', {
       waitUntil: 'load',
       timeout: TIMEOUT_MS,
     });
-    await new Promise((r) => setTimeout(r, 3000));
+    await new Promise((r) => setTimeout(r, 5000));
+    // Check if redirected to login
     if (page.url().includes('/login')) {
       log('Login required');
       await browser.close();
       return { success: false, error: 'Login required', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
+    // Check if captcha appeared on home page
+    if (page.url().includes('captcha') || page.url().includes('verify')) {
+      log('Captcha on new/home');
+      await browser.close();
+      return { success: false, error: 'Captcha verification needed on home page', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+    }
     log('Session OK');
 
+    // ---- Helper: navigate to note-manager and detect captcha/login ----
+    async function navigateToNoteManager(retryCount) {
+      retryCount = retryCount || 0;
+      log('Navigating to note manager');
+      await page.goto('https://creator.xiaohongshu.com/new/note-manager', {
+        waitUntil: 'load',
+        timeout: TIMEOUT_MS,
+      });
+      await new Promise((r) => setTimeout(r, 8000));
+      const currentUrl = page.url();
+      log(`Note manager url: ${currentUrl}`);
+
+      // Detect captcha / login redirect
+      if (currentUrl.includes('login') || currentUrl.includes('captcha') || currentUrl.includes('verify')) {
+        log('Detected captcha or login redirect');
+        if (retryCount < 1) {
+          log('Retrying note-manager navigation...');
+          // Brief wait before retry — captcha may be transient
+          await new Promise((r) => setTimeout(r, 5000));
+          return navigateToNoteManager(retryCount + 1);
+        }
+        // Set errorCode=login_required since the session can't reach the notes page
+        return { isCaptcha: true, error: 'Login required or captcha verification needed', errorCode: 'login_required' };
+      }
+      return { isCaptcha: false };
+    }
+
     // ---- Step 1: Gather card data from note-manager list ----
-    log('Navigating to note manager');
-    await page.goto('https://creator.xiaohongshu.com/new/note-manager', {
-      waitUntil: 'load',
-      timeout: TIMEOUT_MS,
-    });
-    await new Promise((r) => setTimeout(r, 8000));
-    log(`Note manager: ${page.url()}`);
+    const navResult = await navigateToNoteManager();
+    if (navResult.isCaptcha) {
+      await browser.close();
+      return { success: false, error: navResult.error, errorCode: navResult.errorCode, source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+    }
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/metrics_${platformPostId}.png` });
 
@@ -100,7 +142,7 @@ async function fetchMetrics(platformPostId) {
 
     if (cardsOnList.length === 0) {
       await browser.close();
-      return { success: false, error: 'No note cards found', errorCode: 'page_structure_changed', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
+      return { success: false, error: 'No note cards found - captcha redirected login page not detected but DOM shows no cards', errorCode: 'login_required', source: 'xhs_creator_center', capturedAt: nowISO(), executionLogs: logs };
     }
 
     // ---- Step 3: Click cards one by one to find noteId match ----
@@ -144,13 +186,18 @@ async function fetchMetrics(platformPostId) {
         }
 
         // Return to note-manager for the next card
-        await page.goto('https://creator.xiaohongshu.com/new/note-manager', { waitUntil: 'load', timeout: TIMEOUT_MS }).catch(() => {});
-        await new Promise((r) => setTimeout(r, 3000));
+        const backResult = await navigateToNoteManager();
+        if (backResult.isCaptcha) {
+          // Return what we have (or failure)
+          break;
+        }
 
       } catch (e) {
         log(`    Card #${i} click failed: ${e.message}`);
-        await page.goto('https://creator.xiaohongshu.com/new/note-manager', { waitUntil: 'load', timeout: TIMEOUT_MS }).catch(() => {});
-        await new Promise((r) => setTimeout(r, 3000));
+        const backResult = await navigateToNoteManager();
+        if (backResult.isCaptcha) {
+          break;
+        }
       }
     }
 
