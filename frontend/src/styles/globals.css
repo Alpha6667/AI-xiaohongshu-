@@ -150,6 +150,107 @@ textarea {
   background: rgba(255, 255, 255, 0.56);
 }
 
+.account-switcher {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.account-switcher-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.account-switcher-trigger strong,
+.account-switcher-current strong,
+.account-switcher-current p {
+  margin: 0;
+}
+
+.account-switcher-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  width: min(360px, calc(100vw - 40px));
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+}
+
+.account-switcher-current {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(127, 97, 71, 0.08);
+}
+
+.account-switcher-list {
+  display: grid;
+  gap: 8px;
+}
+
+.account-switcher-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-switcher-item:disabled {
+  cursor: default;
+}
+
+.account-switcher-item-active {
+  border-color: rgba(72, 109, 84, 0.32);
+  background: rgba(72, 109, 84, 0.08);
+}
+
+.account-switcher-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.account-switcher-copy span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.account-switcher-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.account-switcher-actions a {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .topbar-label,
 .eyebrow,
 .field-block span:first-child,
@@ -1365,6 +1466,17 @@ textarea {
   .topbar-meta {
     width: 100%;
     grid-template-columns: 1fr;
+  }
+
+  .account-switcher,
+  .account-switcher-trigger {
+    width: 100%;
+  }
+
+  .account-switcher-menu {
+    left: 0;
+    right: auto;
+    width: 100%;
   }
 
   .action-panel-card {
