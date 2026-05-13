@@ -1246,6 +1246,65 @@ textarea {
   margin-top: 4px;
 }
 
+.post-metric-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 6px;
+}
+
+.post-metric-stat-card {
+  min-height: 132px;
+  padding: 22px 24px;
+  border: 1px solid rgba(87, 117, 151, 0.16);
+  border-radius: 18px;
+  background: rgba(247, 250, 253, 0.92);
+}
+
+.post-metric-stat-card-active {
+  border-color: rgba(55, 126, 232, 0.42);
+  background: rgba(235, 246, 255, 0.96);
+}
+
+.post-metric-stat-card span {
+  display: block;
+  color: #1f2a37;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.post-metric-stat-card strong {
+  display: block;
+  margin-top: 18px;
+  color: #1976ff;
+  font-size: clamp(30px, 4vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.post-metric-stat-card p {
+  margin: 14px 0 0;
+  color: #7d90aa;
+  font-size: 13px;
+}
+
+.post-metric-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.post-metric-meta-row span {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .product-table-scroll {
   width: 100%;
   overflow-x: auto;
@@ -1434,6 +1493,7 @@ textarea {
   .review-panel,
   .post-row,
   .metric-grid,
+  .post-metric-stat-grid,
   .asset-grid,
   .field-grid,
   .quick-metrics,
@@ -1530,5 +1590,9 @@ textarea {
 
   .compact-status-row {
     grid-template-columns: 1fr;
+  }
+
+  .post-metric-stat-card {
+    min-height: 112px;
   }
 }

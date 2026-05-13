@@ -160,6 +160,60 @@ favorites = nums[3], followConversions = nums[4]
 a8e8fab fix: correct metrics field mapping (likes vs favorites)
 ```
 
+**2026-05-13 最新复核：**
+
+用户通过小红书 APP 和创作者中心图标再次确认，当前 note-manager 卡片底部 5 个数字应按图标语义映射，不能丢弃第 5 项分享数据：
+
+```javascript
+views = nums[0]
+comments = nums[1]
+likes = nums[2]
+favorites = nums[3]
+followConversions = nums[4]
+```
+
+`followConversions` 当前承载小红书分享/转发箭头图标的数字。后续若后端和前端新增 `shares` 字段，可以从该字段迁移；在 schema 未调整前必须继续保留该值，不能写成 `0` 或丢弃。
+
+真实校验样例 `post_9100f36d13` 的人工确认基准：
+
+```text
+nums[0] = 浏览 = 10
+nums[1] = 评论 = 0
+nums[2] = 点赞 = 2
+nums[3] = 收藏 = 1
+nums[4] = 分享 = 1
+APP 显示“赞和收藏 3” = 点赞 2 + 收藏 1
+```
+
+真实后台截图同时确认第二张卡片 `枯木逢春` 的顺序一致：浏览 14、评论 3、点赞 3、收藏 2、分享 2。
+
+OpenClaw 已提交最终修复：
+
+```text
+2763de5
+54b6ec8
+```
+
+生产验证结果：
+
+```text
+验证时间：2026-05-13 22:20 CST
+postId：post_9100f36d13
+platformPostId：6a026a40000000003600289d
+DOM nums：[10, 0, 2, 1, 1]
+views = 10
+comments = 0
+likes = 2
+favorites = 1
+followConversions = 1
+source = xhs_creator_center
+matchedBy = first_card
+```
+
+`54b6ec8` 保持 `server.js` 对外返回 `followConversions`，用于兼容后端现有 schema；该字段当前承载分享数。
+
+下一次修改 `openclaw/xhs_metrics.js` 时，必须同时检查 precision match 和 first_card fallback 两处映射，保持同一顺序。
+
 ### 3. 笔记匹配无法按 data-id 精准定位
 
 **问题描述：**

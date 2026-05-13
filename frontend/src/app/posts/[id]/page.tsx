@@ -43,6 +43,20 @@ function getMetricsState(post: PostDetail) {
   };
 }
 
+function formatMetricValue(value: number | string) {
+  return typeof value === "number" ? value.toLocaleString() : value;
+}
+
+function MetricsStatCard({ label, value, highlighted = false }: { label: string; value: number | string; highlighted?: boolean }) {
+  return (
+    <article className={`post-metric-stat-card ${highlighted ? "post-metric-stat-card-active" : ""}`.trim()}>
+      <span>{label}</span>
+      <strong>{formatMetricValue(value)}</strong>
+      <p>昨日 --</p>
+    </article>
+  );
+}
+
 function formatOperationalText(value?: string | null) {
   const generatedContentTask = ["generate", "content"].join("_");
   const submittedPublishTask = ["Submitted", "to", "OpenClaw"].join(" ");
@@ -243,47 +257,18 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 <strong>{metricsState.title}</strong>
                 <p>{metricsState.description}</p>
               </article>
-              <div className="metric-grid metrics-summary-grid">
-                <article className="detail-meta-card">
-                  <span className="eyebrow">数据来源</span>
-                  <strong>{metricsState.title}</strong>
-                  <p>{metricsState.description}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">浏览</span>
-                  <strong>{post.latestMetrics.views.toLocaleString()}</strong>
-                  <p>当前记录的是这条内容最近一次成功回写后的浏览量。</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">点赞</span>
-                  <strong>{post.latestMetrics.likes.toLocaleString()}</strong>
-                  <p>这里展示最新持久化互动结果。</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">收藏 / 评论</span>
-                  <strong>{post.latestMetrics.favorites.toLocaleString()} / {post.latestMetrics.comments.toLocaleString()}</strong>
-                  <p>收藏和评论会跟随最新抓取一起刷新，便于快速看出内容后劲。</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">关注转化</span>
-                  <strong>{post.latestMetrics.followConversions.toLocaleString()}</strong>
-                  <p>当前记录的是这条内容带来的关注转化数。</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">抓取时间</span>
-                  <strong>{post.latestMetrics.capturedAt ? new Date(post.latestMetrics.capturedAt).toLocaleString("zh-CN") : "暂无抓取时间"}</strong>
-                  <p>对应 `latestMetrics.capturedAt`。</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">最近一次拉数</span>
-                  <strong>{syncState.label}</strong>
-                  <p>{syncState.detail}</p>
-                </article>
-                <article className="detail-meta-card">
-                  <span className="eyebrow">同步错误</span>
-                  <strong>{getSyncErrorLabel(post.syncError) ?? "无"}</strong>
-                  <p>失败时展示后端返回的错误码或错误信息。</p>
-                </article>
+              <div className="post-metric-stat-grid">
+                <MetricsStatCard label="浏览量" value={post.latestMetrics.views} highlighted />
+                <MetricsStatCard label="评论数" value={post.latestMetrics.comments} />
+                <MetricsStatCard label="收藏数" value={post.latestMetrics.favorites} />
+                <MetricsStatCard label="点赞数" value={post.latestMetrics.likes} />
+                <MetricsStatCard label="分享数" value={post.latestMetrics.followConversions} />
+                <MetricsStatCard label="同步状态" value={syncState.label} />
+              </div>
+              <div className="post-metric-meta-row">
+                <span>数据来源：{metricsState.title}</span>
+                <span>最近抓取：{post.latestMetrics.capturedAt ? new Date(post.latestMetrics.capturedAt).toLocaleString("zh-CN") : "暂无抓取时间"}</span>
+                <span>同步错误：{getSyncErrorLabel(post.syncError) ?? "无"}</span>
               </div>
               <CollapsibleDetails summary={`历史快照 (${post.metricsHistory.length} 条)`}>
                 <div className="product-table-scroll">

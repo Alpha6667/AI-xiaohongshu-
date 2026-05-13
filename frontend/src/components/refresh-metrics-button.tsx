@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { apiClient } from "../lib/api/client";
 
-const AUTO_REFRESH_INTERVAL_MS = 60_000;
+const AUTO_REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000;
 
 function getMetricsRefreshMessage(message: string) {
   if (!message.startsWith("metrics_fetch_failed:")) {
@@ -93,6 +93,7 @@ export function RefreshMetricsButton({ postId }: { postId: string }) {
       <button type="button" className="ghost-button" onClick={() => doRefresh(false)} disabled={pending}>
         {pending ? "刷新中..." : "刷新指标数据"}
       </button>
+      <p className="muted-copy">自动刷新间隔：3 小时。需要即时更新时可手动刷新。</p>
       {lastUpdated ? (
         <p className="muted-copy">上次自动刷新：{lastUpdated}</p>
       ) : null}

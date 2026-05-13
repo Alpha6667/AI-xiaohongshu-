@@ -312,3 +312,239 @@ python3 -m pytest tests/test_repository_persistence.py
 2. 验证真实发布按钮不会对已发布帖子二次触发。
 3. 验证无真实 `platformPostId` 时不会展示为已发布。
 4. 视频发布进入第二阶段前，继续返回防御性错误码。
+
+## 2026-05-13 Metrics 字段映射复核
+
+复核对象：
+
+```text
+postId = post_9100f36d13
+platformPostId = 6a026a40000000003600289d
+```
+
+用户人工确认的小红书 APP / 创作者中心基准：
+
+```text
+浏览 = nums[0] = 10
+评论 = nums[1] = 0
+点赞 = nums[2] = 2
+收藏 = nums[3] = 1
+分享 = nums[4] = 1
+APP “赞和收藏 3” = 点赞 2 + 收藏 1
+```
+
+当前 `openclaw/xhs_metrics.js` 本地代码映射复核结果：
+
+```javascript
+views: nums[0]
+comments: nums[1]
+likes: nums[2]
+favorites: nums[3]
+followConversions: nums[4]
+```
+
+结论：
+
+1. 当前本地代码已保留第 5 项分享/转发数据，写入 `followConversions`。
+2. 当前本地代码中 precision match 和 first_card fallback 两处映射一致。
+3. `a1e41fb fix: correct DOM field mapping for creator note-manager` 中提到的 `followConv: 0` 方案会丢弃分享数据，不能作为最终实现。
+4. 若后续产品需要更直观字段名，建议后端和前端新增 `shares` 字段并从 `followConversions` 迁移展示；迁移前继续使用 `followConversions` 承载分享数。
+5. OpenClaw 已提交最终修复：`2763de5`。
+6. OpenClaw 已补充提交兼容后端 schema 的最终运行版本：`54b6ec8`，继续使用 `followConversions` 承载分享数。
+
+下一步验收：
+
+1. 由 OpenClaw 在生产环境用真实登录态执行一次 `post_9100f36d13` metrics refresh。
+2. 回传结果需要包含 `views`、`comments`、`likes`、`favorites`、`followConversions`、`source`、`matchedBy`、`capturedAt`。
+3. 确认前端最新快照显示点赞 2、收藏 1、评论 0、分享/转发 1 或等价字段。
+
+真实后台截图复核：
+
+1. 截图中第一张卡片底部顺序为：浏览 10、评论 0、点赞 2、收藏 1、分享 1。
+2. 截图中第二张卡片底部顺序为：浏览 14、评论 3、点赞 3、收藏 2、分享 2。
+3. 两张卡片的图标顺序一致，确认创作者中心列表页顺序为：浏览、评论、点赞、收藏、分享。
+
+生产真实抓取验证：
+
+```text
+验证时间：2026-05-13 22:20 CST
+postId：post_9100f36d13
+platformPostId：6a026a40000000003600289d
+标题：在破碎的废墟中...
+DOM nums：[10, 0, 2, 1, 1]
+views = 10
+comments = 0
+likes = 2
+favorites = 1
+followConversions = 1
+source = xhs_creator_center
+matchedBy = first_card
+OpenClaw commit = 54b6ec8
+```
+
+验收结论：OpenClaw 真实 metrics 抓取、DOM 字段映射、分享数据保留和后端 schema 兼容均通过。下一步由后端确认本次 refresh 已保存为最新快照，再由前端确认帖子详情页首屏显示最新数据。
+
+后端开发容器检查结果：
+
+```text
+code HEAD = 4d4762d
+repository path = /tmp/ai-xhs-delivery/backend/data/repository.json
+GET /api/posts/post_9100f36d13 = 404
+response = {"detail":"Post not found"}
+```
+
+结论：当前开发容器使用本地 seed repository，无法读取生产服务器 OpenClaw 写入的真实 metrics 快照。后端保存验收必须在生产服务器 `/srv/AI-xiaohongshu-/backend` 执行。
+
+生产后端验收命令：
+
+```bash
+cd /srv/AI-xiaohongshu-/backend
+
+python3 - <<'PY'
+from fastapi.testclient import TestClient
+from app.main import app
+from app.repositories.memory import repository
+import json
+
+post_id = "post_9100f36d13"
+expected = {
+    "views": 10,
+    "likes": 2,
+    "favorites": 1,
+    "comments": 0,
+    "followConversions": 1,
+    "source": "xhs_creator_center",
+}
+
+client = TestClient(app)
+resp = client.get(f"/api/posts/{post_id}")
+print("status_code =", resp.status_code)
+
+data = resp.json()
+account = repository.accounts.get("account_aeziyo")
+latest_history = (data.get("metricsHistory") or [None])[-1]
+
+result = {
+    "latestMetrics": data.get("latestMetrics"),
+    "metricsHistoryLatest": latest_history,
+    "lastSyncStatus": data.get("lastSyncStatus"),
+    "syncError": data.get("syncError"),
+    "accountId": data.get("accountId"),
+    "profilePath": account.profile_path if account else None,
+}
+
+print(json.dumps(result, ensure_ascii=False, indent=2))
+
+assert resp.status_code == 200
+assert data["accountId"] == "account_aeziyo"
+assert account is not None
+assert account.profile_path == "/root/.openclaw/xhs-profile-persist-account_aeziyo"
+assert data["lastSyncStatus"] == "succeeded"
+assert data["syncError"] is None
+
+latest = data["latestMetrics"]
+for key, value in expected.items():
+    assert latest[key] == value, (key, latest.get(key), value)
+
+assert latest_history is not None
+for key, value in expected.items():
+    assert latest_history[key] == value, (key, latest_history.get(key), value)
+
+print("BACKEND_METRICS_ACCEPTANCE=PASS")
+PY
+```
+
+生产预期验收标记：
+
+```text
+BACKEND_METRICS_ACCEPTANCE=PASS
+```
+
+生产后端保存验收结果：
+
+```text
+验收时间：2026-05-13 22:29 CST
+BACKEND_METRICS_ACCEPTANCE=PASS
+POST /api/posts/post_9100f36d13/refresh-metrics = 201
+OpenClaw commit = 54b6ec8
+Publisher mode during refresh = USE_REAL_PUBLISH=true
+repository snapshots count = 161
+```
+
+后端返回的刷新结果：
+
+```json
+{
+  "id": "metric_8043d5a198",
+  "snapshotAt": "2026-05-13T14:29:33.040957+00:00",
+  "views": 10,
+  "likes": 2,
+  "favorites": 1,
+  "comments": 0,
+  "followConversions": 1,
+  "source": "xhs_creator_center"
+}
+```
+
+repository 最新持久化 snapshot：
+
+```json
+{
+  "id": "metric_03ae0702cc",
+  "postId": "post_9100f36d13",
+  "snapshotAt": "2026-05-13T14:29:54.914295+00:00",
+  "views": 10,
+  "likes": 2,
+  "favorites": 1,
+  "comments": 0,
+  "followConversions": 1,
+  "source": "xhs_creator_center"
+}
+```
+
+验收结论：后端 `refresh-metrics`、OpenClaw 真实 playwright 抓取、内存模型更新和 `repository.json` 持久化均通过。
+
+重要运行风险：验收完成后 Publisher 已恢复 mock 模式。前端页面有 60 秒自动刷新能力，在 mock 模式下继续刷新可能把 `latestMetrics` 覆盖为 mock 数据。前端验收期间需要临时保持 Publisher real 模式，或暂停该帖子自动刷新，直到字段展示验收完成。
+
+前端验收冻结点：
+
+```text
+冻结时间：2026-05-13 22:36 CST
+Publisher 状态：已停止
+目的：阻止 mock metrics 覆盖刚验证通过的真实数据
+验收接口：/api/posts/post_9100f36d13
+```
+
+冻结后后端 API 当前返回的最新真实 metrics：
+
+```json
+{
+  "views": 10,
+  "likes": 2,
+  "favorites": 1,
+  "comments": 0,
+  "followConversions": 1,
+  "source": "xhs_creator_center"
+}
+```
+
+前端可在该冻结状态下验收 `/posts/post_9100f36d13`，验收完成后再恢复 Publisher。
+
+前端当前观察：
+
+```text
+观察时间：2026-05-13 22:40 CST 左右
+页面数据：正确
+页面最新数据时间：2026-05-13 22:30:52
+现象：时间停止更新
+原因：Publisher 已停止，自动刷新无法继续拉取新 metrics
+```
+
+运行恢复要求：
+
+```text
+恢复 Publisher 时必须使用 USE_REAL_PUBLISH=true。
+恢复后检查 /health，确认 realPublish=true。
+不能以 mock 模式恢复，否则前端 60 秒自动刷新会再次写入 mock metrics。
+数据映射无需再改，当前正确值已经通过生产验证。
+```
