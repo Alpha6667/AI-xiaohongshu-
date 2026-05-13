@@ -409,17 +409,29 @@ class InMemoryRepository:
                 id="account_seed_store",
                 name="门店号",
                 handle="@brand_store",
-                status=AccountStatus.BUSY,
+                status=AccountStatus.ONLINE,
                 summary="门店活动与到店转化内容",
                 last_active_at=created_at,
                 created_at=created_at,
                 updated_at=created_at,
-                connection_status=AccountConnectionStatus.VALIDATING,
+                connection_status=AccountConnectionStatus.CONNECTED,
                 connected_at=created_at,
                 last_validated_at=created_at,
                 last_sync_at=created_at,
-                last_sync_status=AccountSyncStatus.SYNCING,
+                last_sync_status=AccountSyncStatus.SUCCEEDED,
             )
+
+        seed_store = self.accounts.get("account_seed_store")
+        if (
+            seed_store is not None
+            and seed_store.connection_status == AccountConnectionStatus.VALIDATING
+            and not seed_store.reauth_required
+            and seed_store.last_auth_error is None
+        ):
+            seed_store.status = AccountStatus.ONLINE
+            seed_store.connection_status = AccountConnectionStatus.CONNECTED
+            seed_store.last_sync_status = AccountSyncStatus.SUCCEEDED
+            seed_store.last_sync_error = None
 
         default_account_id = next(iter(self.accounts.keys())) if self.accounts else None
         if default_account_id is not None:

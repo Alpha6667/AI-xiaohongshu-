@@ -183,6 +183,22 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(trigger_payload["accountId"], first_account["id"])
         self.assertIn(trigger_payload["lastSyncStatus"], {"succeeded", "failed"})
 
+    def test_seed_review_account_is_publish_available(self) -> None:
+        accounts_resp = self.client.get("/api/accounts")
+        self.assertEqual(accounts_resp.status_code, 200)
+        accounts_by_id = {item["id"]: item for item in accounts_resp.json()}
+
+        account = accounts_by_id["account_seed_store"]
+        self.assertEqual(account["connectionStatus"], "connected")
+        self.assertFalse(account["reauthRequired"])
+        self.assertEqual(account["lastSyncStatus"], "succeeded")
+        self.assertIsNone(account["lastSyncError"])
+
+        confirmations_resp = self.client.get("/api/confirmations")
+        self.assertEqual(confirmations_resp.status_code, 200)
+        review_post = next(item for item in confirmations_resp.json() if item["id"] == "post_seed_review")
+        self.assertEqual(review_post["accountId"], "account_seed_store")
+
     def test_confirmations_contract(self) -> None:
         list_resp = self.client.get("/api/confirmations")
         self.assertEqual(list_resp.status_code, 200)
