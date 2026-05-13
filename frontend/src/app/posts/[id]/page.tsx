@@ -148,6 +148,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                 <span className="eyebrow">发布账号</span>
                 <strong>{publishAccount.name}</strong>
                 <p className="muted-copy">{publishAccount.id ? publishAccount.handle : "当前帖子还没有绑定真实账号"}</p>
+                {publishAccount.isActive ? <StatusPill label="当前激活" tone="positive" /> : null}
               </div>
             </div>
           </div>

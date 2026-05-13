@@ -49,6 +49,8 @@ export interface AccountRecord {
   avatarUrl?: string | null;
   xhsId?: string | null;
   profileUrl?: string | null;
+  profilePath?: string | null;
+  isActive?: boolean | null;
   status: string;
   summary?: string | null;
   lastActiveAt?: string | null;
@@ -66,6 +68,15 @@ export interface AccountRecord {
   lastSyncAt?: string | null;
   lastSyncStatus?: AccountSyncStatus | string | null;
   lastSyncError?: string | null;
+}
+
+export interface AccountCreatePayload {
+  id?: string | null;
+  name: string;
+  xhsId: string;
+  avatarUrl?: string | null;
+  profileUrl?: string | null;
+  profilePath?: string | null;
 }
 
 export interface AccountWorkSyncItem {

@@ -33,7 +33,8 @@ export function ComposerWorkbench({
   const hasRealCopy = copyVariants.length > 0;
   const hasRealImages = imageCandidates.length > 0;
 
-  const initialAccountId = task?.accountId ?? accounts[0]?.id ?? "";
+  const activeAccount = accounts.find((account) => account.isActive) ?? accounts[0] ?? null;
+  const initialAccountId = task?.accountId ?? activeAccount?.id ?? "";
   const [selectedCopyId, setSelectedCopyId] = useState(copyVariants[0]?.id ?? "");
   const [selectedAssetId, setSelectedAssetId] = useState(imageCandidates[0]?.id ?? "");
   const [selectedAccountId, setSelectedAccountId] = useState(initialAccountId);
@@ -42,10 +43,10 @@ export function ComposerWorkbench({
   useEffect(() => {
     setSelectedCopyId(copyVariants[0]?.id ?? "");
     setSelectedAssetId(imageCandidates[0]?.id ?? "");
-    setSelectedAccountId(task?.accountId ?? accounts[0]?.id ?? "");
+    setSelectedAccountId(task?.accountId ?? activeAccount?.id ?? "");
     setReviewComment("这版已经确认完成，可以继续往下走。");
     setNotice(null);
-  }, [accounts, copyVariants, imageCandidates, post?.id, task?.accountId]);
+  }, [activeAccount?.id, copyVariants, imageCandidates, post?.id, task?.accountId]);
 
   const selectedCopy = copyVariants.find((item) => item.id === selectedCopyId) ?? copyVariants[0] ?? null;
   const selectedAsset = imageCandidates.find((item) => item.id === selectedAssetId) ?? imageCandidates[0] ?? null;
@@ -408,6 +409,7 @@ export function ComposerWorkbench({
                 {selectedAccount ? (
                   <div className="tag-row">
                     <StatusPill label={getAccountConnectionStatusLabel(selectedAccount.connectionStatus)} tone={getAccountConnectionStatusTone(selectedAccount.connectionStatus)} />
+                    {selectedAccount.isActive ? <StatusPill label="当前激活" tone="positive" /> : null}
                     {selectedAccount.lastValidatedAt ? <StatusPill label={`最近验证 ${new Date(selectedAccount.lastValidatedAt).toLocaleString("zh-CN")}`} /> : null}
                   </div>
                 ) : null}
@@ -473,6 +475,7 @@ export function ComposerWorkbench({
                   </div>
                   <p>{account.summary}</p>
                   <div className="tag-row">
+                    {account.isActive ? <StatusPill label="当前激活" tone="positive" /> : null}
                     <StatusPill label={getAccountConnectionStatusLabel(account.connectionStatus)} tone={getAccountConnectionStatusTone(account.connectionStatus)} />
                     {account.lastValidatedAt ? <StatusPill label={`最近验证 ${new Date(account.lastValidatedAt).toLocaleString("zh-CN")}`} /> : null}
                   </div>

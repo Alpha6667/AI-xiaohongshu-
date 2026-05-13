@@ -1,5 +1,6 @@
 import type {
   AccountRecord,
+  AccountCreatePayload,
   AccountWorksSyncResponse,
   AssetSummary,
   AssetUploadPayload,
@@ -116,6 +117,17 @@ export const apiClient = {
     },
     list() {
       return apiFetch<AccountRecord[]>(endpoint("/accounts"));
+    },
+    create(payload: AccountCreatePayload) {
+      return apiFetch<AccountRecord>(endpoint("/accounts"), {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    },
+    activate(accountId: string) {
+      return apiFetch<AccountRecord>(endpoint(`/accounts/${accountId}/activate`), {
+        method: "PATCH",
+      });
     },
     getWorksSync(accountId: string) {
       return apiFetch<AccountWorksSyncResponse>(endpoint(`/accounts/${accountId}/works-sync`));

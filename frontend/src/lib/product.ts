@@ -21,6 +21,8 @@ export interface AccountOverview {
   avatarUrl: string | null;
   xhsId: string | null;
   profileUrl: string | null;
+  profilePath: string | null;
+  isActive: boolean;
   status: AccountStatus;
   connectionStatus: AccountConnectionStatus;
   reauthRequired: boolean;
@@ -108,6 +110,8 @@ const unassignedAccount: AccountOverview = {
   avatarUrl: null,
   xhsId: null,
   profileUrl: null,
+  profilePath: null,
+  isActive: false,
   status: "offline",
   connectionStatus: "unknown",
   reauthRequired: false,
@@ -518,6 +522,8 @@ export function adaptAccounts(records: AccountRecord[]): AccountOverview[] {
       avatarUrl: record.avatarUrl ?? null,
       xhsId: record.xhsId ?? null,
       profileUrl: record.profileUrl ?? null,
+      profilePath: record.profilePath ?? null,
+      isActive: Boolean(record.isActive),
       status: (record.status === "online" || record.status === "offline" || record.status === "busy") ? record.status : "offline",
       connectionStatus: coerceConnectionStatus(record.connectionStatus, record.reauthRequired),
       reauthRequired: Boolean(record.reauthRequired),

@@ -7,6 +7,17 @@ import { apiClient } from "../../lib/api/client";
 import type { AccountWorksSyncResponse } from "../../lib/api/types";
 import { adaptAccounts, adaptMessageTasks, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone, getSyncErrorLabel } from "../../lib/product";
 
+async function activateAccount(formData: FormData) {
+  "use server";
+
+  const accountId = String(formData.get("accountId") ?? "");
+  if (!accountId) {
+    return;
+  }
+
+  await apiClient.accounts.activate(accountId);
+}
+
 async function getTasksOrNull() {
   try {
     return await apiClient.tasks.list();
@@ -44,6 +55,7 @@ export default async function AccountsPage() {
   });
   const abnormalAccounts = accounts.filter((account) => account.reauthRequired || account.connectionStatus === "reauth_required" || account.lastSyncStatus === "failed");
   const sortedAccounts = [...accounts].sort((left, right) => Number(abnormalAccounts.includes(right)) - Number(abnormalAccounts.includes(left)) || right.waitingCount - left.waitingCount);
+  const activeAccount = accounts.find((account) => account.isActive) ?? null;
 
   return (
     <div className="page-stack">
@@ -67,6 +79,7 @@ export default async function AccountsPage() {
         <div className="compact-status-row">
           <CompactStatus label="账号总数" value={accounts.length} />
           <CompactStatus label="已连接" value={accounts.filter((account) => account.connectionStatus === "connected" && !account.reauthRequired).length} tone="positive" />
+          <CompactStatus label="当前激活" value={activeAccount?.name ?? "暂无"} tone={activeAccount ? "positive" : "warm"} />
           <CompactStatus label="需登录" value={accounts.filter((account) => account.connectionStatus === "reauth_required" || account.reauthRequired).length} tone={abnormalAccounts.length > 0 ? "critical" : "positive"} />
           <CompactStatus label="同步失败" value={accounts.filter((account) => account.lastSyncStatus === "failed").length} tone={accounts.some((account) => account.lastSyncStatus === "failed") ? "critical" : "positive"} />
         </div>
@@ -102,6 +115,7 @@ export default async function AccountsPage() {
                   </div>
                 </div>
                 <div className="tag-row">
+                  {account.isActive ? <StatusPill label="当前激活" tone="positive" /> : null}
                   <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
                   <StatusPill label={getAccountConnectionStatusLabel(account.connectionStatus)} tone={getAccountConnectionStatusTone(account.connectionStatus)} />
                   <StatusPill label={getAccountSyncStatusLabel(account.lastSyncStatus)} tone={getAccountSyncStatusTone(account.lastSyncStatus)} />
@@ -132,11 +146,22 @@ export default async function AccountsPage() {
                     <strong>{account.lastSyncAt ? new Date(account.lastSyncAt).toLocaleString("zh-CN") : "暂无记录"}</strong>
                     <p>{account.lastSyncError ?? "当前没有同步错误摘要。"}</p>
                   </article>
+                  <article className="detail-meta-card">
+                    <span className="eyebrow">账号资料</span>
+                    <strong>{account.xhsId ? `小红书号 ${account.xhsId}` : account.handle}</strong>
+                    <p>{account.isActive ? "当前 OpenClaw 默认使用这个账号发布。" : "切换后 OpenClaw 会默认使用这个账号发布。"}</p>
+                  </article>
                 </div>
               </CollapsibleDetails>
 
               <div className="action-row">
                 <AccountSyncButton accountId={account.id} />
+                {account.isActive ? null : (
+                  <form action={activateAccount}>
+                    <input type="hidden" name="accountId" value={account.id} />
+                    <button type="submit" className="ghost-button">设为激活账号</button>
+                  </form>
+                )}
               </div>
 
               {worksSync ? (
