@@ -394,8 +394,17 @@ export function ComposerWorkbench({
             <div className="preview-summary">
               <article className="preview-summary-card">
                 <span className="eyebrow">发布账号</span>
-                <strong>{selectedAccount?.name ?? "暂未选择账号"}</strong>
-                <p>{selectedAccount ? `${selectedAccount.handle}，当前状态 ${getAccountStatusLabel(selectedAccount.status)}。` : "先从右侧选择一个要发布的账号。"}</p>
+                {selectedAccount ? (
+                  <div className="account-identity">
+                    {selectedAccount.avatarUrl ? <img src={selectedAccount.avatarUrl} alt={`${selectedAccount.name} 头像`} className="account-avatar" /> : <div className="account-avatar account-avatar-fallback">{selectedAccount.name.slice(0, 1)}</div>}
+                    <div>
+                      <strong>{selectedAccount.name}</strong>
+                      <p>{selectedAccount.handle}，当前状态 {getAccountStatusLabel(selectedAccount.status)}。</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p>先从右侧选择一个要发布的账号。</p>
+                )}
                 {selectedAccount ? (
                   <div className="tag-row">
                     <StatusPill label={getAccountConnectionStatusLabel(selectedAccount.connectionStatus)} tone={getAccountConnectionStatusTone(selectedAccount.connectionStatus)} />
@@ -452,8 +461,14 @@ export function ComposerWorkbench({
 
               return (
                 <button key={account.id} type="button" className={`account-choice-card${active ? " account-choice-card-active" : ""}`} onClick={() => setSelectedAccountId(account.id)}>
-                  <div className="queue-item-head">
-                    <strong>{account.name}</strong>
+                  <div className="queue-item-head account-choice-head">
+                    <div className="account-identity">
+                      {account.avatarUrl ? <img src={account.avatarUrl} alt={`${account.name} 头像`} className="account-avatar" /> : <div className="account-avatar account-avatar-fallback">{account.name.slice(0, 1)}</div>}
+                      <div>
+                        <strong>{account.name}</strong>
+                        <p>{account.handle}</p>
+                      </div>
+                    </div>
                     <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
                   </div>
                   <p>{account.summary}</p>

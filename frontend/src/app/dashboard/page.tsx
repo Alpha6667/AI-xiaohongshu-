@@ -1,7 +1,7 @@
 import { RefreshButton } from "../../components/refresh-button";
 import { CollapsibleDetails, CompactStatus, SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, buildAccountOverview, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, getAccountAvailabilityNotice, getAccountForPost, getFailureTypeLabel, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, sortByUpdatedDesc } from "../../lib/product";
 
 async function getAccountsOrNull() {
   try {
@@ -31,7 +31,7 @@ function getPublishSteps(post: { status: string; publishRecords: Array<{ status:
 
 export default async function DashboardPage() {
   const [summary, posts, accountRecords] = await Promise.all([apiClient.dashboard.getSummary(), apiClient.posts.list(), getAccountsOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : [];
   const centerPosts = sortByUpdatedDesc(posts.filter((post) => post.status === "approved" || post.status === "publishing" || post.status === "under_review" || post.status === "published" || post.status === "rejected" || post.status === "publish_failed")).sort((left, right) => Number(right.status === "publish_failed" || right.status === "rejected") - Number(left.status === "publish_failed" || left.status === "rejected")).slice(0, 6);
   const details = await Promise.all(centerPosts.map((post) => apiClient.posts.getById(post.id)));
 
@@ -59,7 +59,7 @@ export default async function DashboardPage() {
             const narrative = getPublishNarrative(post);
             const publishFlowState = getPublishFlowState(post);
             const steps = getPublishSteps(post);
-            const account = getAccountForPost(post, accounts, !accountRecords);
+            const account = getAccountForPost(post, accounts);
             const availability = getAccountAvailabilityNotice(account);
             const reviewStatus = getReviewStatus(post);
 

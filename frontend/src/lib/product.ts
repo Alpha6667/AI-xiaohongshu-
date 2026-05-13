@@ -18,6 +18,9 @@ export interface AccountOverview {
   id: string;
   name: string;
   handle: string;
+  avatarUrl: string | null;
+  xhsId: string | null;
+  profileUrl: string | null;
   status: AccountStatus;
   connectionStatus: AccountConnectionStatus;
   reauthRequired: boolean;
@@ -102,6 +105,9 @@ const unassignedAccount: AccountOverview = {
   id: "",
   name: "未分配账号",
   handle: "当前还没有真实账号归属",
+  avatarUrl: null,
+  xhsId: null,
+  profileUrl: null,
   status: "offline",
   connectionStatus: "unknown",
   reauthRequired: false,
@@ -120,60 +126,6 @@ const unassignedAccount: AccountOverview = {
   totalEngagement: 0,
   bestTopic: "今天还没有已发布样本",
 };
-
-const accountSeeds = [
-  {
-    id: "account-lulu",
-    name: "小鹿的穿搭日记",
-    handle: "@lulu_outfit",
-    status: "online" as const,
-    connectionStatus: "connected" as const,
-    reauthRequired: false,
-    summary: "偏穿搭和通勤内容，适合承接今晚的高意图任务。",
-    connectedAt: "2026-04-22T09:12:00Z",
-    lastValidatedAt: "2026-04-24T09:45:00Z",
-    lastUsedAt: "2026-04-24T10:10:00Z",
-    lastAuthError: null,
-    lastActiveAt: "2026-04-22T11:58:00Z",
-    lastSyncAt: "2026-04-24T10:20:00Z",
-    lastSyncStatus: "succeeded" as const,
-    lastSyncError: null,
-  },
-  {
-    id: "account-yiyi",
-    name: "一一的居家灵感",
-    handle: "@yiyi_home",
-    status: "busy" as const,
-    connectionStatus: "validating" as const,
-    reauthRequired: false,
-    summary: "今天已有生成中的任务，更适合接家居与空间内容。",
-    connectedAt: "2026-04-21T17:40:00Z",
-    lastValidatedAt: "2026-04-24T09:32:00Z",
-    lastUsedAt: "2026-04-24T09:32:00Z",
-    lastAuthError: null,
-    lastActiveAt: "2026-04-22T11:32:00Z",
-    lastSyncAt: "2026-04-24T09:30:00Z",
-    lastSyncStatus: "syncing" as const,
-    lastSyncError: null,
-  },
-  {
-    id: "account-momo",
-    name: "Momo 轻食研究所",
-    handle: "@momo_foodlab",
-    status: "offline" as const,
-    connectionStatus: "reauth_required" as const,
-    reauthRequired: true,
-    summary: "最近数据不错，但当前账号离线，需要稍后接回。",
-    connectedAt: "2026-04-20T20:18:00Z",
-    lastValidatedAt: "2026-04-24T07:50:00Z",
-    lastUsedAt: "2026-04-23T21:14:00Z",
-    lastAuthError: "登录态已失效，需要重新登录后才能继续发布和拉数。",
-    lastActiveAt: "2026-04-22T08:20:00Z",
-    lastSyncAt: "2026-04-24T07:50:00Z",
-    lastSyncStatus: "failed" as const,
-    lastSyncError: "登录态失效，最近一次拉取作品数据失败。",
-  },
-];
 
 function coerceConnectionStatus(rawValue: AccountRecord["connectionStatus"], reauthRequired?: boolean | null): AccountConnectionStatus {
   if (reauthRequired) {
@@ -297,11 +249,6 @@ export function getFailureTypeLabel(failureType?: PublishRecord["failureType"] |
   }
 
   return null;
-}
-
-function getAssignedAccountSeed(post: Pick<PostListItem, "id" | "topic">) {
-  const raw = `${post.id}${post.topic}`.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return accountSeeds[raw % accountSeeds.length];
 }
 
 function getMessageTaskTone(stage: string | null | undefined) {
@@ -562,38 +509,15 @@ export function getPerformanceSuggestion(post: PostListItem) {
   return "这类主题反馈还一般，建议换角度或缩小切口，再试一版。";
 }
 
-export function buildAccountOverview(posts: PostListItem[]): AccountOverview[] {
-  return accountSeeds.map((seed) => {
-    const accountPosts = posts.filter((post) => getAssignedAccountSeed(post).id === seed.id);
-    const publishedCount = accountPosts.filter((post) => post.status === "published").length;
-    const waitingCount = accountPosts.filter((post) => post.status === "draft" || post.status === "in_review" || post.status === "approved" || post.status === "under_review" || post.status === "rejected").length;
-    const totalEngagement = accountPosts.reduce((sum, post) => {
-      const metrics = getPostInteractionSummary(post);
-      return sum + metrics.likes + metrics.collects + metrics.comments;
-    }, 0);
-    const bestPost = [...accountPosts].sort((left, right) => {
-      const leftMetrics = getPostInteractionSummary(left);
-      const rightMetrics = getPostInteractionSummary(right);
-      return (rightMetrics.likes + rightMetrics.collects + rightMetrics.comments) - (leftMetrics.likes + leftMetrics.collects + leftMetrics.comments);
-    })[0];
-
-    return {
-      ...seed,
-      todayTaskCount: accountPosts.length,
-      waitingCount,
-      publishedCount,
-      totalEngagement,
-      bestTopic: bestPost?.topic ?? "今天还没有已发布样本",
-    };
-  });
-}
-
 export function adaptAccounts(records: AccountRecord[]): AccountOverview[] {
   return records.map((record) => {
     return {
       id: record.id,
       name: record.name,
       handle: record.handle,
+      avatarUrl: record.avatarUrl ?? null,
+      xhsId: record.xhsId ?? null,
+      profileUrl: record.profileUrl ?? null,
       status: (record.status === "online" || record.status === "offline" || record.status === "busy") ? record.status : "offline",
       connectionStatus: coerceConnectionStatus(record.connectionStatus, record.reauthRequired),
       reauthRequired: Boolean(record.reauthRequired),
@@ -615,36 +539,12 @@ export function adaptAccounts(records: AccountRecord[]): AccountOverview[] {
   });
 }
 
-export function getAccountForPost(post: Pick<PostListItem, "id" | "topic"> & { accountId?: string | null }, accounts?: AccountOverview[], allowSeedFallback = false) {
-  if (!accounts) {
-    const seed = getAssignedAccountSeed(post);
-    return {
-      ...seed,
-      todayTaskCount: 0,
-      waitingCount: 0,
-      publishedCount: 0,
-      totalEngagement: 0,
-      bestTopic: "今天还没有已发布样本",
-    };
-  }
-
+export function getAccountForPost(post: Pick<PostListItem, "id" | "topic"> & { accountId?: string | null }, accounts: AccountOverview[] = []) {
   if (post.accountId) {
     const matched = accounts.find((item) => item.id === post.accountId);
     if (matched) {
       return matched;
     }
-  }
-
-  if (allowSeedFallback) {
-    const seed = getAssignedAccountSeed(post);
-    return {
-      ...seed,
-      todayTaskCount: 0,
-      waitingCount: 0,
-      publishedCount: 0,
-      totalEngagement: 0,
-      bestTopic: "今天还没有已发布样本",
-    };
   }
 
   return unassignedAccount;
@@ -732,7 +632,7 @@ function getMessageTaskStage(post: PostListItem): Pick<MessageTask, "stage" | "s
 
 export function buildMessageTasks(posts: PostListItem[], accounts?: AccountOverview[]) {
   return sortByUpdatedDesc(posts).map((post, index) => {
-    const account = getAccountForPost(post, accounts, true);
+    const account = getAccountForPost(post, accounts);
     const stage = getMessageTaskStage(post);
     const hasCopy = post.title.trim().length > 0 && post.body.trim().length > 0;
     const hasImages = post.assetIds.length > 0;
@@ -758,13 +658,13 @@ export function buildMessageTasks(posts: PostListItem[], accounts?: AccountOverv
   });
 }
 
-export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListItem[], accounts?: AccountOverview[], allowSeedFallback = false) {
+export function adaptMessageTasks(records: MessageTaskRecord[], posts: PostListItem[], accounts?: AccountOverview[]) {
   return records.map((record) => {
     const post = posts.find((item) => item.id === record.postId) ?? null;
     const account = record.accountId
       ? accounts?.find((item) => item.id === record.accountId) ?? null
       : post?.accountId
-        ? getAccountForPost(post, accounts, allowSeedFallback)
+        ? getAccountForPost(post, accounts)
         : null;
     const stage = normalizeMessageTaskStage(record.stage ?? post?.status ?? "waiting_generation");
 
@@ -807,7 +707,7 @@ export function getTaskOverview(tasks: MessageTask[]) {
     total: tasks.length,
     ready: tasks.filter((task) => task.hasCopy && task.hasImages).length,
     waitingReview: tasks.filter((task) => task.requiresReview).length,
-    todayAccounts: new Set(tasks.map((task) => task.accountId)).size,
+    todayAccounts: new Set(tasks.map((task) => task.accountId).filter(Boolean)).size,
   };
 }
 

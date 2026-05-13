@@ -7,7 +7,7 @@ import { RefreshMetricsButton } from "../../../components/refresh-metrics-button
 import { CollapsibleDetails, SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { AssetSummary, PostDetail } from "../../../lib/api/types";
-import { getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, getSyncErrorLabel } from "../../../lib/product";
+import { adaptAccounts, getAccountForPost, getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, getSyncErrorLabel } from "../../../lib/product";
 
 export const metadata: Metadata = {
   title: "帖子详情 | 小红书日常发帖工作台",
@@ -96,6 +96,14 @@ function MediaAssetCard({ asset, featured }: { asset: AssetSummary; featured: bo
   );
 }
 
+async function getAccountsOrNull() {
+  try {
+    return await apiClient.accounts.list();
+  } catch {
+    return null;
+  }
+}
+
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   let post: PostDetail;
@@ -119,6 +127,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const publishFlowState = getPublishFlowState(post);
   const syncState = getPostSyncState(post);
   const reviewStatus = getReviewStatus(post);
+  const accountRecords = await getAccountsOrNull();
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : [];
+  const publishAccount = getAccountForPost(post, accounts);
 
   return (
     <div className="page-stack">
@@ -131,6 +142,14 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
             <StatusPill label={getReviewStatusLabel(reviewStatus)} tone={getReviewStatusTone(reviewStatus)} />
             <StatusPill label={publishFlowState.label} tone={publishFlowState.tone} />
             <p className="detail-topic">主题：{post.topic}</p>
+            <div className="account-identity post-account-identity">
+              {publishAccount.avatarUrl ? <img src={publishAccount.avatarUrl} alt={`${publishAccount.name} 头像`} className="account-avatar" /> : <div className="account-avatar account-avatar-fallback">{publishAccount.name.slice(0, 1)}</div>}
+              <div>
+                <span className="eyebrow">发布账号</span>
+                <strong>{publishAccount.name}</strong>
+                <p className="muted-copy">{publishAccount.id ? publishAccount.handle : "当前帖子还没有绑定真实账号"}</p>
+              </div>
+            </div>
           </div>
           <div className="action-row">
             <RefreshButton />

@@ -2,7 +2,7 @@ import { ComposerWorkbench } from "../../components/composer-workbench";
 import { SectionCard, SectionHeading } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 import type { PostDetail, PostListItem } from "../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getMessageTaskForPost, getWorkspaceCandidates } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildMessageTasks, getMessageTaskForPost, getWorkspaceCandidates } from "../../lib/product";
 
 async function getConfirmationsOrFallback(): Promise<PostListItem[]> {
   try {
@@ -47,8 +47,8 @@ function getSelectedPostId(searchParams: { postId?: string | string[] } | undefi
 export default async function ReviewPage({ searchParams }: { searchParams?: Promise<{ postId?: string | string[] }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const [posts, accountRecords, taskRecords] = await Promise.all([getConfirmationsOrFallback(), getAccountsOrNull(), getTasksOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : [];
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
   const candidates = getWorkspaceCandidates(posts);
   const selectedPostId = getSelectedPostId(resolvedSearchParams) ?? candidates[0]?.id ?? null;
   const selectedPost = selectedPostId ? await getConfirmationDetailOrFallback(selectedPostId) : null;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { RefreshButton } from "../../components/refresh-button";
 import { SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
-import { adaptAccounts, buildAccountOverview, getAccountForPost, getMetricsSourceState, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, isOperationalPost, sortByUpdatedDesc } from "../../lib/product";
+import { adaptAccounts, getAccountForPost, getMetricsSourceState, getPostSyncState, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, isOperationalPost, sortByUpdatedDesc } from "../../lib/product";
 
 export const metadata: Metadata = {
   title: "帖子与数据 | 小红书日常发帖工作台",
@@ -21,7 +21,7 @@ async function getAccountsOrNull() {
 
 export default async function PostsPage() {
   const [posts, summary, accountRecords] = await Promise.all([apiClient.posts.list(), apiClient.dashboard.getSummary(), getAccountsOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : [];
   const timelinePosts = sortByUpdatedDesc(posts).filter(isOperationalPost).slice(0, 30);
   const hiddenDebugCount = posts.length - timelinePosts.length;
 
@@ -84,7 +84,7 @@ export default async function PostsPage() {
               </thead>
               <tbody>
                 {timelinePosts.map((post) => {
-                  const account = getAccountForPost(post, accounts, !accountRecords);
+                  const account = getAccountForPost(post, accounts);
                   const reviewStatus = getReviewStatus(post);
                   const syncState = getPostSyncState(post);
                   const metricsSourceState = getMetricsSourceState(post);

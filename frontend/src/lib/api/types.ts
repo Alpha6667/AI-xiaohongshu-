@@ -46,6 +46,9 @@ export interface AccountRecord {
   id: string;
   name: string;
   handle: string;
+  avatarUrl?: string | null;
+  xhsId?: string | null;
+  profileUrl?: string | null;
   status: string;
   summary?: string | null;
   lastActiveAt?: string | null;

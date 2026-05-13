@@ -989,6 +989,44 @@ textarea {
   align-items: center;
 }
 
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-identity h3,
+.account-identity p,
+.account-identity strong {
+  margin: 0;
+}
+
+.account-avatar {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: rgba(34, 29, 24, 0.08);
+}
+
+.account-avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.post-account-identity {
+  margin-top: 12px;
+}
+
+.account-choice-head {
+  align-items: center;
+}
+
 .candidate-image-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

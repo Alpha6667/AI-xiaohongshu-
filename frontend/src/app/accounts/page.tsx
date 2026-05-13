@@ -5,7 +5,7 @@ import { RefreshButton } from "../../components/refresh-button";
 import { CollapsibleDetails, CompactStatus, SectionCard, SectionHeading, StatusPill } from "../../components/ui";
 import { apiClient } from "../../lib/api/client";
 import type { AccountWorksSyncResponse } from "../../lib/api/types";
-import { adaptAccounts, adaptMessageTasks, buildAccountOverview, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone, getSyncErrorLabel } from "../../lib/product";
+import { adaptAccounts, adaptMessageTasks, buildMessageTasks, getAccountAvailabilityNotice, getAccountConnectionStatusLabel, getAccountConnectionStatusTone, getAccountStatusLabel, getAccountStatusTone, getAccountSyncStatusLabel, getAccountSyncStatusTone, getSyncErrorLabel } from "../../lib/product";
 
 async function getTasksOrNull() {
   try {
@@ -33,9 +33,9 @@ async function getWorksSyncOrNull(accountId: string) {
 
 export default async function AccountsPage() {
   const [posts, accountRecords, taskRecords] = await Promise.all([apiClient.posts.list(), getAccountsOrNull(), getTasksOrNull()]);
-  const accounts = accountRecords ? adaptAccounts(accountRecords) : buildAccountOverview(posts);
-  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts, !accountRecords) : buildMessageTasks(posts, accounts);
-  const workSyncResults = accountRecords ? await Promise.all(accounts.map((account) => getWorksSyncOrNull(account.id))) : [];
+  const accounts = accountRecords ? adaptAccounts(accountRecords) : [];
+  const tasks = taskRecords ? adaptMessageTasks(taskRecords, posts, accounts) : buildMessageTasks(posts, accounts);
+  const workSyncResults = await Promise.all(accounts.map((account) => getWorksSyncOrNull(account.id)));
   const worksSyncByAccountId = new Map<string, AccountWorksSyncResponse>();
   workSyncResults.forEach((item) => {
     if (item) {
@@ -52,8 +52,8 @@ export default async function AccountsPage() {
 
         {accountRecords ? null : (
           <article className="state-card state-card-warm">
-            <strong>当前仍在使用展示层回退账号数据</strong>
-            <p>`GET /api/accounts` 请求异常时，页面会临时回退到帖子推导账号视图，避免主链路中断。</p>
+            <strong>真实账号接口暂不可用</strong>
+            <p>`GET /api/accounts` 请求异常时，页面不会生成展示层假账号，请恢复真实账号接口后再查看账号列表。</p>
           </article>
         )}
 
@@ -77,6 +77,14 @@ export default async function AccountsPage() {
       </SectionCard>
 
       <section className="product-grid product-grid-two">
+        {sortedAccounts.length === 0 ? (
+          <SectionCard className="product-card account-card">
+            <article className="state-card state-card-neutral">
+              <strong>当前没有真实账号可展示</strong>
+              <p>账号列表只展示后端真实返回的数据。</p>
+            </article>
+          </SectionCard>
+        ) : null}
         {sortedAccounts.map((account) => {
           const accountTasks = tasks.filter((task) => task.accountId === account.id);
           const availability = getAccountAvailabilityNotice(account);
@@ -85,9 +93,13 @@ export default async function AccountsPage() {
           return (
             <SectionCard key={account.id} className="product-card account-card">
               <div className="publish-card-head">
-                <div>
-                  <span className="eyebrow">{account.handle}</span>
-                  <h3>{account.name}</h3>
+                <div className="account-identity">
+                  {account.avatarUrl ? <img src={account.avatarUrl} alt={`${account.name} 头像`} className="account-avatar" /> : <div className="account-avatar account-avatar-fallback">{account.name.slice(0, 1)}</div>}
+                  <div>
+                    <span className="eyebrow">{account.handle}</span>
+                    <h3>{account.name}</h3>
+                    {account.xhsId ? <p className="muted-copy">小红书号 {account.handle}</p> : null}
+                  </div>
                 </div>
                 <div className="tag-row">
                   <StatusPill label={getAccountStatusLabel(account.status)} tone={getAccountStatusTone(account.status)} />
