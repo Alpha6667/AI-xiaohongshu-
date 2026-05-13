@@ -10,6 +10,8 @@ class AccountResponse(BaseModel):
     avatarUrl: str | None
     xhsId: str | None
     profileUrl: str | None
+    profilePath: str | None
+    isActive: bool
     status: AccountStatus
     summary: str
     lastActiveAt: str | None
@@ -27,6 +29,20 @@ class AccountResponse(BaseModel):
     lastSyncAt: str | None
     lastSyncStatus: AccountSyncStatus
     lastSyncError: str | None
+
+
+class AccountCreateRequest(BaseModel):
+    id: str | None = None
+    name: str
+    xhsId: str
+    avatarUrl: str | None = None
+    profileUrl: str | None = None
+    profilePath: str | None = None
+
+
+class AccountDeleteResponse(BaseModel):
+    accountId: str
+    deleted: bool
 
 
 class WorkSyncItemResponse(BaseModel):

@@ -5,7 +5,7 @@ from urllib.request import Request, urlopen
 
 from fastapi import HTTPException, status
 
-from app.models.enums import PostStatus, PublishStatus
+from app.models.enums import AccountConnectionStatus, PostStatus, PublishStatus
 from app.models.post import Post
 from app.models.publish_log import PublishLog
 from app.db.config import get_settings
@@ -100,6 +100,24 @@ class FakePublisherAdapter:
         )
         return DEFAULT_BACKEND_PUBLIC_BASE_URL
 
+    def _account_payload(self, post: Post) -> dict[str, str | None]:
+        if not post.account_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Post does not have an account assigned")
+        account = repository.accounts.get(post.account_id)
+        if account is None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Post account does not exist")
+        if account.reauth_required or account.connection_status != AccountConnectionStatus.CONNECTED:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Post account is not connected")
+        if not account.profile_path:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Post account profile path is not configured")
+        return {
+            "id": account.id,
+            "name": account.name,
+            "handle": account.handle,
+            "xhsId": account.xhs_id,
+            "profilePath": account.profile_path,
+        }
+
     def prepare_publish(self, post: Post, operator: str) -> PreparedPublish:
         if post.status != PostStatus.APPROVED:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved posts can enter publishing")
@@ -153,11 +171,7 @@ class FakePublisherAdapter:
                 "tags": post.tags or [],
                 "assets": self._serialize_assets(post),
             },
-            "account": {
-                "id": getattr(post, "account_id", ""),
-                "name": getattr(post, "account_name", ""),
-                "handle": getattr(post, "account_handle", ""),
-            },
+            "account": self._account_payload(post),
             "callback": {
                 "publishResultUrl": f"{callback_base_url}/api/posts/{post.id}/publish-result",
                 "authToken": auth_token,
@@ -197,7 +211,7 @@ class FakePublisherAdapter:
         if not post.platform_post_id:
             raise MetricsFetchError("platform_post_id_missing", "Platform post id is required for metrics fetch")
 
-        payload = json.dumps({"postId": post.id, "platformPostId": post.platform_post_id}).encode("utf-8")
+        payload = json.dumps({"postId": post.id, "platformPostId": post.platform_post_id, "account": self._account_payload(post)}).encode("utf-8")
         request = Request(metrics_url, data=payload, method="POST")
         request.add_header("Content-Type", "application/json")
 

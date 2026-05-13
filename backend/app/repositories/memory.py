@@ -286,6 +286,8 @@ class InMemoryRepository:
                 avatar_url=value.get("avatar_url") or value.get("avatarUrl"),
                 xhs_id=value.get("xhs_id") or value.get("xhsId"),
                 profile_url=value.get("profile_url") or value.get("profileUrl"),
+                profile_path=value.get("profile_path") or value.get("profilePath"),
+                is_active=bool(value.get("is_active", value.get("isActive", False))),
                 connection_status=(
                     AccountConnectionStatus(value["connection_status"])
                     if value.get("connection_status") is not None
@@ -406,6 +408,8 @@ class InMemoryRepository:
             avatar_url="https://sns-avatar-qc.xhscdn.com/avatar/644632443efe33e0b0d8b243.jpg?imageView2/2/w/80/format/jpg",
             xhs_id="364430981",
             profile_url="https://www.xiaohongshu.com/user/profile/5d80609700000000010044a1",
+            profile_path="/root/.openclaw/xhs-profile-persist-account_aeziyo",
+            is_active=True,
             connection_status=AccountConnectionStatus.CONNECTED,
             reauth_required=False,
             connected_at=created_at,
@@ -422,9 +426,23 @@ class InMemoryRepository:
                 real_account.created_at = previous.created_at
                 real_account.last_active_at = previous.last_active_at or created_at
                 real_account.last_used_at = previous.last_used_at
+                real_account.is_active = previous.is_active
             self.accounts[real_account_id] = real_account
             for legacy_account_id in legacy_account_ids:
                 self.accounts.pop(legacy_account_id, None)
+
+        active_accounts = [account for account in self.accounts.values() if account.is_active]
+        if len(active_accounts) != 1:
+            preferred = next(
+                (
+                    account
+                    for account in self.accounts.values()
+                    if account.connection_status == AccountConnectionStatus.CONNECTED and not account.reauth_required
+                ),
+                next(iter(self.accounts.values()), None),
+            )
+            for account in self.accounts.values():
+                account.is_active = preferred is not None and account.id == preferred.id
 
         default_account_id = next(iter(self.accounts.keys())) if self.accounts else None
         if default_account_id is not None:

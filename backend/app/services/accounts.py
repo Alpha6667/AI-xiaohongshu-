@@ -3,9 +3,9 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 
 from app.models.account import Account
-from app.models.enums import AccountConnectionStatus, AccountSyncStatus, MessageTaskStage, PostStatus, ReviewStatus
-from app.repositories.memory import repository
-from app.schemas.accounts import AccountResponse, AccountWorksSyncResponse, WorkSyncItemResponse
+from app.models.enums import AccountConnectionStatus, AccountStatus, AccountSyncStatus, MessageTaskStage, PostStatus, ReviewStatus
+from app.repositories.memory import now_iso, repository
+from app.schemas.accounts import AccountCreateRequest, AccountDeleteResponse, AccountResponse, AccountWorksSyncResponse, WorkSyncItemResponse
 
 
 def _is_today(iso_text: str) -> bool:
@@ -30,6 +30,34 @@ def _get_account_or_404(account_id: str) -> Account:
     return account
 
 
+def _default_profile_path(account_id: str) -> str:
+    return f"/root/.openclaw/xhs-profile-persist-{account_id}"
+
+
+def _account_id_from_xhs_id(xhs_id: str) -> str:
+    safe_xhs_id = "".join(char for char in xhs_id.lower() if char.isalnum() or char in {"_", "-"})
+    return f"account_{safe_xhs_id or 'xhs'}"
+
+
+def _connected_accounts() -> list[Account]:
+    return [account for account in repository.accounts.values() if account.connection_status == AccountConnectionStatus.CONNECTED and not account.reauth_required]
+
+
+def _ensure_single_active_account() -> None:
+    active_accounts = [account for account in repository.accounts.values() if account.is_active]
+    if len(active_accounts) == 1:
+        return
+
+    preferred = _connected_accounts()[0] if _connected_accounts() else (next(iter(repository.accounts.values()), None) if repository.accounts else None)
+    for account in repository.accounts.values():
+        account.is_active = preferred is not None and account.id == preferred.id
+
+
+def get_active_account() -> Account | None:
+    _ensure_single_active_account()
+    return next((account for account in repository.accounts.values() if account.is_active), None)
+
+
 def _review_status_for_post(post) -> ReviewStatus:
     if post.review_status != ReviewStatus.UNKNOWN:
         return post.review_status
@@ -52,6 +80,8 @@ def _serialize_account(item: Account, *, today_task_count: int, waiting_count: i
         avatarUrl=item.avatar_url,
         xhsId=item.xhs_id,
         profileUrl=item.profile_url,
+        profilePath=item.profile_path,
+        isActive=item.is_active,
         status=item.status,
         summary=item.summary,
         lastActiveAt=item.last_active_at,
@@ -97,6 +127,7 @@ def _serialize_work_sync_item(post) -> WorkSyncItemResponse:
 
 
 def list_accounts() -> list[AccountResponse]:
+    _ensure_single_active_account()
     accounts = sorted(repository.accounts.values(), key=lambda item: item.updated_at, reverse=True)
     waiting_stages = {
         MessageTaskStage.PENDING_GENERATION,
@@ -122,6 +153,67 @@ def list_accounts() -> list[AccountResponse]:
         responses.append(_serialize_account(item, today_task_count=today_task_count, waiting_count=waiting_count, published_count=published_count, total_engagement=total_engagement, best_topic=best_topic))
 
     return responses
+
+
+def create_account(payload: AccountCreateRequest) -> AccountResponse:
+    account_id = payload.id or _account_id_from_xhs_id(payload.xhsId)
+    if account_id in repository.accounts:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account already exists")
+
+    created_at = now_iso()
+    should_activate = not repository.accounts
+    account = Account(
+        id=account_id,
+        name=payload.name,
+        handle=f"@{payload.xhsId}",
+        status=AccountStatus.ONLINE,
+        summary=f"真实小红书账号 {payload.name}。",
+        last_active_at=created_at,
+        created_at=created_at,
+        updated_at=created_at,
+        avatar_url=payload.avatarUrl,
+        xhs_id=payload.xhsId,
+        profile_url=payload.profileUrl,
+        profile_path=payload.profilePath or _default_profile_path(account_id),
+        is_active=should_activate,
+        connection_status=AccountConnectionStatus.CONNECTED,
+        reauth_required=False,
+        connected_at=created_at,
+        last_validated_at=created_at,
+        last_sync_at=created_at,
+        last_sync_status=AccountSyncStatus.SUCCEEDED,
+    )
+    repository.accounts[account.id] = account
+    _ensure_single_active_account()
+    repository.save()
+    return next(item for item in list_accounts() if item.id == account.id)
+
+
+def delete_account(account_id: str) -> AccountDeleteResponse:
+    account = _get_account_or_404(account_id)
+    if any(post.account_id == account.id for post in repository.posts.values()):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account has linked posts and cannot be deleted")
+    if any(task.account_id == account.id for task in repository.message_tasks.values()):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account has linked tasks and cannot be deleted")
+
+    del repository.accounts[account.id]
+    _ensure_single_active_account()
+    repository.save()
+    return AccountDeleteResponse(accountId=account_id, deleted=True)
+
+
+def activate_account(account_id: str) -> AccountResponse:
+    account = _get_account_or_404(account_id)
+    if account.connection_status in {AccountConnectionStatus.DISCONNECTED, AccountConnectionStatus.REAUTH_REQUIRED} or account.reauth_required:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account is not available for activation")
+
+    updated_at = now_iso()
+    for item in repository.accounts.values():
+        item.is_active = item.id == account.id
+    account.last_used_at = updated_at
+    account.updated_at = updated_at
+    repository.save()
+    return next(item for item in list_accounts() if item.id == account.id)
 
 
 def get_account_works_sync(account_id: str) -> AccountWorksSyncResponse:

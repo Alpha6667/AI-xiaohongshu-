@@ -39,6 +39,7 @@ from app.schemas.posts import (
 from app.services.publisher import MetricsFetchError, PreparedPublish, publisher_adapter
 from app.services.image_provider import ProviderNotConfiguredError, prepare_image_provider_for_generation
 from app.services.assets import get_asset_content_url, infer_asset_type
+from app.services.accounts import get_active_account
 
 
 def _get_post_or_404(post_id: str) -> Post:
@@ -291,6 +292,7 @@ def get_post_detail(post_id: str) -> PostDetailResponse:
 
 def create_post(payload: PostCreateRequest) -> PostSummaryResponse:
     timestamp = now_iso()
+    active_account = get_active_account()
     post = Post(
         id=new_id("post"),
         topic=payload.topic,
@@ -299,7 +301,7 @@ def create_post(payload: PostCreateRequest) -> PostSummaryResponse:
         tags=payload.tags,
         status=PostStatus.DRAFT,
         asset_ids=payload.assetIds,
-        account_id=payload.accountId,
+        account_id=payload.accountId or (active_account.id if active_account is not None else None),
         created_at=timestamp,
         updated_at=timestamp,
     )

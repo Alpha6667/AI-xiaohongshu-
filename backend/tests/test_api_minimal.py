@@ -172,6 +172,8 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(first_account["xhsId"], "364430981")
         self.assertEqual(first_account["avatarUrl"], "https://sns-avatar-qc.xhscdn.com/avatar/644632443efe33e0b0d8b243.jpg?imageView2/2/w/80/format/jpg")
         self.assertEqual(first_account["profileUrl"], "https://www.xiaohongshu.com/user/profile/5d80609700000000010044a1")
+        self.assertEqual(first_account["profilePath"], "/root/.openclaw/xhs-profile-persist-account_aeziyo")
+        self.assertTrue(first_account["isActive"])
         self.assertIn("connectionStatus", first_account)
         self.assertIn("lastSyncAt", first_account)
         self.assertIn("lastSyncStatus", first_account)
@@ -187,6 +189,46 @@ class BackendApiMinimalTests(unittest.TestCase):
         trigger_payload = trigger_resp.json()
         self.assertEqual(trigger_payload["accountId"], first_account["id"])
         self.assertIn(trigger_payload["lastSyncStatus"], {"succeeded", "failed"})
+
+    def test_account_registry_create_activate_and_delete(self) -> None:
+        create_resp = self.client.post(
+            "/api/accounts",
+            json={
+                "id": "account_second",
+                "name": "Second Account",
+                "xhsId": "second_xhs",
+                "avatarUrl": "https://example.com/avatar.jpg",
+                "profileUrl": "https://www.xiaohongshu.com/user/profile/second",
+                "profilePath": "/root/.openclaw/xhs-profile-persist-account_second",
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        created = create_resp.json()
+        self.assertEqual(created["id"], "account_second")
+        self.assertEqual(created["profilePath"], "/root/.openclaw/xhs-profile-persist-account_second")
+        self.assertFalse(created["isActive"])
+
+        activate_resp = self.client.patch("/api/accounts/account_second/activate")
+        self.assertEqual(activate_resp.status_code, 200)
+        self.assertTrue(activate_resp.json()["isActive"])
+
+        accounts = self.client.get("/api/accounts").json()
+        self.assertEqual(sum(1 for account in accounts if account["isActive"]), 1)
+        self.assertTrue(next(account for account in accounts if account["id"] == "account_second")["isActive"])
+        self.assertFalse(next(account for account in accounts if account["id"] == "account_aeziyo")["isActive"])
+
+        delete_resp = self.client.delete("/api/accounts/account_second")
+        self.assertEqual(delete_resp.status_code, 200)
+        self.assertEqual(delete_resp.json(), {"accountId": "account_second", "deleted": True})
+
+        accounts_after_delete = self.client.get("/api/accounts").json()
+        self.assertEqual(len(accounts_after_delete), 1)
+        self.assertEqual(accounts_after_delete[0]["id"], "account_aeziyo")
+        self.assertTrue(accounts_after_delete[0]["isActive"])
+
+    def test_delete_linked_account_is_blocked(self) -> None:
+        delete_resp = self.client.delete("/api/accounts/account_aeziyo")
+        self.assertEqual(delete_resp.status_code, 409)
 
     def test_real_seed_account_is_publish_available(self) -> None:
         accounts_resp = self.client.get("/api/accounts")
@@ -712,6 +754,13 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(captured["url"], "http://openclaw.test:18790/api/openclaw/publish")
         payload = captured["payload"]
         self.assertEqual(payload["callback"]["publishResultUrl"], f"http://10.1.0.2:8000/api/posts/{post_id}/publish-result")
+        self.assertEqual(payload["account"], {
+            "id": "account_aeziyo",
+            "name": "AEziyo",
+            "handle": "@364430981",
+            "xhsId": "364430981",
+            "profilePath": "/root/.openclaw/xhs-profile-persist-account_aeziyo",
+        })
         self.assertEqual(payload["content"]["assets"], [
             {
                 "id": asset_id,
@@ -724,6 +773,73 @@ class BackendApiMinimalTests(unittest.TestCase):
                 "contentType": "image/jpeg",
             }
         ])
+
+    def test_openclaw_metrics_payload_includes_account_profile_path(self) -> None:
+        create_resp = self.client.post(
+            "/api/posts",
+            json={
+                "topic": "OpenClaw metrics payload",
+                "title": "OpenClaw metrics payload 标题",
+                "body": "OpenClaw metrics payload 正文",
+                "tags": [],
+                "assetIds": [],
+            },
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        post_id = create_resp.json()["id"]
+        self.client.post(f"/api/posts/{post_id}/submit-review", json={"comment": "提交", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/approve", json={"comment": "通过", "operator": "qa"})
+        self.client.post(f"/api/posts/{post_id}/publish", json={"comment": "进入发布", "operator": "qa"})
+        self.client.post(
+            f"/api/posts/{post_id}/publish-result",
+            json={"publishStatus": "succeeded", "operator": "worker", "detail": "发布成功", "platformPostId": "xh_metrics_payload"},
+        )
+
+        captured: dict[str, object] = {}
+
+        class Response:
+            def read(self) -> bytes:
+                return json.dumps({
+                    "views": 1,
+                    "likes": 2,
+                    "favorites": 3,
+                    "comments": 4,
+                    "followConversions": 5,
+                    "source": "xhs_creator_center",
+                    "capturedAt": "2026-05-13T00:00:00.000Z",
+                }).encode("utf-8")
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> None:
+                return None
+
+        def fake_urlopen(request, timeout):
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            captured["timeout"] = timeout
+            return Response()
+
+        class Settings:
+            openclaw_metrics_webhook_url = "http://openclaw.test:18790/api/openclaw/metrics"
+            openclaw_metrics_auth_token = "test-token"
+            openclaw_metrics_timeout_seconds = 10
+
+        with patch("app.services.publisher.get_settings", return_value=Settings()), patch("app.services.publisher.urlopen", side_effect=fake_urlopen):
+            refresh_resp = self.client.post(f"/api/posts/{post_id}/refresh-metrics")
+
+        self.assertEqual(refresh_resp.status_code, 201)
+        self.assertEqual(captured["payload"], {
+            "postId": post_id,
+            "platformPostId": "xh_metrics_payload",
+            "account": {
+                "id": "account_aeziyo",
+                "name": "AEziyo",
+                "handle": "@364430981",
+                "xhsId": "364430981",
+                "profilePath": "/root/.openclaw/xhs-profile-persist-account_aeziyo",
+            },
+        })
 
     def test_publish_success_writeback_metrics_fetch_failure_keeps_publish_success(self) -> None:
         create_resp = self.client.post(

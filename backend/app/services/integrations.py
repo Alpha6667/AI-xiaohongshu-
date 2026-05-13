@@ -8,6 +8,7 @@ from app.models.message_task import MessageTask
 from app.models.post import Post
 from app.repositories.memory import new_id, now_iso, repository
 from app.schemas.integrations import QQMessageIngestRequest, QQMessageIngestResponse
+from app.services.accounts import get_active_account
 
 
 def _event_key(source: str, event_id: str) -> str:
@@ -31,6 +32,10 @@ def _validate_signature(payload: QQMessageIngestRequest) -> str:
 
 
 def _resolve_ingest_account_id() -> str:
+    active_account = get_active_account()
+    if active_account is not None:
+        return active_account.id
+
     if repository.accounts:
         return sorted(repository.accounts.keys())[0]
 

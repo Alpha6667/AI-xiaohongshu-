@@ -16,6 +16,8 @@ class Account:
     avatar_url: str | None = None
     xhs_id: str | None = None
     profile_url: str | None = None
+    profile_path: str | None = None
+    is_active: bool = False
     connection_status: AccountConnectionStatus = AccountConnectionStatus.UNKNOWN
     reauth_required: bool = False
     connected_at: str | None = None
