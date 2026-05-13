@@ -1,26 +1,19 @@
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
-const { spawn } = require('child_process');
+const { execSync, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.OPENCLAW_PUBLISH_PORT || 18790;
-
-// 持久化模块
-const { addEvent, readState, setPlatformPostId, markFailed, markCompleted, isSubmitClicked } = require('./publisher/publish_state');
-const { acquireLock, releaseLock, cleanZombieLocks } = require('./publisher/publish_lock');
-const { preflightCheck, initPublishState } = require('./publisher/xhs_preflight');
-
-// Item 1: No default value — fail if not set
-if (!process.env.OPENCLAW_PUBLISH_AUTH_TOKEN) {
-  console.error('[FATAL] OPENCLAW_PUBLISH_AUTH_TOKEN is not set. Exiting.');
-  process.exit(1);
-}
-const AUTH_TOKEN = process.env.OPENCLAW_PUBLISH_AUTH_TOKEN;
-
+const AUTH_TOKEN = process.env.OPENCLAW_PUBLISH_AUTH_TOKEN || 'openclaw-publish-2026-prod-token';
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8000';
 const USE_REAL_PUBLISH = process.env.USE_REAL_PUBLISH === 'true';
+const DEFAULT_PROFILE_DIR = process.env.DEFAULT_XHS_PROFILE_DIR || '/root/.openclaw/xhs-profile-persist';
+
+function getProfileDir(task) {
+  return task.account?.profilePath || task.account?.profileDir || DEFAULT_PROFILE_DIR;
+}
 
 const executions = new Map();
 
@@ -80,130 +73,34 @@ function httpRequest(url, options, body) {
   });
 }
 
-/**
- * Run a Node.js script with spawn and receive output via pipes.
- * Returns { stdout, stderr, code }.
- */
-function runScript(scriptPath, args = []) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [scriptPath, ...args], {
-      cwd: path.dirname(scriptPath),
-      env: {
-        ...process.env,
-        // Item 5: Do not force-override XHS_PROFILE_DIR, only set a default
-        XHS_PROFILE_DIR: process.env.XHS_PROFILE_DIR || '/root/.openclaw/xhs-profile-persist',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 120000,
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
-
-    child.on('close', (code) => {
-      resolve({ stdout, stderr, code });
-    });
-
-    child.on('error', reject);
-  });
-}
-
 async function executeRealPublish(task) {
   const executionId = generateId('exec');
   const logs = ['Task received'];
-  const postId = task.postId;
   
   logs.push('Using real browser publish mode');
-
-  // === Preflight + Lock + State Init ===
-  // Step 1: Preflight check
-  const check = preflightCheck(task);
-  if (!check.passed) {
-    logs.push(`Preflight rejected: ${check.reason}`);
-    return {
-      publishStatus: 'rejected',
-      operator: 'openclaw-publisher-real',
-      detail: check.reason,
-      platformPostId: check.platformPostId || null,
-      executionLogs: logs
-    };
-  }
-  logs.push('Preflight check passed');
-
-  // Step 2: Initialize publish state (creates state file)
-  const init = initPublishState(task);
-  if (!init.ok) {
-    logs.push(`State init failed: ${init.reason}`);
-    return {
-      publishStatus: 'failed',
-      operator: 'openclaw-publisher-real',
-      detail: init.reason,
-      executionLogs: logs
-    };
-  }
-  logs.push('Publish state initialized');
-
-  // Step 3: Acquire lock
-  const lock = acquireLock(postId);
-  if (!lock.acquired) {
-    logs.push(`Lock acquisition failed: ${lock.reason}`);
-    markFailed(postId, lock.reason);
-    releaseLock(postId);
-    return {
-      publishStatus: 'rejected',
-      operator: 'openclaw-publisher-real',
-      detail: lock.reason,
-      executionLogs: logs
-    };
-  }
-  addEvent(postId, 'lock_acquired', `Lock acquired by pid ${process.pid}`, 'publishing');
-  logs.push('Lock acquired');
   
   try {
-    // Item 6: Pass the full content including assets via JSON string on CLI
+    // 调用 Python 脚本进行真实发布
     const contentJson = JSON.stringify({
       title: task.content?.title || '',
       body: task.content?.body || '',
-      tags: task.content?.tags || [],
-      assets: task.content?.assets || []
+      tags: task.content?.tags || []
     });
     
     logs.push('Starting browser automation');
-    addEvent(postId, 'browser_started', 'Browser launch initiated');
     
-    // Items 3 & 4: Use path.join + spawn (argument array, no string injection)
-    const scriptPath = path.join(__dirname, 'xhs_publish.js');
-    const result = await runScript(scriptPath, [contentJson]);
-    
-    if (result.code !== 0) {
-      logs.push(`Script exited with code ${result.code}`);
-      throw new Error(result.stderr || `Script exited with code ${result.code}`);
-    }
+    // 执行 Python 脚本
+    const scriptPath = '/root/.openclaw/workspace/skills/xiaohongshu-publisher/xhs_publish.js';
+    const result = execSync(`node "${scriptPath}" '${contentJson}'`, {
+      encoding: 'utf-8',
+      timeout: 60000,
+      env: { ...process.env, XHS_PROFILE_DIR: getProfileDir(task) }
+    });
     
     logs.push('Browser automation completed');
     
-    const publishResult = JSON.parse(result.stdout);
+    const publishResult = JSON.parse(result);
     logs.push(...(publishResult.executionLogs || []));
-
-    // === Persistence: Record publish result ===
-    if (publishResult.success) {
-      // submit_clicked event
-      addEvent(postId, 'submit_clicked', 'Publish button was clicked', 'submit_clicked');
-
-      if (publishResult.platformPostId) {
-        setPlatformPostId(postId, publishResult.platformPostId);
-        addEvent(postId, 'platform_id_detected', `Platform post id: ${publishResult.platformPostId}`);
-      }
-
-      // Mark completed (will be overridden to callback_pending if writeback fails later)
-      markCompleted(postId, publishResult.platformPostId || null);
-    } else {
-      // Publish failed
-      markFailed(postId, publishResult.errorMessage || 'Unknown publish failure');
-    }
 
     const detailParts = [];
     if (publishResult.success) {
@@ -230,43 +127,15 @@ async function executeRealPublish(task) {
     
   } catch (error) {
     logs.push(`Error: ${error.message}`);
-
-    // === If we got an error but already have state (e.g. during browser automation) ===
-    if (postId) {
-      const currentState = readState(postId);
-      if (currentState) {
-        // platformPostId might have been set before the error
-        const existingPlatformId = currentState.platformPostId;
-        if (existingPlatformId) {
-          // Was the publish actually submitted? If we have a platformPostId but callback failed
-          if (currentState.submitClicked) {
-            // Mark as callback_pending — only callback retry, no re-publish
-            addEvent(postId, 'failed', `Callback pending: ${error.message}`, 'callback_pending');
-            setPlatformPostId(postId, existingPlatformId);
-          } else {
-            markFailed(postId, error.message);
-          }
-        } else {
-          markFailed(postId, error.message);
-        }
-      }
-    }
     
     return {
       publishStatus: 'failed',
       operator: 'openclaw-publisher-real',
       detail: `Publish failed: ${error.message}`,
-      platformPostId: postId ? (readState(postId) || {}).platformPostId : null,
       errorMessage: error.message,
       failureType: 'retryable',
       executionLogs: logs
     };
-  } finally {
-    // Always release lock when done (success or failure)
-    if (postId) {
-      releaseLock(postId);
-      logs.push('Lock released');
-    }
   }
 }
 
@@ -282,7 +151,6 @@ async function executeMockPublish(task) {
   await new Promise(r => setTimeout(r, 400));
   logs.push('Published');
   
-  // Mock 模式下不创建持久化状态
   return {
     publishStatus: 'succeeded',
     operator: 'openclaw-publisher-mock',
@@ -319,7 +187,7 @@ async function handlePublish(req, res) {
   
   try {
     const task = await parseBody(req);
-    log(`Publish request: postId=${task.postId} callback.publishResultUrl=${task.callback?.publishResultUrl || '(none)'} callback.metricsUrl=${task.callback?.metricsUrl || '(none)'}`);
+    log(`Publish request: postId=${task.postId}`);
     
     if (!task.postId || !task.content) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -349,38 +217,7 @@ async function handlePublish(req, res) {
         }
 
         const result = USE_REAL_PUBLISH ? await executeRealPublish(task) : await executeMockPublish(task);
-
-        // === Writeback error → callback_pending handling ===
-        if (result.publishStatus === 'succeeded' || result.publishStatus === 'failed') {
-          try {
-            await writebackResult(task, result);
-            // If writeback succeeded and we have state with platformPostId, mark callback as confirmed
-            if (USE_REAL_PUBLISH && task.postId) {
-              const state = readState(task.postId);
-              if (state && state.platformPostId) {
-                if (state.status !== 'failed') {
-                  addEvent(task.postId, 'callback_sent', 'Writeback sent to backend');
-                  addEvent(task.postId, 'callback_confirmed', 'Writeback confirmed');
-                }
-              }
-            }
-          } catch (writebackError) {
-            log(`Writeback failed: ${writebackError.message}`);
-            if (USE_REAL_PUBLISH && task.postId) {
-              const state = readState(task.postId);
-              const platformPostId = result.platformPostId || (state ? state.platformPostId : null);
-              if (platformPostId) {
-                // 有 platformPostId 但 callback 失败 → callback_pending
-                log(`Setting state to callback_pending for postId=${task.postId} platformPostId=${platformPostId}`);
-                addEvent(task.postId, 'callback_sent', `Writeback attempt failed: ${writebackError.message}`);
-                addEvent(task.postId, 'failed', `Callback failed, platformPostId preserved: ${platformPostId}`, 'callback_pending');
-              }
-            }
-          }
-        } else {
-          // rejected 状态仍然回传
-          try { await writebackResult(task, result); } catch (e) { log('Writeback error for rejected: ' + e.message); }
-        }
+        await writebackResult(task, result);
       } catch (error) {
         log(`Execution failed: ${error.message}`);
       }
@@ -413,23 +250,21 @@ async function handleMetrics(req, res) {
     log(`Metrics request: postId=${postId} platformPostId=${platformPostId}`);
 
     if (USE_REAL_PUBLISH) {
-      // Items 3 & 4: Use path.join + spawn (argument array, no string injection)
       const scriptPath = path.join(__dirname, 'xhs_metrics.js');
       log(`Running metrics script: ${scriptPath} ${platformPostId}`);
 
       try {
-        let result = await runScript(scriptPath, [platformPostId]);
+        const result = execSync(`node "${scriptPath}" "${platformPostId}"`, {
+          encoding: 'utf-8',
+          timeout: 60000,
+          env: {
+            ...process.env,
+            XHS_PROFILE_DIR: getProfileDir(body) || process.env.XHS_PROFILE_DIR || DEFAULT_PROFILE_DIR,
+            XHS_HEADLESS: process.env.XHS_HEADLESS || 'true',
+          },
+        });
 
-        if (result.code !== 0) {
-          log(`Metrics script exited with code ${result.code}, retrying once...`);
-          result = await runScript(scriptPath, [platformPostId]);
-        }
-
-        if (result.code !== 0) {
-          throw new Error(result.stderr || `Script exited with code ${result.code}`);
-        }
-
-        const metricsResult = JSON.parse(result.stdout);
+        const metricsResult = JSON.parse(result);
         log(`Metrics result: success=${metricsResult.success} errorCode=${metricsResult.errorCode || 'none'}`);
 
         if (metricsResult.success) {
@@ -440,40 +275,25 @@ async function handleMetrics(req, res) {
             favorites: metricsResult.favorites || 0,
             comments: metricsResult.comments || 0,
             followConversions: metricsResult.followConversions || 0,
-            source: metricsResult.source || 'xhs_creator_center',
-            capturedAt: metricsResult.capturedAt || new Date().toISOString(),
-            matchedBy: metricsResult.matchedBy,
           }));
         } else {
-          const statusCode = (
-            metricsResult.errorCode === 'login_required' ? 401 :
-            metricsResult.errorCode === 'post_not_found' ? 404 :
-            metricsResult.errorCode === 'page_structure_changed' ? 502 :
-            metricsResult.errorCode === 'metrics_unavailable' ? 503 :
-            502
-          );
-          res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+          res.writeHead(502, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
-            error: metricsResult.error || metricsResult.errorMessage || 'Metrics fetch failed',
+            error: metricsResult.errorMessage || 'Metrics fetch failed',
             errorCode: metricsResult.errorCode || 'metrics_fetch_failed',
-            source: metricsResult.source || 'xhs_creator_center',
-            capturedAt: metricsResult.capturedAt || new Date().toISOString(),
           }));
         }
       } catch (execError) {
         const reason = execError.killed ? 'timeout' : execError.message;
-        const errorCode = execError.killed ? 'metrics_fetch_timeout' : 'metrics_fetch_execution_error';
         log(`Metrics script error: ${reason}`);
-        const statusCode = errorCode === 'metrics_fetch_timeout' ? 504 : 502;
-        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           error: `Metrics fetch failed: ${reason}`,
-          errorCode,
-          source: 'xhs_creator_center',
+          errorCode: execError.killed ? 'metrics_fetch_timeout' : 'metrics_fetch_execution_error',
         }));
       }
     } else {
-      // Mock mode — return synthetic data with source=mock + capturedAt
+      // Mock mode: return simulated metrics
       log('Using mock metrics mode');
       const mockMetrics = {
         views: Math.floor(Math.random() * 500) + 100,
@@ -481,8 +301,6 @@ async function handleMetrics(req, res) {
         favorites: Math.floor(Math.random() * 20) + 5,
         comments: Math.floor(Math.random() * 10) + 2,
         followConversions: Math.floor(Math.random() * 5),
-        source: 'mock',
-        capturedAt: new Date().toISOString(),
       };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(mockMetrics));
@@ -496,15 +314,11 @@ async function handleMetrics(req, res) {
 }
 
 function handleHealth(req, res) {
-  const zombies = cleanZombieLocks();
-  if (zombies > 0) {
-    log(`Cleaned ${zombies} zombie lock(s)`);
-  }
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     status: 'healthy',
     service: 'openclaw-xiaohongshu-publisher',
-    version: '2.1.0',
+    version: '2.0.0',
     realPublish: USE_REAL_PUBLISH
   }));
 }
