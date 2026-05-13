@@ -79,6 +79,11 @@ export interface AccountCreatePayload {
   profilePath?: string | null;
 }
 
+export interface AccountDeleteResponse {
+  accountId: string;
+  deleted: boolean;
+}
+
 export interface AccountWorkSyncItem {
   postId: string;
   title: string;

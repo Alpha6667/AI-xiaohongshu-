@@ -1,6 +1,7 @@
 import type {
   AccountRecord,
   AccountCreatePayload,
+  AccountDeleteResponse,
   AccountWorksSyncResponse,
   AssetSummary,
   AssetUploadPayload,
@@ -127,6 +128,11 @@ export const apiClient = {
     activate(accountId: string) {
       return apiFetch<AccountRecord>(endpoint(`/accounts/${accountId}/activate`), {
         method: "PATCH",
+      });
+    },
+    delete(accountId: string) {
+      return apiFetch<AccountDeleteResponse>(endpoint(`/accounts/${accountId}`), {
+        method: "DELETE",
       });
     },
     getWorksSync(accountId: string) {

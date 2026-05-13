@@ -86,6 +86,7 @@ export default async function AccountsPage() {
 
         <div className="action-row">
           <RefreshButton />
+          <Link href="/accounts/manage" className="text-link product-link">添加新账号 / 管理账号</Link>
         </div>
       </SectionCard>
 

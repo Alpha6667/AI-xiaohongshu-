@@ -1220,9 +1220,25 @@ textarea {
 
 .message-task-grid,
 .account-choice-list,
-.account-stat-grid {
+.account-stat-grid,
+.account-manage-stack,
+.account-create-form {
   display: grid;
   gap: 16px;
+}
+
+.active-account-panel,
+.account-create-panel {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.account-create-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.account-create-form button {
+  align-self: end;
 }
 
 .message-task-grid,
@@ -1356,7 +1372,8 @@ textarea {
   }
 
   .message-task-grid,
-  .account-stat-grid {
+  .account-stat-grid,
+  .account-create-form {
     grid-template-columns: 1fr;
   }
 
