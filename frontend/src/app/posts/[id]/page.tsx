@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { RefreshButton } from "../../../components/refresh-button";
 import { RefreshMetricsButton } from "../../../components/refresh-metrics-button";
-import { SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
+import { CollapsibleDetails, SectionCard, SectionHeading, StatusPill } from "../../../components/ui";
 import { apiClient } from "../../../lib/api/client";
 import type { AssetSummary, PostDetail } from "../../../lib/api/types";
 import { getFailureTypeLabel, getMetricsSnapshotSourceLabel, getMetricsSourceState, getPostSyncState, getPublishFlowState, getPublishNarrative, getPublishRecordLabel, getReviewStatus, getReviewStatusLabel, getReviewStatusTone, getStatusLabel, getStatusTone, getSyncErrorLabel } from "../../../lib/product";
@@ -265,40 +265,42 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
                   <p>失败时展示后端返回的错误码或错误信息。</p>
                 </article>
               </div>
-              <div className="product-table-scroll">
-                {post.metricsHistory.length > 0 ? (
-                  <table className="product-data-table metrics-history-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">快照时间</th>
-                        <th scope="col" className="numeric-cell">浏览</th>
-                        <th scope="col" className="numeric-cell">点赞</th>
-                        <th scope="col" className="numeric-cell">收藏</th>
-                        <th scope="col" className="numeric-cell">评论</th>
-                        <th scope="col" className="numeric-cell">关注转化</th>
-                        <th scope="col">来源</th>
-                        <th scope="col">抓取时间</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {post.metricsHistory.map((item) => (
-                        <tr key={item.snapshotAt}>
-                          <td>{new Date(item.snapshotAt).toLocaleString("zh-CN")}</td>
-                          <td className="numeric-cell">{item.views.toLocaleString()}</td>
-                          <td className="numeric-cell">{item.likes.toLocaleString()}</td>
-                          <td className="numeric-cell">{item.favorites.toLocaleString()}</td>
-                          <td className="numeric-cell">{item.comments.toLocaleString()}</td>
-                          <td className="numeric-cell">{item.followConversions.toLocaleString()}</td>
-                          <td>{getMetricsSnapshotSourceLabel(item.source)}</td>
-                          <td>{item.capturedAt ? new Date(item.capturedAt).toLocaleString("zh-CN") : "暂无抓取时间"}</td>
+              <CollapsibleDetails summary={`历史快照 (${post.metricsHistory.length} 条)`}>
+                <div className="product-table-scroll">
+                  {post.metricsHistory.length > 0 ? (
+                    <table className="product-data-table metrics-history-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">快照时间</th>
+                          <th scope="col" className="numeric-cell">浏览</th>
+                          <th scope="col" className="numeric-cell">点赞</th>
+                          <th scope="col" className="numeric-cell">收藏</th>
+                          <th scope="col" className="numeric-cell">评论</th>
+                          <th scope="col" className="numeric-cell">关注转化</th>
+                          <th scope="col">来源</th>
+                          <th scope="col">抓取时间</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p className="muted-copy">当前还没有历史快照，等第一次拉数成功后，这里会按时间顺序展示每一次指标变化。</p>
-                )}
-              </div>
+                      </thead>
+                      <tbody>
+                        {post.metricsHistory.map((item) => (
+                          <tr key={item.snapshotAt}>
+                            <td>{new Date(item.snapshotAt).toLocaleString("zh-CN")}</td>
+                            <td className="numeric-cell">{item.views.toLocaleString()}</td>
+                            <td className="numeric-cell">{item.likes.toLocaleString()}</td>
+                            <td className="numeric-cell">{item.favorites.toLocaleString()}</td>
+                            <td className="numeric-cell">{item.comments.toLocaleString()}</td>
+                            <td className="numeric-cell">{item.followConversions.toLocaleString()}</td>
+                            <td>{getMetricsSnapshotSourceLabel(item.source)}</td>
+                            <td>{item.capturedAt ? new Date(item.capturedAt).toLocaleString("zh-CN") : "暂无抓取时间"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="muted-copy">当前还没有历史快照，等第一次拉数成功后，这里会按时间顺序展示每一次指标变化。</p>
+                  )}
+                </div>
+              </CollapsibleDetails>
             </SectionCard>
           </div>
 

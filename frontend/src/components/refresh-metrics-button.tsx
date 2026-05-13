@@ -1,9 +1,11 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiClient } from "../lib/api/client";
+
+const AUTO_REFRESH_INTERVAL_MS = 60_000;
 
 function getMetricsRefreshMessage(message: string) {
   if (!message.startsWith("metrics_fetch_failed:")) {
@@ -51,27 +53,49 @@ export function RefreshMetricsButton({ postId }: { postId: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function handleRefreshMetrics() {
-    setPending(true);
+  async function doRefresh(silent = false) {
+    if (!silent) setPending(true);
     setNotice(null);
 
     try {
       await apiClient.posts.refreshMetrics(postId);
-      setNotice("已刷新这条内容的最新数据，页面现在展示的是最新指标和历史快照。");
+      setLastUpdated(new Date().toLocaleString("zh-CN"));
+      if (!silent) {
+        setNotice("已刷新这条内容的最新数据。");
+      }
       startTransition(() => router.refresh());
     } catch (error) {
-      setNotice(getMetricsRefreshMessage(error instanceof Error ? error.message : "刷新数据失败"));
+      const msg = getMetricsRefreshMessage(error instanceof Error ? error.message : "刷新数据失败");
+      setNotice(msg);
     } finally {
-      setPending(false);
+      if (!silent) setPending(false);
     }
   }
 
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      doRefresh(true);
+    }, AUTO_REFRESH_INTERVAL_MS);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
   return (
     <div className="refresh-metrics-actions">
-      <button type="button" className="ghost-button" onClick={handleRefreshMetrics} disabled={pending}>
+      <button type="button" className="ghost-button" onClick={() => doRefresh(false)} disabled={pending}>
         {pending ? "刷新中..." : "刷新指标数据"}
       </button>
+      {lastUpdated ? (
+        <p className="muted-copy">上次自动刷新：{lastUpdated}</p>
+      ) : null}
       {notice ? <p className="feedback-text">{notice}</p> : null}
     </div>
   );
