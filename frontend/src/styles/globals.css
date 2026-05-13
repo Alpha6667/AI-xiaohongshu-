@@ -628,6 +628,7 @@ textarea {
   display: grid;
   gap: 16px;
   margin-top: 18px;
+  width: 100%;
 }
 
 .compact-media-first {
@@ -646,22 +647,27 @@ textarea {
 
 .post-media-grid-single {
   grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
 }
 
 .post-media-card {
   display: grid;
   gap: 12px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.66);
+  overflow: hidden;
 }
 
 .post-media-image,
 .post-media-video,
 .post-media-file {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  max-width: 100%;
   border-radius: 18px;
   background: rgba(34, 29, 24, 0.06);
 }
@@ -669,18 +675,20 @@ textarea {
 .post-media-card-featured .post-media-image,
 .post-media-card-featured .post-media-video,
 .post-media-card-featured .post-media-file {
-  aspect-ratio: 16 / 10;
+  max-height: 520px;
 }
 
 .post-media-image,
 .post-media-video {
   display: block;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
 }
 
 .post-media-file {
   display: grid;
   place-items: center;
+  min-height: 180px;
   color: var(--muted);
 }
 
@@ -727,6 +735,12 @@ textarea {
 .asset-copy {
   display: grid;
   gap: 12px;
+}
+
+.detail-primary {
+  width: 100%;
+  max-width: 960px;
+  justify-self: center;
 }
 
 .post-headline,
@@ -1242,6 +1256,18 @@ textarea {
   align-content: start;
 }
 
+@media (min-width: 1200px) {
+  .post-media-card {
+    max-width: 900px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .detail-primary {
+    max-width: 840px;
+  }
+}
+
 @media (max-width: 1100px) {
   .shell,
   .hero-grid,
@@ -1302,6 +1328,17 @@ textarea {
 
   .post-media-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-primary {
+    padding: 0 12px;
+  }
+
+  .post-media-card {
+    max-width: 100%;
+    padding: 12px;
   }
 }
 
