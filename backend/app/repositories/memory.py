@@ -447,8 +447,8 @@ class InMemoryRepository:
         default_account_id = next(iter(self.accounts.keys())) if self.accounts else None
         if default_account_id is not None:
             for post in self.posts.values():
-                if post.account_id is None or post.account_id in legacy_account_ids:
-                    post.account_id = default_account_id
+                if post.account_id is None or post.account_id in legacy_account_ids or post.account_id not in self.accounts:
+                    post.account_id = real_account_id
 
         if self.message_tasks:
             return

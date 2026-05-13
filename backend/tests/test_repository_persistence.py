@@ -135,6 +135,79 @@ class RepositoryPersistenceTests(unittest.TestCase):
             self.assertEqual(saved_snapshot["source"], "xhs_creator_center")
             self.assertEqual(saved_snapshot["capturedAt"], captured_at)
 
+    def test_reload_migrates_missing_account_without_dropping_metrics_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage_path = Path(temp_dir) / "repository.json"
+            captured_at = "2026-05-13T10:00:00.000Z"
+            payload = {
+                "posts": {
+                    "post_9100f36d13": {
+                        "id": "post_9100f36d13",
+                        "topic": "真实图文发布",
+                        "title": "真实图文发布标题",
+                        "body": "真实图文发布正文",
+                        "tags": ["xhs"],
+                        "status": "published",
+                        "assetIds": [],
+                        "platformPostId": "6a026a40000000003600289d",
+                        "accountId": "account_deleted_by_registry_change",
+                        "reviewStatus": "approved",
+                        "likeCount": 42,
+                        "collectCount": 11,
+                        "commentCount": 7,
+                        "lastSyncAt": captured_at,
+                        "lastSyncStatus": "succeeded",
+                        "syncError": None,
+                        "createdAt": captured_at,
+                        "updatedAt": captured_at,
+                        "publishedAt": captured_at,
+                    }
+                },
+                "assets": {},
+                "review_records": {},
+                "generation_tasks": {},
+                "publish_logs": {},
+                "metrics_snapshots": {
+                    "post_9100f36d13": [
+                        {
+                            "id": "metric_real_latest",
+                            "postId": "post_9100f36d13",
+                            "views": 453,
+                            "likes": 42,
+                            "favorites": 11,
+                            "comments": 7,
+                            "followConversions": 3,
+                            "snapshotAt": captured_at,
+                            "source": "xhs_creator_center",
+                            "capturedAt": captured_at,
+                        }
+                    ]
+                },
+                "accounts": {},
+                "message_tasks": {},
+                "inbound_messages": {},
+                "image_provider_config": None,
+            }
+            storage_path.write_text(json.dumps(payload), encoding="utf-8")
+
+            reloaded_repo = InMemoryRepository(storage_path=storage_path)
+
+            post = reloaded_repo.posts["post_9100f36d13"]
+            self.assertEqual(post.account_id, "account_aeziyo")
+            self.assertEqual(post.last_sync_status, AccountSyncStatus.SUCCEEDED)
+            self.assertIsNone(post.sync_error)
+
+            snapshots = reloaded_repo.metrics_snapshots["post_9100f36d13"]
+            self.assertEqual(len(snapshots), 1)
+            self.assertEqual(snapshots[-1].views, 453)
+            self.assertEqual(snapshots[-1].likes, 42)
+            self.assertEqual(snapshots[-1].source, "xhs_creator_center")
+
+            reloaded_repo.save()
+            saved_payload = json.loads(storage_path.read_text(encoding="utf-8"))
+            self.assertEqual(saved_payload["posts"]["post_9100f36d13"]["accountId"], "account_aeziyo")
+            self.assertEqual(saved_payload["metrics_snapshots"]["post_9100f36d13"][-1]["views"], 453)
+
     def test_save_and_reload_published_post_keeps_metrics_source(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             storage_path = Path(temp_dir) / "repository.json"
