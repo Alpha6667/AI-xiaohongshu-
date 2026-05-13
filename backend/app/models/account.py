@@ -13,6 +13,9 @@ class Account:
     last_active_at: str | None
     created_at: str
     updated_at: str
+    avatar_url: str | None = None
+    xhs_id: str | None = None
+    profile_url: str | None = None
     connection_status: AccountConnectionStatus = AccountConnectionStatus.UNKNOWN
     reauth_required: bool = False
     connected_at: str | None = None

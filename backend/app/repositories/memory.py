@@ -283,6 +283,9 @@ class InMemoryRepository:
                 last_active_at=value.get("last_active_at"),
                 created_at=value["created_at"],
                 updated_at=value["updated_at"],
+                avatar_url=value.get("avatar_url") or value.get("avatarUrl"),
+                xhs_id=value.get("xhs_id") or value.get("xhsId"),
+                profile_url=value.get("profile_url") or value.get("profileUrl"),
                 connection_status=(
                     AccountConnectionStatus(value["connection_status"])
                     if value.get("connection_status") is not None
@@ -388,55 +391,45 @@ class InMemoryRepository:
         self.save()
 
     def _ensure_minimum_support_data(self) -> None:
-        if not self.accounts:
-            created_at = now_iso()
-            self.accounts["account_seed_brand"] = Account(
-                id="account_seed_brand",
-                name="主品牌号",
-                handle="@brand_main",
-                status=AccountStatus.ONLINE,
-                summary="主营内容与品牌日常发布",
-                last_active_at=created_at,
-                created_at=created_at,
-                updated_at=created_at,
-                connection_status=AccountConnectionStatus.CONNECTED,
-                connected_at=created_at,
-                last_validated_at=created_at,
-                last_sync_at=created_at,
-                last_sync_status=AccountSyncStatus.SUCCEEDED,
-            )
-            self.accounts["account_seed_store"] = Account(
-                id="account_seed_store",
-                name="门店号",
-                handle="@brand_store",
-                status=AccountStatus.ONLINE,
-                summary="门店活动与到店转化内容",
-                last_active_at=created_at,
-                created_at=created_at,
-                updated_at=created_at,
-                connection_status=AccountConnectionStatus.CONNECTED,
-                connected_at=created_at,
-                last_validated_at=created_at,
-                last_sync_at=created_at,
-                last_sync_status=AccountSyncStatus.SUCCEEDED,
-            )
+        real_account_id = "account_aeziyo"
+        legacy_account_ids = {"account_seed_brand", "account_seed_store"}
+        created_at = now_iso()
+        real_account = Account(
+            id=real_account_id,
+            name="AEziyo",
+            handle="@364430981",
+            status=AccountStatus.ONLINE,
+            summary="真实小红书账号 AEziyo，已由 OpenClaw 抓取并确认连接可用。",
+            last_active_at=created_at,
+            created_at=created_at,
+            updated_at=created_at,
+            avatar_url="https://sns-avatar-qc.xhscdn.com/avatar/644632443efe33e0b0d8b243.jpg?imageView2/2/w/80/format/jpg",
+            xhs_id="364430981",
+            profile_url="https://www.xiaohongshu.com/user/profile/5d80609700000000010044a1",
+            connection_status=AccountConnectionStatus.CONNECTED,
+            reauth_required=False,
+            connected_at=created_at,
+            last_validated_at=created_at,
+            last_sync_at=created_at,
+            last_sync_status=AccountSyncStatus.SUCCEEDED,
+        )
 
-        seed_store = self.accounts.get("account_seed_store")
-        if (
-            seed_store is not None
-            and seed_store.connection_status == AccountConnectionStatus.VALIDATING
-            and not seed_store.reauth_required
-            and seed_store.last_auth_error is None
-        ):
-            seed_store.status = AccountStatus.ONLINE
-            seed_store.connection_status = AccountConnectionStatus.CONNECTED
-            seed_store.last_sync_status = AccountSyncStatus.SUCCEEDED
-            seed_store.last_sync_error = None
+        if not self.accounts:
+            self.accounts[real_account_id] = real_account
+        else:
+            previous = self.accounts.get(real_account_id)
+            if previous is not None:
+                real_account.created_at = previous.created_at
+                real_account.last_active_at = previous.last_active_at or created_at
+                real_account.last_used_at = previous.last_used_at
+            self.accounts[real_account_id] = real_account
+            for legacy_account_id in legacy_account_ids:
+                self.accounts.pop(legacy_account_id, None)
 
         default_account_id = next(iter(self.accounts.keys())) if self.accounts else None
         if default_account_id is not None:
             for post in self.posts.values():
-                if post.account_id is None:
+                if post.account_id is None or post.account_id in legacy_account_ids:
                     post.account_id = default_account_id
 
         if self.message_tasks:
@@ -461,7 +454,7 @@ class InMemoryRepository:
                 topic=post.topic,
                 stage=stage,
                 post_id=post.id,
-                account_id=post.account_id,
+                account_id=post.account_id if post.account_id not in legacy_account_ids else default_account_id,
                 requested_at=post.created_at or now_iso(),
                 scheduled_at=None,
                 has_copy=bool(post.body.strip()),
@@ -496,7 +489,7 @@ class InMemoryRepository:
             asset_ids=[asset.id],
             review_status=ReviewStatus.PENDING,
             last_sync_status=AccountSyncStatus.IDLE,
-            account_id="account_seed_brand",
+            account_id="account_aeziyo",
             created_at=created_at,
             updated_at=created_at,
         )
@@ -509,7 +502,7 @@ class InMemoryRepository:
             status=PostStatus.IN_REVIEW,
             review_status=ReviewStatus.PENDING,
             last_sync_status=AccountSyncStatus.IDLE,
-            account_id="account_seed_store",
+            account_id="account_aeziyo",
             created_at=created_at,
             updated_at=created_at,
         )
@@ -523,7 +516,7 @@ class InMemoryRepository:
             asset_ids=[asset.id],
             platform_post_id="xh_123456",
             platform_url="https://www.xiaohongshu.com/explore/xh_123456",
-            account_id="account_seed_brand",
+            account_id="account_aeziyo",
             review_status=ReviewStatus.APPROVED,
             like_count=1260,
             collect_count=842,

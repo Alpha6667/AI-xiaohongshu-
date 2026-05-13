@@ -165,8 +165,13 @@ class BackendApiMinimalTests(unittest.TestCase):
         list_resp = self.client.get("/api/accounts")
         self.assertEqual(list_resp.status_code, 200)
         accounts = list_resp.json()
-        self.assertGreaterEqual(len(accounts), 1)
+        self.assertEqual(len(accounts), 1)
         first_account = accounts[0]
+        self.assertEqual(first_account["id"], "account_aeziyo")
+        self.assertEqual(first_account["name"], "AEziyo")
+        self.assertEqual(first_account["xhsId"], "364430981")
+        self.assertEqual(first_account["avatarUrl"], "https://sns-avatar-qc.xhscdn.com/avatar/644632443efe33e0b0d8b243.jpg?imageView2/2/w/80/format/jpg")
+        self.assertEqual(first_account["profileUrl"], "https://www.xiaohongshu.com/user/profile/5d80609700000000010044a1")
         self.assertIn("connectionStatus", first_account)
         self.assertIn("lastSyncAt", first_account)
         self.assertIn("lastSyncStatus", first_account)
@@ -183,12 +188,12 @@ class BackendApiMinimalTests(unittest.TestCase):
         self.assertEqual(trigger_payload["accountId"], first_account["id"])
         self.assertIn(trigger_payload["lastSyncStatus"], {"succeeded", "failed"})
 
-    def test_seed_review_account_is_publish_available(self) -> None:
+    def test_real_seed_account_is_publish_available(self) -> None:
         accounts_resp = self.client.get("/api/accounts")
         self.assertEqual(accounts_resp.status_code, 200)
         accounts_by_id = {item["id"]: item for item in accounts_resp.json()}
 
-        account = accounts_by_id["account_seed_store"]
+        account = accounts_by_id["account_aeziyo"]
         self.assertEqual(account["connectionStatus"], "connected")
         self.assertFalse(account["reauthRequired"])
         self.assertEqual(account["lastSyncStatus"], "succeeded")
@@ -197,7 +202,7 @@ class BackendApiMinimalTests(unittest.TestCase):
         confirmations_resp = self.client.get("/api/confirmations")
         self.assertEqual(confirmations_resp.status_code, 200)
         review_post = next(item for item in confirmations_resp.json() if item["id"] == "post_seed_review")
-        self.assertEqual(review_post["accountId"], "account_seed_store")
+        self.assertEqual(review_post["accountId"], "account_aeziyo")
 
     def test_confirmations_contract(self) -> None:
         list_resp = self.client.get("/api/confirmations")
@@ -219,12 +224,12 @@ class BackendApiMinimalTests(unittest.TestCase):
 
         patch_resp = self.client.patch(
             f"/api/confirmations/{first_confirmation['id']}",
-            json={"title": "确认对象已更新标题", "accountId": "account-yiyi"},
+            json={"title": "确认对象已更新标题", "accountId": "account_aeziyo"},
         )
         self.assertEqual(patch_resp.status_code, 200)
         patch_payload = patch_resp.json()
         self.assertEqual(patch_payload["title"], "确认对象已更新标题")
-        self.assertEqual(patch_payload["accountId"], "account-yiyi")
+        self.assertEqual(patch_payload["accountId"], "account_aeziyo")
 
     def test_asset_upload_with_post_id_association(self) -> None:
         create_resp = self.client.post(

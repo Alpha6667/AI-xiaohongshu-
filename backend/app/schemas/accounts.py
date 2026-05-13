@@ -7,6 +7,9 @@ class AccountResponse(BaseModel):
     id: str
     name: str
     handle: str
+    avatarUrl: str | None
+    xhsId: str | None
+    profileUrl: str | None
     status: AccountStatus
     summary: str
     lastActiveAt: str | None
