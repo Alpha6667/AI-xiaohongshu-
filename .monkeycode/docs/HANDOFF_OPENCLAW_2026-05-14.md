@@ -1,6 +1,6 @@
 # Handoff：2026-05-14 OpenClaw 运维交接记录
 
-> 编写时间：2026-05-14 12:24 CST
+> 编写时间：2026-05-14 22:30 CST
 > 编写者：OpenClaw
 > 交接人：大哥
 
@@ -32,7 +32,7 @@
 - platformPostId: `6a026a40000000003600289d`
 - DOM nums: `[10, 0, 2, 1, 1]`
 - views=10, comments=0, likes=2, favorites=1, followConversions=1
-- 与 APP 显示"赞和收藏 3"(点赞2+收藏1) 完全吻合 → **APP 后台不统计分享，只看赞和收藏**
+- 与 APP 显示"赞和收藏 3"(点赞2+收藏1) 完全吻合
 - source: `xhs_creator_center`
 
 ### 2. 多账号 Profile 隔离
@@ -44,7 +44,7 @@
 | AEziyo | `account_aeziyo` | `/root/.openclaw/xhs-profile-persist-account_aeziyo` | ✅ 已连接，可发布 + metrics |
 | 5D7F8C0C | `account_877059946` | `/root/.openclaw/xhs-profile-persist-account_877059946` | ✅ 已连接（SMS 登录），有 access-token-creator |
 
-**迁移**：`mv /root/.openclaw/xhs-profile-persist /root/.openclaw/xhs-profile-persist-account_aeziyo`
+**迁移过程**：`mv /root/.openclaw/xhs-profile-persist /root/.openclaw/xhs-profile-persist-account_aeziyo`
 
 **server.js 改造**：从 webhook payload 动态读取 `profilePath`，设置 `XHS_PROFILE_DIR` 环境变量。
 
@@ -53,7 +53,7 @@
 **账号2**：account_877059946，小红书 ID 5D7F8C0C
 
 **登录方式**：SMS 验证码
-1. 手动输入手机号 `18949308283`
+1. 手动输入手机号
 2. 勾选用户协议 checkbox
 3. 点击"发送验证码"（找 `textContent.trim() === '发送验证码'` 且 `childElementCount === 0` 的最内层 DIV）
 4. 人工输入验证码
@@ -76,8 +76,6 @@ Writeback failed: socket hang up
 
 **网络监控验证**：点击后仅有图片上传（阿里云 OSS）请求，没有任何 `xiaohongshu.com/api` 的 note/post 请求被触发。
 
-**可能原因**：小红书发布页对 headless Chromium 做了附加检测，账号2 是较新注册的账号，被检测级别更高。
-
 ### 5. 账号1 帖子发布（成功）
 
 **postId**：`post_c99f744268`
@@ -85,7 +83,7 @@ Writeback failed: socket hang up
 **platformPostId**：`6a04d84e000000003503b141`
 **内容**：穿越回19世纪疯狂星期四复古风 + KFC 图片
 
-**关键发现**：**原始 PNG 图（1197×1314）无法发布**，换成大哥发的新 JPG 图（1080×1919）后一次成功。推测是图片可能被小红书判定侵权。
+**关键发现**：**某些 PNG 图片可能被小红书判定侵权或格式不支持**，换图后一次成功。
 
 ### 6. 素材关联修复
 
@@ -93,13 +91,11 @@ Writeback failed: socket hang up
 
 **修复**：
 1. 手动在 `repository.json` 中创建 asset 记录（需要字段：`id`, `name`, `url`, `type`）
-2. `url` 需要设为**本地文件路径**（如 `/root/.openclaw/media/asset_{hash}.jpg`），而非 `/api/assets/{id}/content`
-3. asset 字段需求（memory.py `_load_from_payload`）：
+2. `url` 必须设为**本地绝对文件路径**（如 `/root/.openclaw/media/asset_{hash}.jpg`），而非 `/api/assets/{id}/content`
+3. asset Schema 字段需求（memory.py `_load_from_payload`）：
    - 必需：`id`, `name`, `url`, `type`
    - 可选：`file_name`, `content_type`, `created_at`, `thumbnail_url`, `width`, `height`
 4. `content_type` 建议设为 `image/jpeg` 而非默认的 `application/octet-stream`
-
-**文件传输**：素材文件在 OpenClaw 服务器上，需要手动复制或链接到后端服务器对应目录。
 
 ### 7. Publisher 模式切换
 
@@ -115,7 +111,7 @@ cd /root/.openclaw/workspace/skills/xiaohongshu-publisher \
 **验证**：
 ```bash
 curl http://127.0.0.1:18790/health
-# 返回 {"realPublish": true}
+# 应返回 {"realPublish": true}
 ```
 
 ---
@@ -124,19 +120,19 @@ curl http://127.0.0.1:18790/health
 
 ### 1. 创作者中心 DOM 映射反复
 
-旧版 metrics 脚本映射与新版本小红书 UI 不一致。需要人工截图 + DOM 探测反复确认。最终通过 SVG path 分析确认图标顺序。
+旧版 metrics 脚本映射与新版本小红书 UI 不一致。需人工截图 + DOM 探测反复确认。最终通过 SVG path 分析确认图标顺序。
 
 ### 2. explore 域扫码 vs creator 域扫码
 
-explore（`www.xiaohongshu.com/explore`）扫码只拿到普通 web session，`creator.xiaohongshu.com/publish/publish` 仍返回 401，Cookie 缺少 `access-token-creator`。必须**在 creator 域名下完成扫码/SMS 登录**才能获取正确的发布权限。
+`www.xiaohongshu.com/explore` 扫码只拿到普通 web session，`creator.xiaohongshu.com/publish/publish` 仍返回 401，Cookie 缺少 `access-token-creator`。必须**在 creator 域名下完成扫码/SMS 登录**。
 
 ### 3. 切换二维码入口失效
 
-创作者登录页右上角的 IMG 元素（class `css-wemwzq`，坐标约 1215, 239）点击多次未切换到扫码页。可能是该入口在当前版本不可用或被移除了。
+创作者登录页右上角的 IMG 元素（class `css-wemwzq`，坐标约 1215, 239）点击多次未切换到扫码页。可能是该入口在当前版本不可用或已移除。
 
 ### 4. Cookie 持久化时机
 
-`Playwright.launchPersistentContext()` 在 `context.close()` 时 flush Cookie 到磁盘。如果 context 被 OOM kill 或未正常关闭，Cookie 不会写入 profile 目录。
+`Playwright.launchPersistentContext()` 在 `context.close()` 时 flush Cookie 到磁盘。context 被 OOM kill 或未正常关闭时 Cookie 不会写入 profile 目录。
 
 ### 5. 账号2 headless 发布拦截
 
@@ -144,37 +140,38 @@ explore（`www.xiaohongshu.com/explore`）扫码只拿到普通 web session，`c
 
 ### 6. 2GB 服务器 OOM
 
-多次 OOM kill 导致：
-- curl 请求被 kill
-- 后端进程被 kill（systemd auto-restart）
-- 数据库写入不完整
-- journal 不完整
+多次 OOM kill 导致 curl 请求被 kill、后端进程被 systemd auto-restart、数据库写入不完整。
 
 ### 7. 素材文件跨服务器
 
-OpenClaw 和 AI-xiaohongshu 后端在同一台服务器，但 asset 记录创建后需要手动复制文件到后端能找到的路径。
+OpenClaw 和 AI-xiaohongshu 在同一服务器，但 asset 记录创建后需手动复制文件到后端能找到的路径。
 
 ### 8. profile 隔离约束
 
-不同账号的 profile 目录不能共用或复制。账号1的 Cookie/session 对账号2无效。
+不同账号的 profile 目录不能共用或复制。
 
 ### 9. xhs_publish.js 反检测参数破坏发布
 
-`45e9953` commit 添加了 `--disable-blink-features=AutomationControlled`、自定义 UA 和 `addInitScript` 反检测参数。**但这些参数反而可能触发更严格的检测**。回滚到 `2c0ddda` 版本（无反检测参数）后，账号1成功发布。
+`45e9953` 添加了 `--disable-blink-features=AutomationControlled`、自定义 UA 和 `addInitScript`，**反而触发更严格检测**。回滚到 `2c0ddda`（无反检测参数）后账号1成功发布。
 
-**结论**：对于小红书，少加反检测参数比多增加更安全。
+**结论**：对小红书少加反检测参数比多增加更安全。
+
+### 10. 图片可能导致发布按钮无响应
+
+某些 PNG 图片（1197x1314）可正常上传到编辑器但点击发布后**不触发任何 API 请求**。换用大哥手机发的 JPG（1080x1919）后一次成功。推测小红书前端在点击发布时可能会对已上传图片做合规检查，不合规则阻止按钮行为而非弹出错误。
 
 ---
 
 ## 三、当前运行状态
 
-### 3.1 服务列表
+### 3.1 服务列表（云服务器）
 
 | 服务 | 端口 | 状态 | 备注 |
 |------|------|------|------|
 | Backend (FastAPI) | 8000 | ✅ active | account_aeziyo online |
 | Publisher (Node.js) | 18790 | ✅ active | realPublish=true |
 | Frontend (Next.js) | 3000 | ✅ active | 含 tasks 页面 |
+| OpenClaw Gateway | 18789 | ✅ active | |
 
 ### 3.2 账号状态
 
@@ -192,49 +189,47 @@ OpenClaw 和 AI-xiaohongshu 后端在同一台服务器，但 asset 记录创建
 | xhs_metrics.js | `/root/.openclaw/workspace/skills/xiaohongshu-publisher/xhs_metrics.js` |
 | repository.json | `/srv/AI-xiaohongshu-/backend/data/repository.json` |
 | publisher log | `/tmp/publisher_real.log` |
+| OpenClaw config | `/root/.openclaw/openclaw.json` |
+| QQ forward 脚本 | `/srv/qq-forward-service/forward.sh` |
 
 ### 3.4 关键配置
 
 - publisher: `USE_REAL_PUBLISH=true`
-- metrics: `USE_REAL_PUBLISH=true`（由 publisher 根据 task 类型决定）
+- metrics: `USE_REAL_PUBLISH=true`
 - `XHS_PROFILE_DIR`：由 server.js 根据 `task.account.profilePath` 动态设置
+- 系统代理：云服务器配置了 http_proxy 环境变量，Chromium 内 fetch 会走代理导致 503。server.js 在 spawn 子进程时清除了代理环境变量。
 
 ---
 
-## 四、后续建议
+## 四、未完成事项
 
 ### 4.1 账号2 headless 发布
 
-- **短期方案**：用 Xvfb + headed 模式，在虚拟显示器上运行浏览器发布
-- **长期方案**：抽取小红书本地的 API（edith.xiaohongshu.com）的直接 HTTP 调用接口，避免前端自动化
+- 已被小红书 JS 层拦截
+- 可能的解决路径：Xvfb headed 模式 / 手动 APP 发布 / 账号1 代替发布
 
-### 4.2 新账号登录
+### 4.2 Publisher systemd 服务化
 
-- 在后端做扫码登录入口页面的前端组件
-- 用户在前端展示二维码，用手机小红书 APP 扫码
-- 扫码后后端拿到 Cookie 自动持久化到 profile 目录
+- 当前 publisher 通过 `nohup node server.js` 手动启动
+- 需要注册为 systemd 服务实现自动重启
 
-### 4.3 素材管理
+### 4.3 QQ 渠道切换
 
-- 素材上传后应自动创建 asset 记录并关联到 post
-- 文件路径应统一管理，避免手动复制
+- 云服务器和本地笔记本不能同时接同一个 QQ 机器人
+- 需要云服务器下线后笔记本才可接 QQ
 
-### 4.4 服务器资源
+### 4.4 repository.json 备份
 
-- 2GB 内存对于 Chromium + Python + Node + Next.js 的压力较大
-- 建议升级到至少 4GB
-- 或考虑定时清理 chrome 僵尸进程（`pkill -f chrome-headless-shell`）
+- 目前没有配置定期备份
 
-### 4.5 xhs_publish.js 改造方向
+### 4.5 素材自动关联
 
-当前代码：
-- 用 `page.evaluate(() => document.querySelector('button').click())` 触发发布
-- `page.on('response')` 监听 `/web_api/sns/v2/note` 取 noteId
+- 当前 asset 记录需手动创建并关联到 post
 
-需改进：
-- 按钮点击方式尝试多种 fallback（`page.click` -> `evaluate click` -> `mouse.click`）
-- noteId 监听路径扩展到更多 API 模式
-- 发布后等待时间加到 15s，因为部分网络需要更多时间
+### 4.6 跨平台部署
+
+- OpenClaw 快照包已 push 到 `releases/` 目录
+- 部署指南见 `DEPLOY_OPENCLAW_SETUP.md`
 
 ---
 
@@ -251,21 +246,57 @@ XHS_PROFILE_DIR=/root/.openclaw/xhs-profile-persist-{accountId}
 # 启动: python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 # Frontend
-# 启动: pnpm --dir frontend dev (或 systemctl ai-xiaohongshu-frontend.service)
+# 启动: systemctl ai-xiaohongshu-frontend.service
 ```
 
 ---
 
 ## 六、重要 Commit 列表
 
-| Commit | 描述 | 分支 |
-|--------|------|------|
-| `2763de5` | 修正 DOM 字段映射——第3、第4对调修复 | openclaw |
+| Commit | 描述 | 仓库/分支 |
+|--------|------|-----------|
+| `2763de5` | 修正 DOM 字段映射——点赞/收藏对调修复 | openclaw |
 | `54b6ec8` | followConversions 兼容后端 schema | openclaw |
-| `115f785` | metrics source 修复 | openclaw |
+| `115f785` | metrics source 修复（加 `source: xhs_creator_center`） | openclaw |
 | `45e9953` | ❌ 添加反检测参数（破坏发布） | openclaw |
-| `2c0ddda` | ✅ 确认可用的 metrics 版本 | openclaw |
-| `aa03b8f` | tasks 页面修复 | 260509-chore-add-final-archive |
+| `2c0ddda` | ✅ 确认可用的 metrics 脚本版本（无反检测参数） | openclaw |
+| `aa03b8f` | tasks 页面布局修复 | 260509-chore-add-final-archive |
+| `d8286fa` | 新增 OpenClaw 初始化配置模板（openclaw-init/） | 260509-chore-add-final-archive |
+| `306cb5d` | OpenClaw 系统快照包（releases/*.tar.gz） | 260509-chore-add-final-archive |
+| `10eea02` | OpenClaw 部署指南 | 260509-chore-add-final-archive |
+| `66f2bd2` | OpenClaw 交接记录（本文初版） | 260509-chore-add-final-archive |
+
+---
+
+## 七、本地笔记本接手时的第一步
+
+1. **确认 OpenClaw 已安装**
+   ```bash
+   openclaw --version
+   ```
+2. **配置 openclaw.json**（至少配一个模型 provider）
+3. **启动 gateway**
+   ```bash
+   openclaw gateway start
+   ```
+4. **验证 Web UI**
+   浏览器打开 `http://127.0.0.1:18789/`
+5. **安装 Playwright**（如未装）
+   ```bash
+   npx playwright install chromium
+   npx playwright install-deps chromium
+   ```
+6. **拉取项目代码**（如未拉）
+   ```bash
+   git clone git@github.com:Alpha6667/AI-xiaohongshu-.git /srv/AI-xiaohongshu-
+   cd /srv/AI-xiaohongshu- && git checkout 260509-chore-add-final-archive
+   ```
+7. **阅读下面文档顺序**
+   - `DEPLOY_OPENCLAW_SETUP.md` → 系统架构
+   - `XHS_LOGIN_STATE_RUNBOOK.md` → 登录态保护
+   - `REAL_PUBLISH_RUNBOOK.md` → 发布流程
+   - `OPENCLAW_RUNTIME_KNOWLEDGE.md` → 运行时知识
+   - `OPENCLAW_LOCAL_BOOTSTRAP.md` → 本地启动指南
 
 ---
 

@@ -41,6 +41,10 @@
 - `XHS_LOGIN_STATE_RUNBOOK.md`：小红书登录态保护、健康检查和恢复流程
 - `PUBLISH_VERIFICATION_LOG.md`：真实发布、metrics、素材展示验收记录
 - `FRONTEND_UI_REFRESH_BRIEF.md`：前端信息架构清爽化改版任务书
+- `HANDOFF_OPENCLAW_2026-05-14.md`：OpenClaw 运维交接记录（最新）
+- `OPENCLAW_LOCAL_BOOTSTRAP.md`：本地笔记本 OpenClaw 启动指南
+- `OPENCLAW_RUNTIME_KNOWLEDGE.md`：OpenClaw 运行时知识手册
+- `DEPLOY_OPENCLAW_SETUP.md`：OpenClaw 部署到新服务器指南
 
 ## 协作说明
 
