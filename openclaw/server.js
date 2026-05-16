@@ -58,6 +58,11 @@ function httpRequest(url, options, body) {
       headers: { 'Content-Type': 'application/json', ...options.headers }
     };
     
+    const bodyStr = body ? JSON.stringify(body) : '';
+    reqOptions.headers['Content-Length'] = Buffer.byteLength(bodyStr);
+    reqOptions.agent = false;
+    reqOptions.headers['Connection'] = 'close';
+    
     const req = httpModule.request(reqOptions, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -68,7 +73,7 @@ function httpRequest(url, options, body) {
     });
     
     req.on('error', reject);
-    if (body) req.write(JSON.stringify(body));
+    if (bodyStr) req.write(bodyStr);
     req.end();
   });
 }
@@ -84,16 +89,17 @@ async function executeRealPublish(task) {
     const contentJson = JSON.stringify({
       title: task.content?.title || '',
       body: task.content?.body || '',
-      tags: task.content?.tags || []
+      tags: task.content?.tags || [],
+      assets: task.content?.assets || []
     });
     
     logs.push('Starting browser automation');
     
-    // 执行 Python 脚本
+    // 执行 Playwright 脚本
     const scriptPath = '/root/.openclaw/workspace/skills/xiaohongshu-publisher/xhs_publish.js';
     const result = execSync(`node "${scriptPath}" '${contentJson}'`, {
       encoding: 'utf-8',
-      timeout: 60000,
+      timeout: 120000,
       env: { ...process.env, XHS_PROFILE_DIR: getProfileDir(task) }
     });
     
@@ -102,26 +108,29 @@ async function executeRealPublish(task) {
     const publishResult = JSON.parse(result);
     logs.push(...(publishResult.executionLogs || []));
 
+    // 真实发布成功判定：必须同时满足 success=true 且 platformPostId 是真实小红书 noteId
+    // 真实小红书 noteId 以 6a 开头（如 6a04d84e000000003503b141），不是 xh_ 或其它伪造前缀
+    const hasRealNoteId = publishResult.success &&
+      typeof publishResult.platformPostId === 'string' &&
+      publishResult.platformPostId.length >= 8 &&
+      !publishResult.platformPostId.startsWith('xh_');
+
     const detailParts = [];
-    if (publishResult.success) {
+    if (hasRealNoteId) {
       detailParts.push('Published successfully');
-      if (publishResult.warning) {
-        detailParts.push(`[warning: ${publishResult.warning}]`);
-      }
-    } else {
-      detailParts.push(publishResult.errorMessage || 'Publish failed');
-    }
-    if (publishResult.platformPostId) {
       detailParts.push(`note_id=${publishResult.platformPostId}`);
+    } else {
+      const errorMsg = publishResult.errorMessage || 'Publish failed: no valid platformPostId returned';
+      detailParts.push(errorMsg);
     }
     
     return {
-      publishStatus: publishResult.success ? 'succeeded' : 'failed',
+      publishStatus: hasRealNoteId ? 'succeeded' : 'failed',
       operator: 'openclaw-publisher-real',
       detail: detailParts.join(' '),
-      platformPostId: publishResult.platformPostId,
-      errorMessage: publishResult.errorMessage,
-      failureType: publishResult.failureType,
+      platformPostId: hasRealNoteId ? publishResult.platformPostId : null,
+      errorMessage: hasRealNoteId ? null : (publishResult.errorMessage || 'Publish failed: no valid platformPostId returned'),
+      failureType: hasRealNoteId ? null : (publishResult.failureType || 'retryable'),
       executionLogs: logs
     };
     
@@ -155,7 +164,7 @@ async function executeMockPublish(task) {
     publishStatus: 'succeeded',
     operator: 'openclaw-publisher-mock',
     detail: 'Published successfully (mock)',
-    platformPostId: `xh_${generateId('post')}`,
+    platformPostId: `mock_${generateId('post')}`,
     executionLogs: logs
   };
 }

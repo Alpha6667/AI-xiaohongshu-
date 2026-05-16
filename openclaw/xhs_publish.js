@@ -286,7 +286,7 @@ async function publish(content) {
       const ce = document.querySelector('[contenteditable="true"]');
       if (ce) {
         ce.focus();
-        ce.innerHTML = body;
+        ce.innerHTML = finalBody;
         ce.dispatchEvent(new Event('input', {bubbles: true}));
         r.body = 'filled';
       }
@@ -314,8 +314,14 @@ async function publish(content) {
 
     // Step 8: Click publish
     const pubR = await page.evaluate(() => {
-      for (const b of document.querySelectorAll('button')) {
-        if (b.textContent.trim() === '发布') { b.click(); return 'clicked'; }
+      // Find publish button with text '发布笔记' or contains '发布'
+      for (const sel of ['[class*=btn]', '[class*=publish]', 'button', 'div', 'span']) {
+        for (const b of document.querySelectorAll(sel)) {
+          const txt = (b.textContent || '').trim().replace(/\s+/g, '');
+          if ((txt === '发布笔记' || txt === '发布') && b.offsetParent !== null) {
+            b.click(); return 'clicked_' + sel;
+          }
+        }
       }
       return 'not_found';
     });
@@ -336,8 +342,7 @@ async function publish(content) {
     if (capturedNoteId) {
       return { success: true, platformPostId: capturedNoteId, executionLogs: logs };
     }
-    return { success: true, platformPostId: `xh_${Math.floor(Date.now()/1000)}`,
-             executionLogs: logs, warning: 'Real note id not captured, using fallback' };
+    return { success: false, errorMessage: 'Publish failed: real noteId not captured from API response. The publish button was clicked but Xiaohongshu did not return a valid note ID, indicating the submission was intercepted or rejected.', errorCode: 'note_id_not_captured', failureType: 'retryable', executionLogs: logs };
 
   } catch (e) {
     log(`Error: ${e.message}`);
